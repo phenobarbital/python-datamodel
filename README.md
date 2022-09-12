@@ -1,5 +1,5 @@
-# DataModel
-DataModel is a simple library based on python +3.7 to use Dataclass-syntax for interacting with
+# DataModels
+DataModels is a simple library based on python +3.7 to use Dataclass-syntax for interacting with
 Data, using the same syntax of Dataclass, users can write Python Objects
 and work with Data in the same way, is a reimplementation of python Dataclasses supporting true inheritance (without decorators), true composition and other good features.
 
@@ -17,7 +17,7 @@ Python 3.7+
 <div class="termy">
 
 ```console
-$ pip install "datamodels"
+$ pip install python-datamodels
 ---> 100%
 Successfully installed datamodels
 ```

@@ -22,7 +22,7 @@ with open(get_path('datamodels/version.py')) as meta:
     exec(meta.read())
 
 setup(
-    name="datamodels",
+    name="python-datamodel",
     version=__version__,
     python_requires=">=3.7.1",
     url="https://github.com/phenobarbital/DataModel",
@@ -34,14 +34,19 @@ setup(
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
-        "Operating System :: POSIX :: Linux",
-        "Environment :: Web Environment",
+        "Intended Audience :: System Administrators",
         "Topic :: Software Development :: Build Tools",
         "Topic :: Software Development :: Libraries :: Python Modules",
+        "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Framework :: AsyncIO",
+        "License :: OSI Approved :: BSD License",
+        "Operating System :: OS Independent",
+        "Topic :: System :: Systems Administration",
+        "Topic :: Utilities",
+        "Environment :: Web Environment",
     ],
     author=__author__,
     author_email=__author_email__,
