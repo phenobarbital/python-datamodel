@@ -12,7 +12,7 @@ build-backend = "setuptools.build_meta"
 module = "datamodels"
 author = "Jesus Lara Gimenez"
 author-email = "jesuslarag@gmail.com"
-home-page = "https://github.com/phenobarbital/DataModel"
+home-page = "https://github.com/phenobarbital/python-datamodel"
 classifiers=[
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",

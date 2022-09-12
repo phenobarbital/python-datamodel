@@ -18,16 +18,16 @@ def readme():
         return readme.read()
 
 
-with open(get_path('datamodels/version.py')) as meta:
+with open(get_path('datamodel/version.py')) as meta:
     exec(meta.read())
 
 setup(
     name="python-datamodel",
     version=__version__,
     python_requires=">=3.7.1",
-    url="https://github.com/phenobarbital/DataModel",
+    url="https://github.com/phenobarbital/python-datamodel",
     description=__description__,
-    keywords=['asyncio', 'dataclass', 'dataclasses'],
+    keywords=['asyncio', 'dataclass', 'dataclasses', 'data models'],
     platforms=['POSIX'],
     long_description=readme(),
     long_description_content_type='text/markdown',
