@@ -8,7 +8,6 @@ from typing import (
     Any
 )
 import logging
-import six
 from collections.abc import Callable, Iterable, Mapping
 from decimal import Decimal
 # Dataclass
@@ -17,13 +16,13 @@ from dataclasses import (
     dataclass,
     is_dataclass,
     _FIELD,
-    fields,
     asdict,
     MISSING,
     InitVar,
     make_dataclass,
     _MISSING_TYPE
 )
+import six
 from .encoders import DefaultEncoder
 
 
@@ -315,7 +314,7 @@ class ModelMeta(type):
 
 
 
-class Model(six.with_metaclass(ModelMeta)):
+class BaseModel(metaclass=ModelMeta):
     """
     Model.
 
@@ -400,9 +399,11 @@ class Model(six.with_metaclass(ModelMeta)):
                 if isinstance(_type.__origin__, type(Union)):
                     t = args[0]
                     if is_dataclass(t):
+                        # print('AQUI ', F, args, _type.__origin__, t)
+                        # print(data, type(data))
                         if isinstance(data, dict):
                             data = t(**data)
-                        elif isinstance(data, list):
+                        elif isinstance(data, (list, tuple)):
                             data = t(*data)
                         else:
                             data = None
