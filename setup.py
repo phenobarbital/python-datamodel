@@ -71,7 +71,8 @@ setup(
         "objectpath==0.6.1",
         "rapidjson==1.0.0",
         "python-rapidjson>=1.5",
-        'typing_extensions==4.3.0'
+        'typing_extensions==4.3.0',
+        "asyncpg==0.26.0"
     ],
     tests_require=[
         'pytest>=6.0.0',
