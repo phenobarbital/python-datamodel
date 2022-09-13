@@ -320,6 +320,7 @@ class BaseModel(metaclass=ModelMeta):
 
     Base Model for all DataModels.
     """
+    Meta = Meta
 
     def __unicode__(self):
         return str(__class__)
@@ -570,3 +571,14 @@ class BaseModel(metaclass=ModelMeta):
             except (AttributeError, TypeError, ValueError) as e:
                 logging.error(e)
                 raise
+
+    @classmethod
+    def make_model(cls, name: str, schema: str = "public", fields: list = None):
+        parent = inspect.getmro(cls)
+        obj = make_dataclass(name, fields, bases=(parent[0],))
+        m = Meta()
+        m.name = name
+        m.schema = schema
+        m.app_label = schema
+        obj.Meta = m
+        return obj
