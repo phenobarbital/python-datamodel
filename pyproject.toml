@@ -3,6 +3,7 @@ requires = [
     'setuptools>=47',
     'wheel==0.37.1',
     'Cython==0.29.32',
+    'numpy',
     'toml>=0.10.2',
     'asyncio==3.4.3',
     'flit'
@@ -10,7 +11,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.flit.metadata]
-module = "datamodels"
+module = "python-datamodel"
 author = "Jesus Lara Gimenez"
 author-email = "jesuslarag@gmail.com"
 home-page = "https://github.com/phenobarbital/python-datamodel"
