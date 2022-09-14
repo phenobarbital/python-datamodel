@@ -82,8 +82,7 @@ setup(
         "asyncio==3.4.3",
         "cchardet==2.1.7",
         "objectpath==0.6.1",
-        "rapidjson==1.0.0",
-        "python-rapidjson>=1.5",
+        "orjson==3.8.0",
         'typing_extensions==4.3.0',
         "asyncpg==0.26.0"
     ],

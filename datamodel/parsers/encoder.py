@@ -2,36 +2,26 @@
 JSON Encoders.
 """
 import decimal
-import uuid
-from datetime import datetime, timedelta
+from typing import Any
 from decimal import Decimal
-from enum import Enum
 import asyncpg
 import numpy as np
-from rapidjson import Encoder as JSONEncoder
+import orjson
 
-class DefaultEncoder(JSONEncoder):
+
+class DefaultEncoder:
     """
-    Basic Encoder using rapidjson
+    Basic Encoder using orjson
     """
+    def __init__(self, **kwargs):
+        # eventually take into consideration when serializing
+        self.options = kwargs
+
+    def __call__(self, obj) -> Any:
+        return self.encode(obj)
 
     def default(self, obj):
-        if isinstance(obj, datetime):
-            return str(obj)
-        elif isinstance(obj, timedelta):
-            return str(obj)
-        elif isinstance(obj, Enum):
-            if not obj.value:
-                return None
-            else:
-                return str(obj.value)
-        elif isinstance(obj, uuid.UUID):
-            try:
-                return str(obj)
-            except ValueError:
-                if uobj := uuid.UUID(obj, version=4):
-                    return str(uobj)
-        elif isinstance(obj, decimal.Decimal):
+        if isinstance(obj, decimal.Decimal):
             return float(obj)
         elif isinstance(obj, Decimal):
             return str(obj)
@@ -48,17 +38,22 @@ class DefaultEncoder(JSONEncoder):
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
         else:
-            # return str(obj)
             raise TypeError(f"{obj!r} is not JSON serializable")
+
+    def encode(self, obj):
+        # decode back to str, as orjson returns bytes
+        return orjson.dumps(
+            obj,
+            option=orjson.OPT_NAIVE_UTC | orjson.OPT_SERIALIZE_NUMPY| orjson.OPT_UTC_Z,
+            default=self.default
+        ).decode('utf-8')
+
 
 class BaseEncoder:
     """
-    Encoder replacement for json.dumps using rapidjson
+    Encoder replacement for json.dumps using orjson
     """
 
     def __init__(self, *args, **kwargs):
-        # Filter/adapt JSON arguments to RapidJSON ones
-        rjargs = ()
-        rjkwargs = {}
-        encoder = DefaultEncoder(sort_keys=False, *rjargs, **rjkwargs)
+        encoder = DefaultEncoder(*args, **kwargs)
         self.encode = encoder.__call__
