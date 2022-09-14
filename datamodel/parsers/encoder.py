@@ -7,7 +7,7 @@ from decimal import Decimal
 import asyncpg
 import numpy as np
 import orjson
-
+from dataclasses import _MISSING_TYPE, MISSING
 
 class DefaultEncoder:
     """
@@ -37,8 +37,11 @@ class DefaultEncoder:
             return float(obj)
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
-        else:
-            raise TypeError(f"{obj!r} is not JSON serializable")
+        elif obj == _MISSING_TYPE:
+            return None
+        elif obj == MISSING:
+            return None
+        raise TypeError(f"{obj!r} is not JSON serializable")
 
     def encode(self, obj):
         # decode back to str, as orjson returns bytes

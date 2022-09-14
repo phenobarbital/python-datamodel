@@ -18,7 +18,9 @@ from dataclasses import (
 )
 from datamodel.fields import Field
 from .parsers import DefaultEncoder
-
+from .exceptions import (
+    ValidationModel
+)
 
 class Meta:
     """
@@ -86,9 +88,7 @@ def create_dataclass(
     dc = dataclass(unsafe_hash=True, init=True, frozen=frozen)(new_cls)
     setattr(dc, "__setattr__", _dc_method_setattr)
     # adding a properly internal json encoder:
-    dc.__encoder__ = DefaultEncoder(
-        sort_keys=False
-    )
+    dc.__encoder__ = DefaultEncoder()
     dc.__valid__: bool = False
     return dc
 
@@ -164,7 +164,6 @@ class ModelMeta(type):
         super(ModelMeta, cls).__init__(*args, **kwargs)
 
 
-
 class BaseModel(metaclass=ModelMeta):
     """
     Model.
@@ -191,7 +190,7 @@ class BaseModel(metaclass=ModelMeta):
     def json(self, **kwargs):
         encoder = self.__encoder__
         if len(kwargs) > 0: # re-configure the encoder
-            encoder = DefaultEncoder(sort_keys=False, **kwargs)
+            encoder = DefaultEncoder(**kwargs)
         return encoder(asdict(self))
 
     def is_valid(self):
@@ -232,13 +231,19 @@ class BaseModel(metaclass=ModelMeta):
                 pass
             if _type._name == 'Dict' and isinstance(data, dict):
                 return {k: self._parse_type(F.type.__args__[1], v) for k, v in data.items()}
-            elif _type._name == 'List' and isinstance(data, list):
+            elif _type._name == 'List' and isinstance(data, (list, tuple)):
                 arg = args[0]
                 if arg.__module__ == 'typing': # nested typing
                     try:
                         t = arg.__args__[0]
                         if is_dataclass(t):
-                            return [t(*x) for x in data]
+                            result = []
+                            for x in data:
+                                if isinstance(x, dict):
+                                    result.append(t(**x))
+                                else:
+                                    result.append(t(*x))
+                            return result
                         else:
                             return data
                     except AttributeError:
@@ -251,8 +256,6 @@ class BaseModel(metaclass=ModelMeta):
                 if isinstance(_type.__origin__, type(Union)):
                     t = args[0]
                     if is_dataclass(t):
-                        # print('AQUI ', F, args, _type.__origin__, t)
-                        # print(data, type(data))
                         if isinstance(data, dict):
                             data = t(**data)
                         elif isinstance(data, (list, tuple)):

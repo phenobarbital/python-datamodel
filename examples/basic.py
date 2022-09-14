@@ -1,6 +1,7 @@
 from typing import Union, List, Optional
 from dataclasses import dataclass, fields, is_dataclass
 from datamodel import Field, BaseModel
+import orjson
 
 @dataclass
 class Point:
@@ -66,3 +67,14 @@ print(addr)
 print('IS a Dataclass?: ', is_dataclass(addr))
 
 print(addr.location.get_location())
+print('== Export to JSON ==')
+print(addr.json())
+b = addr.json()
+data = orjson.loads(b)
+data['country'] = {
+    "country": "Spain",
+    "code": "ES"
+}
+print('DICT: ', data)
+addr2 = Address(**data)
+print(addr2)
