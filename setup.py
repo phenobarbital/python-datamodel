@@ -6,7 +6,8 @@ See:
 https://github.com/phenobarbital/DataModel
 """
 from os import path
-from setuptools import find_packages, setup
+from setuptools import find_packages, setup, Extension
+from Cython.Build import cythonize
 
 
 def get_path(filename):
@@ -14,12 +15,24 @@ def get_path(filename):
 
 
 def readme():
-    with open(get_path('README.md')) as readme:
-        return readme.read()
+    with open(get_path('README.md'), encoding='utf-8') as rd:
+        return rd.read()
 
 
-with open(get_path('datamodel/version.py')) as meta:
+with open(get_path('datamodel/version.py'), encoding='utf-8') as meta:
     exec(meta.read())
+
+COMPILE_ARGS = ["-O2"]
+
+extensions = [
+    Extension(
+        name='datamodel.fields',
+        sources=['datamodel/fields.pyx'],
+        language_level=3,
+        extra_compile_args=COMPILE_ARGS,
+        language="c++"
+    )
+]
 
 setup(
     name="python-datamodel",
@@ -69,8 +82,7 @@ setup(
         "asyncio==3.4.3",
         "cchardet==2.1.7",
         "objectpath==0.6.1",
-        "rapidjson==1.0.0",
-        "python-rapidjson>=1.5",
+        "orjson==3.8.0",
         'typing_extensions==4.3.0',
         "asyncpg==0.26.0"
     ],
@@ -81,6 +93,7 @@ setup(
         'pytest-assume==2.4.3'
     ],
     test_suite='tests',
+    ext_modules=cythonize(extensions),
     project_urls={  # Optional
         "Source": "https://github.com/phenobarbital/datamodels",
         "Funding": "https://paypal.me/phenobarbital",

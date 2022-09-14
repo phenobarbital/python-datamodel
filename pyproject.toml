@@ -1,11 +1,12 @@
 [build-system]
 requires = [
-    'setuptools >= 47',
-    'wheel == 0.37.1',
-    'toml == 0.10.2',
-    'flit==3.5.1'
+    'setuptools>=47',
+    'wheel==0.37.1',
+    'Cython==0.29.32',
+    'toml>=0.10.2',
+    'asyncio==3.4.3',
+    'flit'
 ]
-
 build-backend = "setuptools.build_meta"
 
 [tool.flit.metadata]
@@ -20,8 +21,8 @@ classifiers=[
   "Intended Audience :: Information Technology",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.7",
   "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python",
   "Typing :: Typed",
   "Environment :: Web Environment",
@@ -31,8 +32,9 @@ classifiers=[
   "Topic :: Software Development :: Build Tools",
   "License :: OSI Approved :: BSD License",
 ]
+dynamic = ['version', 'description']
 description-file = "README.md"
-requires-python = ">=3.7.1"
+requires-python = ">=3.8.1"
 
 [tool.pytest.ini_options]
 addopts = [

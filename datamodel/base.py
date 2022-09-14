@@ -1,30 +1,29 @@
 from __future__ import annotations
-import types
 import inspect
-import typing
 from typing import (
     Optional,
     Union,
     Any
 )
 import logging
-from collections.abc import Callable, Iterable, Mapping
-from decimal import Decimal
+import uuid
+from collections.abc import Callable
 # Dataclass
-from dataclasses import Field as ff
 from dataclasses import (
     dataclass,
     is_dataclass,
     _FIELD,
     asdict,
-    MISSING,
-    InitVar,
     make_dataclass,
     _MISSING_TYPE
 )
-import six
-from .encoders import DefaultEncoder
-
+from orjson import OPT_INDENT_2
+from datamodel.fields import Field
+from .parsers import DefaultEncoder
+from .exceptions import (
+    ValidationModel
+)
+from .types import JSON_TYPES
 
 class Meta:
     """
@@ -45,149 +44,6 @@ class Meta:
     def set_connection(cls, conn: Callable):
         cls.connection = conn
 
-@dataclass
-class ValidationError:
-    """
-    Class for Error validation on DataModels.
-    """
-    field: str
-    value: Optional[Union[str, Any]]
-    error: str
-    value_type: Any
-    annotation: type
-    exception: Optional[Exception]
-
-
-class Field(ff):
-    """
-    Field.
-    description: Extending Field definition from Dataclass Field to DataModel.
-    """
-    def __init__(
-        self,
-        default: Optional[Union[Iterable, Mapping, Any]] = None,
-        nullable: Optional[bool] = True,
-        required: Optional[bool] = False,
-        factory: Callable[..., Any] = None,
-        min: Union[int, float, Decimal] = None,
-        max: Union[int, float, Decimal] = None,
-        validator: Optional[Union[Callable, None]] = None,
-        **kwargs,
-    ):
-        args = {
-            "init": True,
-            "repr": True,
-            "hash": True,
-            "compare": True,
-            "metadata": None,
-        }
-        try:
-            args["compare"] = kwargs["compare"]
-            del kwargs["compare"]
-        except KeyError:
-            pass
-        meta = {
-            "required": required,
-            "nullable": nullable,
-            "validator": None
-        }
-        self._required = required
-        self._nullable = nullable
-        if 'description' in kwargs:
-            self.description = kwargs['description']
-        else:
-            self.description = None
-        _range = {}
-        if min is not None:
-            _range["min"] = min
-        if max is not None:
-            _range["max"] = max
-        try:
-            args["repr"] = kwargs["repr"]
-            del kwargs["repr"]
-        except KeyError:
-            args["repr"] = True
-        try:
-            args["init"] = kwargs["init"]
-            del kwargs["init"]
-        except KeyError:
-            args["init"] = True
-        if required is True:
-            args["init"] = True
-        if args["init"] is False:
-            args["repr"] = False
-        if validator is not None:
-            meta["validator"] = validator
-        try:
-            meta = {**meta, **kwargs["metadata"]}
-            del kwargs["metadata"]
-        except (KeyError, TypeError):
-            pass
-        self._meta = {**meta, **_range, **kwargs}
-        args["metadata"] = self._meta
-        self._default_factory = MISSING
-        if default is not None:
-            self._default = default
-        else:
-            self._default = None
-            if nullable is True: # Can be null
-                if not factory:
-                    factory = _MISSING_TYPE
-                self._default_factory = factory
-        # Calling Parent init
-        super(Field, self).__init__(
-            default=self._default,
-            default_factory=self._default_factory,
-            **args
-        )
-        # set field type and dbtype
-        self._field_type = self.type
-
-    def __repr__(self):
-        return (
-            "Field("
-            f"column={self.name!r},"
-            f"type={self.type!r},"
-            f"default={self.default!r})"
-        )
-
-    def required(self) -> bool:
-        return self._required
-
-    def nullable(self) -> bool:
-        return self._nullable
-
-def Column(
-    *,
-    default: Optional[Union[Iterable, Mapping, Any]] = None,
-    nullable: Optional[bool] = True,
-    required: Optional[bool] = False,
-    factory: Callable[..., Any] = None,
-    min: Union[int, float, Decimal] = None,
-    max: Union[int, float, Decimal] = None,
-    validator: Optional[Union[Callable, None]] = None,
-    **kwargs,
-):
-    """
-      Column.
-      DataModel Function that returns a Field() object
-    """
-    if factory is None:
-        factory = MISSING
-    if default is not None and factory is not MISSING:
-        raise ValueError(
-            f"Cannot specify both default: {default} and factory: {factory}"
-        )
-    return Field(
-        default=default,
-        nullable=nullable,
-        required=required,
-        factory=factory,
-        min=min,
-        max=max,
-        validator=validator,
-        **kwargs,
-    )
 
 def _dc_method_setattr(
             self,
@@ -235,9 +91,7 @@ def create_dataclass(
     dc = dataclass(unsafe_hash=True, init=True, frozen=frozen)(new_cls)
     setattr(dc, "__setattr__", _dc_method_setattr)
     # adding a properly internal json encoder:
-    dc.__encoder__ = DefaultEncoder(
-        sort_keys=False
-    )
+    dc.__encoder__ = DefaultEncoder()
     dc.__valid__: bool = False
     return dc
 
@@ -313,7 +167,6 @@ class ModelMeta(type):
         super(ModelMeta, cls).__init__(*args, **kwargs)
 
 
-
 class BaseModel(metaclass=ModelMeta):
     """
     Model.
@@ -340,7 +193,7 @@ class BaseModel(metaclass=ModelMeta):
     def json(self, **kwargs):
         encoder = self.__encoder__
         if len(kwargs) > 0: # re-configure the encoder
-            encoder = DefaultEncoder(sort_keys=False, **kwargs)
+            encoder = DefaultEncoder(**kwargs)
         return encoder(asdict(self))
 
     def is_valid(self):
@@ -372,6 +225,7 @@ class BaseModel(metaclass=ModelMeta):
             setattr(self, name, value)
 
     def _parse_type(self, F, data) -> object:
+        # TODO: migrate to cython, using Type
         _type = F.type
         if _type.__module__ == 'typing':
             args = None
@@ -381,13 +235,19 @@ class BaseModel(metaclass=ModelMeta):
                 pass
             if _type._name == 'Dict' and isinstance(data, dict):
                 return {k: self._parse_type(F.type.__args__[1], v) for k, v in data.items()}
-            elif _type._name == 'List' and isinstance(data, list):
+            elif _type._name == 'List' and isinstance(data, (list, tuple)):
                 arg = args[0]
                 if arg.__module__ == 'typing': # nested typing
                     try:
                         t = arg.__args__[0]
                         if is_dataclass(t):
-                            return [t(*x) for x in data]
+                            result = []
+                            for x in data:
+                                if isinstance(x, dict):
+                                    result.append(t(**x))
+                                else:
+                                    result.append(t(*x))
+                            return result
                         else:
                             return data
                     except AttributeError:
@@ -400,8 +260,6 @@ class BaseModel(metaclass=ModelMeta):
                 if isinstance(_type.__origin__, type(Union)):
                     t = args[0]
                     if is_dataclass(t):
-                        # print('AQUI ', F, args, _type.__origin__, t)
-                        # print(data, type(data))
                         if isinstance(data, dict):
                             data = t(**data)
                         elif isinstance(data, (list, tuple)):
@@ -424,7 +282,7 @@ class BaseModel(metaclass=ModelMeta):
         for _, f in self.__columns__.items():
             value = getattr(self, f.name)
             key = f.name
-            # print(f'FIELD {key} = {value}')
+            # print(f'FIELD {key} = {value}', 'TYPE : ', f.type)
             if is_dataclass(f.type): # is already a dataclass
                 if isinstance(value, dict):
                     new_val = f.type(**value)
@@ -452,6 +310,14 @@ class BaseModel(metaclass=ModelMeta):
             elif value is None:
                 is_missing = isinstance(f.default, _MISSING_TYPE)
                 setattr(self, key, f.default_factory if is_missing else f.default)
+            elif f.type == uuid.UUID:
+                # TODO: Automatic conversion from other types, like datatime, etc
+                uid = None
+                try:
+                    uid = uuid.UUID(str(value))
+                except ValueError as e:
+                    print(e)
+                setattr(self, key, uid if uid else f.default)
             else:
                 continue
         try:
@@ -496,7 +362,7 @@ class BaseModel(metaclass=ModelMeta):
             if val_type == type or val == annotated_type or val is None:
                 # data not provided
                 if f.metadata["required"] is True and self.Meta.strict is True:
-                    errors[name] = ValidationError(
+                    errors[name] = ValidationModel(
                         field=name,
                         value=None,
                         value_type=val_type,
@@ -505,7 +371,7 @@ class BaseModel(metaclass=ModelMeta):
                         exception=None,
                     )
                 elif f.metadata['nullable'] is False:
-                    errors[name] = ValidationError(
+                    errors[name] = ValidationModel(
                         field=name,
                         value=None,
                         value_type=val_type,
@@ -517,7 +383,7 @@ class BaseModel(metaclass=ModelMeta):
                 try:
                     instance = self._is_instanceof(val, annotated_type)
                     if not instance:
-                            errors[name] = ValidationError(
+                            errors[name] = ValidationModel(
                                 field=name,
                                 value=val,
                                 error="Validation Exception",
@@ -526,7 +392,7 @@ class BaseModel(metaclass=ModelMeta):
                                 exception=None,
                             )
                 except (TypeError) as e:
-                    errors[name] = ValidationError(
+                    errors[name] = ValidationModel(
                         field=name,
                         value=val,
                         error="Validation Exception",
@@ -542,7 +408,7 @@ class BaseModel(metaclass=ModelMeta):
                             try:
                                 result = fn(f, val)
                                 if result is False:
-                                    errors[name] = ValidationError(
+                                    errors[name] = ValidationModel(
                                         field=name,
                                         value=val,
                                         error=f"Validator: {result}",
@@ -551,7 +417,7 @@ class BaseModel(metaclass=ModelMeta):
                                         exception=None,
                                     )
                             except (ValueError, AttributeError, TypeError) as e:
-                                errors[name] = ValidationError(
+                                errors[name] = ValidationModel(
                                     field=name,
                                     value=val,
                                     error="Validator Exception",
@@ -586,3 +452,68 @@ class BaseModel(metaclass=ModelMeta):
         m.app_label = schema
         obj.Meta = m
         return obj
+
+    @classmethod
+    def from_json(cls, obj: str) -> dataclass:
+        try:
+            decoded = cls.__encoder__.loads(obj)
+            return cls(**decoded)
+        except ValueError as e:
+            raise RuntimeError(
+                "DataModel: Invalid string (JSON) data for decoding: {e}"
+            ) from e
+
+    @classmethod
+    def from_dict(cls, obj: dict) -> dataclass:
+        try:
+            return cls(**obj)
+        except ValueError as e:
+            raise RuntimeError(
+                "DataModel: Invalid Dictionary data for decoding: {e}"
+            ) from e
+
+    @classmethod
+    def model(cls, dialect: str = "json") -> Any:
+        """model.
+
+        Return the json-version of current Model.
+        Returns:
+            str: string (json) version of model.
+        """
+        result = None
+        clsname = cls.__name__
+        schema = cls.Meta.schema
+        table = cls.Meta.name if cls.Meta.name else clsname.lower()
+        columns = cls.columns(cls).items()
+        if dialect == 'json':
+            cols = {}
+            for _, field in columns:
+                key = field.name
+                _type = field.type
+                if _type.__module__ == 'typing':
+                    # TODO: discover real value of typing
+                    if _type._name == 'List':
+                        t = 'list'
+                    elif _type._name == 'Dict':
+                        t = 'dict'
+                    else:
+                        try:
+                            t = _type.__args__[0]
+                            t = t.__name__
+                        except (AttributeError, ValueError):
+                            t = 'object'
+                else:
+                    try:
+                        t = JSON_TYPES[_type]
+                    except KeyError:
+                        t = 'object'
+                cols[key] = {"name": key, "type": t}
+            doc = {
+                "name": clsname,
+                "description": cls.__doc__.strip("\n").strip(),
+                "table": table,
+                "schema": schema,
+                "fields": cols,
+            }
+            result = cls.__encoder__.dumps(doc, option=OPT_INDENT_2)
+        return result
