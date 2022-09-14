@@ -2,7 +2,7 @@
 JSON Encoders.
 """
 import decimal
-from typing import Any
+from typing import Any, Union
 from decimal import Decimal
 import asyncpg
 import numpy as np
@@ -43,7 +43,7 @@ class DefaultEncoder:
             return None
         raise TypeError(f"{obj!r} is not JSON serializable")
 
-    def encode(self, obj):
+    def encode(self, obj) -> str:
         # decode back to str, as orjson returns bytes
         return orjson.dumps(
             obj,
@@ -51,6 +51,14 @@ class DefaultEncoder:
             default=self.default
         ).decode('utf-8')
 
+    dumps = encode
+
+    def decode(self, obj) -> Union[dict, list]:
+        return orjson.loads(
+            obj
+        )
+
+    loads = decode
 
 class BaseEncoder:
     """

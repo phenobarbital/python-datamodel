@@ -6,6 +6,7 @@ from typing import (
     Any
 )
 import logging
+import uuid
 from collections.abc import Callable
 # Dataclass
 from dataclasses import (
@@ -278,7 +279,7 @@ class BaseModel(metaclass=ModelMeta):
         for _, f in self.__columns__.items():
             value = getattr(self, f.name)
             key = f.name
-            # print(f'FIELD {key} = {value}')
+            print(f'FIELD {key} = {value}', 'TYPE : ', f.type)
             if is_dataclass(f.type): # is already a dataclass
                 if isinstance(value, dict):
                     new_val = f.type(**value)
@@ -306,6 +307,14 @@ class BaseModel(metaclass=ModelMeta):
             elif value is None:
                 is_missing = isinstance(f.default, _MISSING_TYPE)
                 setattr(self, key, f.default_factory if is_missing else f.default)
+            elif f.type == uuid.UUID:
+                # TODO: Automatic conversion from other types, like datatime, etc
+                uid = None
+                try:
+                    uid = uuid.UUID(str(value))
+                except ValueError as e:
+                    print(e)
+                setattr(self, key, uid if uid else f.default)
             else:
                 continue
         try:
@@ -440,3 +449,13 @@ class BaseModel(metaclass=ModelMeta):
         m.app_label = schema
         obj.Meta = m
         return obj
+
+    @classmethod
+    def from_json(cls, obj: str) -> dataclass:
+        try:
+            decoded = cls.__encoder__.loads(obj)
+            return cls(**decoded)
+        except ValueError as e:
+            raise RuntimeError(
+                "DataModel: Invalid string (JSON) data for decoding: {e}"
+            ) from e
