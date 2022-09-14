@@ -1,29 +1,23 @@
 from __future__ import annotations
-import types
 import inspect
-import typing
 from typing import (
     Optional,
     Union,
     Any
 )
 import logging
-from collections.abc import Callable, Iterable, Mapping
-from decimal import Decimal
+from collections.abc import Callable
 # Dataclass
-from dataclasses import Field as ff
 from dataclasses import (
     dataclass,
     is_dataclass,
     _FIELD,
     asdict,
-    MISSING,
-    InitVar,
     make_dataclass,
     _MISSING_TYPE
 )
-import six
-from .encoders import DefaultEncoder
+from datamodel.fields import Field
+from .parsers import DefaultEncoder
 
 
 class Meta:
@@ -45,149 +39,6 @@ class Meta:
     def set_connection(cls, conn: Callable):
         cls.connection = conn
 
-@dataclass
-class ValidationError:
-    """
-    Class for Error validation on DataModels.
-    """
-    field: str
-    value: Optional[Union[str, Any]]
-    error: str
-    value_type: Any
-    annotation: type
-    exception: Optional[Exception]
-
-
-class Field(ff):
-    """
-    Field.
-    description: Extending Field definition from Dataclass Field to DataModel.
-    """
-    def __init__(
-        self,
-        default: Optional[Union[Iterable, Mapping, Any]] = None,
-        nullable: Optional[bool] = True,
-        required: Optional[bool] = False,
-        factory: Callable[..., Any] = None,
-        min: Union[int, float, Decimal] = None,
-        max: Union[int, float, Decimal] = None,
-        validator: Optional[Union[Callable, None]] = None,
-        **kwargs,
-    ):
-        args = {
-            "init": True,
-            "repr": True,
-            "hash": True,
-            "compare": True,
-            "metadata": None,
-        }
-        try:
-            args["compare"] = kwargs["compare"]
-            del kwargs["compare"]
-        except KeyError:
-            pass
-        meta = {
-            "required": required,
-            "nullable": nullable,
-            "validator": None
-        }
-        self._required = required
-        self._nullable = nullable
-        if 'description' in kwargs:
-            self.description = kwargs['description']
-        else:
-            self.description = None
-        _range = {}
-        if min is not None:
-            _range["min"] = min
-        if max is not None:
-            _range["max"] = max
-        try:
-            args["repr"] = kwargs["repr"]
-            del kwargs["repr"]
-        except KeyError:
-            args["repr"] = True
-        try:
-            args["init"] = kwargs["init"]
-            del kwargs["init"]
-        except KeyError:
-            args["init"] = True
-        if required is True:
-            args["init"] = True
-        if args["init"] is False:
-            args["repr"] = False
-        if validator is not None:
-            meta["validator"] = validator
-        try:
-            meta = {**meta, **kwargs["metadata"]}
-            del kwargs["metadata"]
-        except (KeyError, TypeError):
-            pass
-        self._meta = {**meta, **_range, **kwargs}
-        args["metadata"] = self._meta
-        self._default_factory = MISSING
-        if default is not None:
-            self._default = default
-        else:
-            self._default = None
-            if nullable is True: # Can be null
-                if not factory:
-                    factory = _MISSING_TYPE
-                self._default_factory = factory
-        # Calling Parent init
-        super(Field, self).__init__(
-            default=self._default,
-            default_factory=self._default_factory,
-            **args
-        )
-        # set field type and dbtype
-        self._field_type = self.type
-
-    def __repr__(self):
-        return (
-            "Field("
-            f"column={self.name!r},"
-            f"type={self.type!r},"
-            f"default={self.default!r})"
-        )
-
-    def required(self) -> bool:
-        return self._required
-
-    def nullable(self) -> bool:
-        return self._nullable
-
-def Column(
-    *,
-    default: Optional[Union[Iterable, Mapping, Any]] = None,
-    nullable: Optional[bool] = True,
-    required: Optional[bool] = False,
-    factory: Callable[..., Any] = None,
-    min: Union[int, float, Decimal] = None,
-    max: Union[int, float, Decimal] = None,
-    validator: Optional[Union[Callable, None]] = None,
-    **kwargs,
-):
-    """
-      Column.
-      DataModel Function that returns a Field() object
-    """
-    if factory is None:
-        factory = MISSING
-    if default is not None and factory is not MISSING:
-        raise ValueError(
-            f"Cannot specify both default: {default} and factory: {factory}"
-        )
-    return Field(
-        default=default,
-        nullable=nullable,
-        required=required,
-        factory=factory,
-        min=min,
-        max=max,
-        validator=validator,
-        **kwargs,
-    )
 
 def _dc_method_setattr(
             self,
@@ -496,7 +347,7 @@ class BaseModel(metaclass=ModelMeta):
             if val_type == type or val == annotated_type or val is None:
                 # data not provided
                 if f.metadata["required"] is True and self.Meta.strict is True:
-                    errors[name] = ValidationError(
+                    errors[name] = ValidationModel(
                         field=name,
                         value=None,
                         value_type=val_type,
@@ -505,7 +356,7 @@ class BaseModel(metaclass=ModelMeta):
                         exception=None,
                     )
                 elif f.metadata['nullable'] is False:
-                    errors[name] = ValidationError(
+                    errors[name] = ValidationModel(
                         field=name,
                         value=None,
                         value_type=val_type,
@@ -517,7 +368,7 @@ class BaseModel(metaclass=ModelMeta):
                 try:
                     instance = self._is_instanceof(val, annotated_type)
                     if not instance:
-                            errors[name] = ValidationError(
+                            errors[name] = ValidationModel(
                                 field=name,
                                 value=val,
                                 error="Validation Exception",
@@ -526,7 +377,7 @@ class BaseModel(metaclass=ModelMeta):
                                 exception=None,
                             )
                 except (TypeError) as e:
-                    errors[name] = ValidationError(
+                    errors[name] = ValidationModel(
                         field=name,
                         value=val,
                         error="Validation Exception",
@@ -542,7 +393,7 @@ class BaseModel(metaclass=ModelMeta):
                             try:
                                 result = fn(f, val)
                                 if result is False:
-                                    errors[name] = ValidationError(
+                                    errors[name] = ValidationModel(
                                         field=name,
                                         value=val,
                                         error=f"Validator: {result}",
@@ -551,7 +402,7 @@ class BaseModel(metaclass=ModelMeta):
                                         exception=None,
                                     )
                             except (ValueError, AttributeError, TypeError) as e:
-                                errors[name] = ValidationError(
+                                errors[name] = ValidationModel(
                                     field=name,
                                     value=val,
                                     error="Validator Exception",

@@ -1,6 +1,6 @@
-from typing import Union, List, Dict, Optional
+from typing import Union, List, Optional
 from dataclasses import dataclass, fields, is_dataclass
-from datamodel.base import Field, BaseModel
+from datamodel import Field, BaseModel
 
 @dataclass
 class Point:

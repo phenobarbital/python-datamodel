@@ -1,7 +1,7 @@
 import uuid
 from typing import Union, List, Optional
 from dataclasses import dataclass, field, is_dataclass
-from datamodel.base import BaseModel, Column, Field
+from datamodel import BaseModel, Column, Field
 
 def auto_uid():
     return uuid.uuid4()
