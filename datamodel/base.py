@@ -408,7 +408,7 @@ class BaseModel(metaclass=ModelMeta):
                             data = t(*data)
                         else:
                             data = None
-                    F.type = args[0]
+                    # F.type = args[0]
                     return data
                 else:
                     pass
@@ -478,7 +478,10 @@ class BaseModel(metaclass=ModelMeta):
                         try:
                             new_val = val()
                         except TypeError:
-                            new_val = f.default()
+                            try:
+                                new_val = f.default()
+                            except TypeError:
+                                new_val = None
                         setattr(self, name, new_val)
                 except TypeError as e:
                     print(e)
@@ -532,29 +535,30 @@ class BaseModel(metaclass=ModelMeta):
                         exception=e,
                     )
                 ## calling validator:
-                if f.metadata['validator'] is not None:
-                    fn = f.metadata['validator']
-                    if self.is_callable(fn):
-                        try:
-                            result = fn(f, val)
-                            if result is False:
+                if 'validator' in f.metadata:
+                    if f.metadata['validator'] is not None:
+                        fn = f.metadata['validator']
+                        if self.is_callable(fn):
+                            try:
+                                result = fn(f, val)
+                                if result is False:
+                                    errors[name] = ValidationError(
+                                        field=name,
+                                        value=val,
+                                        error=f"Validator: {result}",
+                                        value_type=val_type,
+                                        annotation=annotated_type,
+                                        exception=None,
+                                    )
+                            except (ValueError, AttributeError, TypeError) as e:
                                 errors[name] = ValidationError(
                                     field=name,
                                     value=val,
-                                    error=f"Validator: {result}",
+                                    error="Validator Exception",
                                     value_type=val_type,
                                     annotation=annotated_type,
-                                    exception=None,
+                                    exception=e,
                                 )
-                        except (ValueError, AttributeError, TypeError) as e:
-                            errors[name] = ValidationError(
-                                field=name,
-                                value=val,
-                                error="Validator Exception",
-                                value_type=val_type,
-                                annotation=annotated_type,
-                                exception=e,
-                            )
         if errors:
             print("=== ERRORS ===")
             print(errors)
