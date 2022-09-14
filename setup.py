@@ -29,7 +29,7 @@ extensions = [
         name='datamodel.fields',
         sources=['datamodel/fields.pyx'],
         extra_compile_args=COMPILE_ARGS,
-        language="c++"
+        language="c"
     )
 ]
 
@@ -69,13 +69,11 @@ setup(
         "setuptools==65.3.0",
         "wheel==0.37.1",
         "Cython==0.29.32",
-        "numpy==1.22.2",
         "asyncio==3.4.3",
         "cchardet==2.1.7"
     ],
     install_requires=[
         "wheel==0.37.1",
-        "cpython==0.0.6",
         "Cython==0.29.32",
         "numpy==1.23.3",
         "uvloop==0.16.0",
