@@ -30,7 +30,7 @@ extensions = [
         sources=['datamodel/fields.pyx'],
         language_level=3,
         extra_compile_args=COMPILE_ARGS,
-        language="c++"
+        # language="c++"
     )
 ]
 
