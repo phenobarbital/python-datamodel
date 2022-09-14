@@ -5,6 +5,7 @@
 See:
 https://github.com/phenobarbital/DataModel
 """
+import sys
 from os import path
 from setuptools import find_packages, setup, Extension
 from Cython.Build import cythonize
@@ -32,6 +33,8 @@ extensions = [
         language="c"
     )
 ]
+
+# sys.argv.extend(['--plat-name', 'manylinux_2_28_x86_64'])
 
 setup(
     name="python-datamodel",
