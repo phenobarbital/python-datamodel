@@ -17,11 +17,13 @@ from dataclasses import (
     make_dataclass,
     _MISSING_TYPE
 )
+from orjson import OPT_INDENT_2
 from datamodel.fields import Field
 from .parsers import DefaultEncoder
 from .exceptions import (
     ValidationModel
 )
+from .types import JSON_TYPES
 
 class Meta:
     """
@@ -223,6 +225,7 @@ class BaseModel(metaclass=ModelMeta):
             setattr(self, name, value)
 
     def _parse_type(self, F, data) -> object:
+        # TODO: migrate to cython, using Type
         _type = F.type
         if _type.__module__ == 'typing':
             args = None
@@ -279,7 +282,7 @@ class BaseModel(metaclass=ModelMeta):
         for _, f in self.__columns__.items():
             value = getattr(self, f.name)
             key = f.name
-            print(f'FIELD {key} = {value}', 'TYPE : ', f.type)
+            # print(f'FIELD {key} = {value}', 'TYPE : ', f.type)
             if is_dataclass(f.type): # is already a dataclass
                 if isinstance(value, dict):
                     new_val = f.type(**value)
@@ -459,3 +462,49 @@ class BaseModel(metaclass=ModelMeta):
             raise RuntimeError(
                 "DataModel: Invalid string (JSON) data for decoding: {e}"
             ) from e
+
+    @classmethod
+    def model(cls, dialect: str = "json") -> Any:
+        """model.
+
+        Return the json-version of current Model.
+        Returns:
+            str: string (json) version of model.
+        """
+        result = None
+        clsname = cls.__name__
+        schema = cls.Meta.schema
+        table = cls.Meta.name if cls.Meta.name else clsname.lower()
+        columns = cls.columns(cls).items()
+        if dialect == 'json':
+            cols = {}
+            for _, field in columns:
+                key = field.name
+                _type = field.type
+                if _type.__module__ == 'typing':
+                    # TODO: discover real value of typing
+                    if _type._name == 'List':
+                        t = 'list'
+                    elif _type._name == 'Dict':
+                        t = 'dict'
+                    else:
+                        try:
+                            t = _type.__args__[0]
+                            t = t.__name__
+                        except (AttributeError, ValueError):
+                            t = 'object'
+                else:
+                    try:
+                        t = JSON_TYPES[_type]
+                    except KeyError:
+                        t = 'object'
+                cols[key] = {"name": key, "type": t}
+            doc = {
+                "name": clsname,
+                "description": cls.__doc__.strip("\n").strip(),
+                "table": table,
+                "schema": schema,
+                "fields": cols,
+            }
+            result = cls.__encoder__.dumps(doc, option=OPT_INDENT_2)
+        return result

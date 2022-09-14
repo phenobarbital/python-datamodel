@@ -1,13 +1,14 @@
 """
 JSON Encoders.
 """
+from dataclasses import _MISSING_TYPE, MISSING
 import decimal
 from typing import Any, Union
 from decimal import Decimal
 import asyncpg
 import numpy as np
 import orjson
-from dataclasses import _MISSING_TYPE, MISSING
+
 
 class DefaultEncoder:
     """
@@ -17,8 +18,8 @@ class DefaultEncoder:
         # eventually take into consideration when serializing
         self.options = kwargs
 
-    def __call__(self, obj) -> Any:
-        return self.encode(obj)
+    def __call__(self, obj, **kwargs) -> Any:
+        return self.encode(obj, **kwargs)
 
     def default(self, obj):
         if isinstance(obj, decimal.Decimal):
@@ -43,12 +44,17 @@ class DefaultEncoder:
             return None
         raise TypeError(f"{obj!r} is not JSON serializable")
 
-    def encode(self, obj) -> str:
+    def encode(self, obj, **kwargs) -> str:
         # decode back to str, as orjson returns bytes
+        options = {
+            "default": self.default,
+            "option": orjson.OPT_NAIVE_UTC | orjson.OPT_SERIALIZE_NUMPY| orjson.OPT_UTC_Z
+        }
+        if kwargs:
+            options = {**options, **kwargs}
         return orjson.dumps(
             obj,
-            option=orjson.OPT_NAIVE_UTC | orjson.OPT_SERIALIZE_NUMPY| orjson.OPT_UTC_Z,
-            default=self.default
+            **options
         ).decode('utf-8')
 
     dumps = encode

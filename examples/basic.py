@@ -1,7 +1,12 @@
+import uuid
 from typing import Union, List, Optional
-from dataclasses import dataclass, fields, is_dataclass
-from datamodel import Field, BaseModel
+from dataclasses import dataclass, fields, is_dataclass, field
 import orjson
+from datamodel import Field, BaseModel
+
+
+def auto_uid():
+    return uuid.uuid4()
 
 @dataclass
 class Point:
@@ -53,6 +58,7 @@ def valid_zipcode(field, value):
     return value == 45510
 
 class Address(BaseModel):
+    id: uuid.UUID = field(default_factory=auto_uid)
     street: str = Field(required=True)
     number: str = Field(factory=default_number)
     zipcode: int = Field(required=False, default=1010, validator=valid_zipcode)
@@ -75,6 +81,10 @@ data['country'] = {
     "country": "Spain",
     "code": "ES"
 }
-print('DICT: ', data)
 addr2 = Address(**data)
 print(addr2)
+print('== Using "from-json" method ==')
+addr3 = Address.from_json(b)
+print(addr3)
+print('=== PRINTING MODEL === ')
+print(Address.model())
