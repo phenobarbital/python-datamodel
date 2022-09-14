@@ -40,7 +40,7 @@ setup(
     url="https://github.com/phenobarbital/python-datamodel",
     description=__description__,
     keywords=['asyncio', 'dataclass', 'dataclasses', 'data models'],
-    platforms=['POSIX'],
+    platforms=['any'],
     long_description=readme(),
     long_description_content_type='text/markdown',
     classifiers=[
@@ -66,6 +66,7 @@ setup(
     include_package_data=True,
     license=__license__,
     setup_requires=[
+        "setuptools==65.3.0",
         "wheel==0.37.1",
         "Cython==0.29.32",
         "numpy==1.22.2",

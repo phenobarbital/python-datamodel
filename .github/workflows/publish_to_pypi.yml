@@ -3,17 +3,22 @@ on: push
 jobs:
   build-n-publish:
     name: Build and publish Python 🐍 distributions 📦 to PyPI and TestPyPI
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags')
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
     - name: Set up Python 3.9
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
         python-version: 3.9
     - name: Install pypa/build
       run: >-
+        python -m pip install --upgrade pip
         python -m
+        # install cython first...
+        pip install cython
         pip install
         build
         --user
