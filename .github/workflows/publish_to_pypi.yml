@@ -1,5 +1,7 @@
 name: Publish Python 🐍 distributions 📦 to PyPI and TestPyPI
 on: push
+      branches:
+        - main
 jobs:
   build-n-publish:
     name: Build and publish Python 🐍 distributions 📦 to PyPI and TestPyPI
@@ -10,12 +12,14 @@ jobs:
       with:
         submodules: 'true'
     - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: 3.9
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip cython
     - name: Install pypa/build
       run: >-
-        pip install --upgrade pip cython
         python -m
         pip install
         build
