@@ -69,7 +69,7 @@ setup(
         "setuptools==65.3.0",
         "wheel==0.37.1",
         "Cython==0.29.32",
-        "numpy==1.22.2",
+        "numpy==1.23.3",
         "asyncio==3.4.3",
         "cchardet==2.1.7"
     ],
