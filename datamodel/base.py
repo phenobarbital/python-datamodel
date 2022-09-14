@@ -464,6 +464,15 @@ class BaseModel(metaclass=ModelMeta):
             ) from e
 
     @classmethod
+    def from_dict(cls, obj: dict) -> dataclass:
+        try:
+            return cls(**obj)
+        except ValueError as e:
+            raise RuntimeError(
+                "DataModel: Invalid Dictionary data for decoding: {e}"
+            ) from e
+
+    @classmethod
     def model(cls, dialect: str = "json") -> Any:
         """model.
 
