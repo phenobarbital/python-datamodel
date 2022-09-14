@@ -3,7 +3,7 @@ requires = [
     'setuptools==65.3.0',
     'wheel==0.37.1',
     'Cython==0.29.32',
-    'numpy',
+    'numpy==1.23.3',
     'toml>=0.10.2',
     'asyncio==3.4.3',
     'flit'

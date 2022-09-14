@@ -6,6 +6,7 @@
         "extra_compile_args": [
             "-O2"
         ],
+        "language": "c",
         "name": "datamodel.fields",
         "sources": [
             "datamodel/fields.pyx"

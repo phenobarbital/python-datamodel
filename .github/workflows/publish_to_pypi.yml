@@ -3,7 +3,7 @@ on: push
 jobs:
   build-n-publish:
     name: Build and publish Python 🐍 distributions 📦 to PyPI and TestPyPI
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     if: startsWith(github.ref, 'refs/tags')
     steps:
     - uses: actions/checkout@v3
@@ -13,9 +13,10 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: 3.9
+        architecture: x64
     - name: Install dependencies
       run: |
-        pip install --upgrade pip cython
+        pip install --upgrade pip numpy cython
     - name: Install pypa/build
       run: >-
         python -m
@@ -27,15 +28,19 @@ jobs:
         python -m
         build
         --sdist
-        --wheel
+        --no-isolation
         --outdir dist/
     - name: Publish distribution 📦 to Test PyPI
-      uses: pypa/gh-action-pypi-publish@master
+      uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.PYTHON_DATAMODEL_TEST_PYPI_API_TOKEN }}
         repository_url: https://test.pypi.org/legacy/
+        verbose: true
+        packages_dir: dist/
     - name: Publish distribution 📦 to PyPI
       if: startsWith(github.ref, 'refs/tags')
-      uses: pypa/gh-action-pypi-publish@master
+      uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.PYTHON_DATAMODEL_PYPI_API_TOKEN }}
+        verbose: true
+        packages_dir: dist/
