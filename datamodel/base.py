@@ -103,6 +103,8 @@ class ModelMeta(type):
     """
     __fields__: list
 
+    Meta = Meta
+
     def __new__(cls, name, bases, attrs, **kwargs):
         """__new__ is a classmethod, even without @classmethod decorator"""
         cols = []
@@ -133,7 +135,19 @@ class ModelMeta(type):
         new_cls.Meta = attr_meta or getattr(new_cls, "Meta", Meta)
         if not new_cls.Meta:
             new_cls.Meta = Meta
-        frozen = False
+        try:
+            frozen = new_cls.Meta.frozen
+        except AttributeError:
+            new_cls.Meta.frozen = False
+            frozen = False
+        # mix values from Meta to an existing Meta Class
+        new_cls.Meta.__annotations__ = Meta.__annotations__
+        for key, _ in Meta.__annotations__.items():
+            if not hasattr(new_cls.Meta, key):
+                try:
+                    setattr(new_cls.Meta, key, None)
+                except AttributeError as e:
+                    logging.warning(e)
         # adding a "class init method"
         try:
             new_cls.__model_init__(
