@@ -12,6 +12,7 @@ from cpython cimport datetime
 from dateutil import parser
 from uuid import UUID
 from cpython.ref cimport PyObject
+import orjson
 
 
 cdef object to_uuid(object obj):
@@ -179,6 +180,18 @@ cpdef object to_boolean(object obj):
     else:
         return bool(obj)
 
+cpdef object to_object(object obj):
+    if isinstance(obj, (list, dict)):
+        return obj
+    elif isinstance(obj, str):
+        try:
+            return orjson.loads(obj)
+        except (TypeError, ValueError):
+            return None
+    else:
+        raise ValueError(
+            f"DataModel: can't convert invalid data {obj} to Object"
+        )
 
 cdef dict encoders = {
     UUID: to_uuid,
@@ -191,6 +204,8 @@ cdef dict encoders = {
     datetime.timedelta: to_timedelta,
     datetime.time: to_time,
     Decimal: to_decimal,
+    dict: to_object,
+    list: to_object
 }
 
 def parse_type(object T, object data):
