@@ -38,6 +38,8 @@ class Field(ff):
         '_field_type',  # Private: not to be used by user code.
         '_required',
         '_nullable'
+        '_primary',
+        '_dbtype'
     )
 
     def __init__(
@@ -58,6 +60,16 @@ class Field(ff):
             "compare": True,
             "metadata": None,
         }
+        try:
+            self._primary = kwargs["primary_key"]
+            del kwargs["primary_key"]
+        except KeyError:
+            self._primary = False
+        try:
+            self._dbtype = kwargs["db_type"]
+            del kwargs["db_type"]
+        except KeyError:
+            self._dbtype = None
         try:
             args["compare"] = kwargs["compare"]
             del kwargs["compare"]
@@ -100,6 +112,22 @@ class Field(ff):
             del kwargs["metadata"]
         except (KeyError, TypeError):
             pass
+        ## Encoder, decoder and widget:
+        try:
+            meta["widget"] = kwargs['widget']
+            del kwargs['widget']
+        except KeyError:
+            meta["widget"] = None
+        try:
+            meta["encoder"] = kwargs['encoder']
+            del kwargs['encoder']
+        except KeyError:
+            meta["encoder"] = None
+        try:
+            meta["decoder"] = kwargs['decoder']
+            del kwargs['decoder']
+        except KeyError:
+            meta["decoder"] = None
         self._meta = {**meta, **_range, **kwargs}
         args["metadata"] = self._meta
         self._default_factory = MISSING
