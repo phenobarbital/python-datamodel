@@ -79,7 +79,7 @@ setup(
         "wheel==0.37.1",
         "Cython==0.29.32",
         "numpy==1.23.3",
-        "uvloop==0.16.0",
+        "uvloop==0.17.0",
         "asyncio==3.4.3",
         "cchardet==2.1.7",
         "objectpath==0.6.1",
