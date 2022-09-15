@@ -14,6 +14,9 @@ from dataclasses import (
     MISSING,
     _MISSING_TYPE
 )
+from datamodel.types import (
+    DB_TYPES
+)
 
 
 class Field(ff):
@@ -161,6 +164,26 @@ class Field(ff):
 
     def nullable(self) -> bool:
         return self._nullable
+
+    def get_dbtype(self):
+        return self._dbtype
+
+    def db_type(self):
+        if self._dbtype is not None:
+            if self._dbtype == "array":
+                t = DB_TYPES[self.type]
+                return f"{t}[]"
+            else:
+                return self._dbtype
+        else:
+            try:
+                return DB_TYPES[self.type]
+            except KeyError:
+                return 'varchar'
+
+    @property
+    def primary_key(self):
+        return self._primary
 
 
 def Column(
