@@ -1,5 +1,6 @@
 from __future__ import annotations
 import inspect
+import types
 from typing import (
     Optional,
     Union,
@@ -36,13 +37,12 @@ class Meta:
     strict: bool = True
     driver: str = None
     credentials: dict = Optional[dict]
-    dsn:  Union[None, str] = None
-    datasource: Union[None, str] = None
-    connection = None
+    dsn: Optional[str] = None
+    datasource: Optional[str] = None
+    connection: Optional[Callable] = None
 
-    @classmethod
-    def set_connection(cls, conn: Callable):
-        cls.connection = conn
+def set_connection(cls, conn: Callable):
+    cls.connection = conn
 
 
 def _dc_method_setattr(
@@ -135,6 +135,9 @@ class ModelMeta(type):
         new_cls.Meta = attr_meta or getattr(new_cls, "Meta", Meta)
         if not new_cls.Meta:
             new_cls.Meta = Meta
+        new_cls.Meta.set_connection = types.MethodType(
+            set_connection, new_cls.Meta
+        )
         try:
             frozen = new_cls.Meta.frozen
         except AttributeError:
