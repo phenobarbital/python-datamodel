@@ -2,12 +2,13 @@
 Abstract Type, Database types and converters for Data types.
 """
 import uuid
-import numpy as np
+import datetime
 import time
 from decimal import Decimal
-from cpython cimport datetime
+import numpy as np
 
-cpdef dict DB_TYPES = {
+
+DB_TYPES: dict = {
     bool: "boolean",
     int: "integer",
     np.int64: "bigint",
@@ -27,7 +28,8 @@ cpdef dict DB_TYPES = {
     type(None): None
 }
 
-cpdef dict MODEL_TYPES = {
+
+MODEL_TYPES: dict = {
     "boolean": bool,
     "integer": int,
     "bigint": np.int64,
@@ -54,7 +56,8 @@ cpdef dict MODEL_TYPES = {
     "inet": str
 }
 
-cpdef dict JSON_TYPES = {
+
+JSON_TYPES: dict = {
     bool: "boolean",
     int: "integer",
     np.int64: "integer",

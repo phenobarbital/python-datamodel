@@ -1,6 +1,8 @@
 import uuid
+# import datetime
+import datetime
+from decimal import Decimal
 from datamodel import BaseModel, Column
-from datetime import datetime
 
 
 def auto_now_add(*args, **kwargs):
@@ -19,7 +21,12 @@ class User(BaseModel):
     lastname: str
     name: str = Column(required=True, default='John Doe')
     age: int = Column(default=18, required=True)
-    signup_ts: datetime = Column(default=datetime.now(), db_default='now()')
+    salary: Decimal = Column(default=10.0)
+    in_time: datetime.time = Column(default='15:00')
+    out_time: datetime.time = Column(default='23:00')
+    birth: datetime.date = Column(required=False)
+    size: float
+    signup_ts: datetime.datetime = Column(default=datetime.datetime.now(), db_default='now()')
     contacts: Contact = Column(required=False)
 
     class Meta:
@@ -27,7 +34,15 @@ class User(BaseModel):
         schema = 'public'
         driver = 'pg'
         strict = False
-        michiko = 'mamon'
 
 u = User()
 print(u.model(dialect='json'))
+
+### creates a new user:
+jesus = User(
+    firstname='Jesus', lastname='Lara', age=43, salary=1500.25, size=185.28, birth='1978-10-23', in_time='11:00:00.000', out_time='23:59:00.000'
+)
+print(jesus)
+b = jesus.json()
+jlara = User.from_json(b)
+print(jlara)

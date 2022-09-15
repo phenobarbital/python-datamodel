@@ -32,8 +32,8 @@ extensions = [
         language="c"
     ),
     Extension(
-        name='datamodel.types',
-        sources=['datamodel/types.pyx'],
+        name='datamodel.converters',
+        sources=['datamodel/converters.pyx'],
         extra_compile_args=COMPILE_ARGS,
         language="c"
     )
@@ -90,7 +90,8 @@ setup(
         "objectpath==0.6.1",
         "orjson==3.8.0",
         'typing_extensions==4.3.0',
-        "asyncpg==0.26.0"
+        "asyncpg==0.26.0",
+        "python-dateutil==2.8.2"
     ],
     tests_require=[
         'pytest>=6.0.0',

@@ -2975,7 +2975,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
  *             meta["widget"] = kwargs['widget']
  *             del kwargs['widget']             # <<<<<<<<<<<<<<
  *         except KeyError:
- *             meta["widget"] = None
+ *             meta["widget"] = {}
  */
       if (unlikely(PyDict_DelItem(__pyx_v_kwargs, __pyx_n_u_widget) < 0)) __PYX_ERR(0, 123, __pyx_L53_error)
 
@@ -3000,7 +3000,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
  *             meta["widget"] = kwargs['widget']
  *             del kwargs['widget']
  *         except KeyError:             # <<<<<<<<<<<<<<
- *             meta["widget"] = None
+ *             meta["widget"] = {}
  *         try:
  */
     __pyx_t_5 = __Pyx_PyErr_ExceptionMatches(__pyx_builtin_KeyError);
@@ -3014,11 +3014,14 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
       /* "datamodel/fields.pyx":125
  *             del kwargs['widget']
  *         except KeyError:
- *             meta["widget"] = None             # <<<<<<<<<<<<<<
+ *             meta["widget"] = {}             # <<<<<<<<<<<<<<
  *         try:
  *             meta["encoder"] = kwargs['encoder']
  */
-      if (unlikely(PyDict_SetItem(__pyx_v_meta, __pyx_n_u_widget, Py_None) < 0)) __PYX_ERR(0, 125, __pyx_L55_except_error)
+      __pyx_t_10 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 125, __pyx_L55_except_error)
+      __Pyx_GOTREF(__pyx_t_10);
+      if (unlikely(PyDict_SetItem(__pyx_v_meta, __pyx_n_u_widget, __pyx_t_10) < 0)) __PYX_ERR(0, 125, __pyx_L55_except_error)
+      __Pyx_DECREF(__pyx_t_10); __pyx_t_10 = 0;
       __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
       __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
       __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
@@ -3049,7 +3052,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
 
   /* "datamodel/fields.pyx":126
  *         except KeyError:
- *             meta["widget"] = None
+ *             meta["widget"] = {}
  *         try:             # <<<<<<<<<<<<<<
  *             meta["encoder"] = kwargs['encoder']
  *             del kwargs['encoder']
@@ -3064,7 +3067,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
     /*try:*/ {
 
       /* "datamodel/fields.pyx":127
- *             meta["widget"] = None
+ *             meta["widget"] = {}
  *         try:
  *             meta["encoder"] = kwargs['encoder']             # <<<<<<<<<<<<<<
  *             del kwargs['encoder']
@@ -3086,7 +3089,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
 
       /* "datamodel/fields.pyx":126
  *         except KeyError:
- *             meta["widget"] = None
+ *             meta["widget"] = {}
  *         try:             # <<<<<<<<<<<<<<
  *             meta["encoder"] = kwargs['encoder']
  *             del kwargs['encoder']
@@ -3098,6 +3101,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
     goto __pyx_L66_try_end;
     __pyx_L61_error:;
     __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
+    __Pyx_XDECREF(__pyx_t_10); __pyx_t_10 = 0;
     __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
 
@@ -3134,7 +3138,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
 
     /* "datamodel/fields.pyx":126
  *         except KeyError:
- *             meta["widget"] = None
+ *             meta["widget"] = {}
  *         try:             # <<<<<<<<<<<<<<
  *             meta["encoder"] = kwargs['encoder']
  *             del kwargs['encoder']
@@ -3203,6 +3207,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
     goto __pyx_L74_try_end;
     __pyx_L69_error:;
     __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
+    __Pyx_XDECREF(__pyx_t_10); __pyx_t_10 = 0;
     __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
 

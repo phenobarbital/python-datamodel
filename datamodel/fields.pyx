@@ -122,7 +122,7 @@ class Field(ff):
             meta["widget"] = kwargs['widget']
             del kwargs['widget']
         except KeyError:
-            meta["widget"] = None
+            meta["widget"] = {}
         try:
             meta["encoder"] = kwargs['encoder']
             del kwargs['encoder']

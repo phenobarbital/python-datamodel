@@ -7,7 +7,6 @@ from typing import (
     Any
 )
 import logging
-import uuid
 from collections.abc import Callable
 # Dataclass
 from dataclasses import (
@@ -21,10 +20,12 @@ from dataclasses import (
 from orjson import OPT_INDENT_2
 from datamodel.fields import Field
 from datamodel.types import JSON_TYPES
+from datamodel.converters import parse_type
 from .parsers import DefaultEncoder
 from .exceptions import (
     ValidationModel
 )
+
 
 class Meta:
     """
@@ -241,55 +242,6 @@ class BaseModel(metaclass=ModelMeta):
         else:
             setattr(self, name, value)
 
-    def _parse_type(self, F, data) -> object:
-        # TODO: migrate to cython, using Type
-        _type = F.type
-        if _type.__module__ == 'typing':
-            args = None
-            try:
-                args = _type.__args__
-            except AttributeError:
-                pass
-            if _type._name == 'Dict' and isinstance(data, dict):
-                return {k: self._parse_type(F.type.__args__[1], v) for k, v in data.items()}
-            elif _type._name == 'List' and isinstance(data, (list, tuple)):
-                arg = args[0]
-                if arg.__module__ == 'typing': # nested typing
-                    try:
-                        t = arg.__args__[0]
-                        if is_dataclass(t):
-                            result = []
-                            for x in data:
-                                if isinstance(x, dict):
-                                    result.append(t(**x))
-                                else:
-                                    result.append(t(*x))
-                            return result
-                        else:
-                            return data
-                    except AttributeError:
-                        return data # data -as is-
-                elif is_dataclass(arg):
-                    return [arg(*x) for x in data]
-                else:
-                    return data
-            elif _type._name is None:
-                if isinstance(_type.__origin__, type(Union)):
-                    t = args[0]
-                    if is_dataclass(t):
-                        if isinstance(data, dict):
-                            data = t(**data)
-                        elif isinstance(data, (list, tuple)):
-                            data = t(*data)
-                        else:
-                            data = None
-                    # F.type = args[0]
-                    return data
-                else:
-                    pass
-        else:
-            return data
-
     def __post_init__(self) -> None:
         """
          Post init method.
@@ -299,44 +251,50 @@ class BaseModel(metaclass=ModelMeta):
         for _, f in self.__columns__.items():
             value = getattr(self, f.name)
             key = f.name
-            # print(f'FIELD {key} = {value}', 'TYPE : ', f.type)
+            # print(f'FIELD {key} = {value}', 'TYPE : ', f.type, type(f.type))
+            if isinstance(f.type, types.MethodType):
+                raise TypeError(
+                    f"DataModel: Wrong type for Column {key}: {f.type}"
+                )
             if is_dataclass(f.type): # is already a dataclass
                 if isinstance(value, dict):
                     new_val = f.type(**value)
                     setattr(self, key, new_val)
-            elif f.type.__module__ == 'typing':  # a typing extension
-                new_val = self._parse_type(f, value)
-                setattr(self, key, new_val)
-            elif isinstance(value, list):
-                try:
-                    sub_type = f.type.__args__[0]
-                    if is_dataclass(sub_type):
-                        # for every item
-                        items = []
-                        for item in value:
-                            try:
-                                if isinstance(item, dict):
-                                    items.append(sub_type(**item))
-                                else:
-                                    items.append(item)
-                            except (TypeError, AttributeError):
-                                continue
-                        setattr(self, key, items)
-                except AttributeError:
-                    setattr(self, key, value)
-            elif value is None:
-                is_missing = isinstance(f.default, _MISSING_TYPE)
-                setattr(self, key, f.default_factory if is_missing else f.default)
-            elif f.type == uuid.UUID:
-                # TODO: Automatic conversion from other types, like datatime, etc
-                uid = None
-                try:
-                    uid = uuid.UUID(str(value))
-                except ValueError as e:
-                    print(e)
-                setattr(self, key, uid if uid else f.default)
             else:
-                continue
+                try:
+                    if f.type.__module__ == 'typing':  # a typing extension
+                        new_val = parse_type(f.type, value)
+                        setattr(self, key, new_val)
+                        continue
+                except AttributeError as e:
+                    raise TypeError(
+                        f"DataModel: Wrong type for {key}: {f.type}, error: {e}"
+                    ) from e
+                if isinstance(value, list):
+                    try:
+                        sub_type = f.type.__args__[0]
+                        if is_dataclass(sub_type):
+                            # for every item
+                            items = []
+                            for item in value:
+                                try:
+                                    if isinstance(item, dict):
+                                        items.append(sub_type(**item))
+                                    else:
+                                        items.append(item)
+                                except (TypeError, AttributeError):
+                                    continue
+                            setattr(self, key, items)
+                    except AttributeError:
+                        setattr(self, key, value)
+                elif value is None:
+                    is_missing = isinstance(f.default, _MISSING_TYPE)
+                    setattr(self, key, f.default_factory if is_missing else f.default)
+                elif new_val:= parse_type(f.type, value):
+                    # be processed by _parse_type
+                    setattr(self, key, new_val)
+                else:
+                    continue
         try:
             self._validation()
         except RuntimeError as err:
