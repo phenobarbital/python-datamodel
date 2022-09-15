@@ -251,6 +251,10 @@ class BaseModel(metaclass=ModelMeta):
         for _, f in self.__columns__.items():
             value = getattr(self, f.name)
             key = f.name
+            if 'encoder' in f.metadata:
+                encoder = f.metadata['encoder']
+            else:
+                encoder = None
             # print(f'FIELD {key} = {value}', 'TYPE : ', f.type, type(f.type))
             if isinstance(f.type, types.MethodType):
                 raise TypeError(
@@ -263,7 +267,7 @@ class BaseModel(metaclass=ModelMeta):
             else:
                 try:
                     if f.type.__module__ == 'typing':  # a typing extension
-                        new_val = parse_type(f.type, value)
+                        new_val = parse_type(f.type, value, encoder)
                         setattr(self, key, new_val)
                         continue
                 except AttributeError as e:
@@ -290,7 +294,7 @@ class BaseModel(metaclass=ModelMeta):
                 elif value is None:
                     is_missing = isinstance(f.default, _MISSING_TYPE)
                     setattr(self, key, f.default_factory if is_missing else f.default)
-                elif new_val:= parse_type(f.type, value):
+                elif new_val:= parse_type(f.type, value, encoder):
                     # be processed by _parse_type
                     setattr(self, key, new_val)
                 else:
@@ -313,6 +317,7 @@ class BaseModel(metaclass=ModelMeta):
         for _, f in self.__columns__.items():
             name = f.name
             val = self.__dict__[name]
+            # Fix values of Data:
             if hasattr(f, 'default') and self.is_callable(val):
                 try:
                     if val.__module__ != 'typing':
