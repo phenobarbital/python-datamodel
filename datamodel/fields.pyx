@@ -40,7 +40,7 @@ class Field(ff):
         '_meta',
         '_field_type',  # Private: not to be used by user code.
         '_required',
-        '_nullable'
+        '_nullable',
         '_primary',
         '_dbtype'
     )
@@ -64,16 +64,6 @@ class Field(ff):
             "metadata": None,
         }
         try:
-            self._primary = kwargs["primary_key"]
-            del kwargs["primary_key"]
-        except KeyError:
-            self._primary = False
-        try:
-            self._dbtype = kwargs["db_type"]
-            del kwargs["db_type"]
-        except KeyError:
-            self._dbtype = None
-        try:
             args["compare"] = kwargs["compare"]
             del kwargs["compare"]
         except KeyError:
@@ -83,12 +73,24 @@ class Field(ff):
             "nullable": nullable,
             "validator": None
         }
+        self._primary = False
+        self._dbtype = None
         self._required = required
         self._nullable = nullable
         if 'description' in kwargs:
             self.description = kwargs['description']
         else:
             self.description = None
+        try:
+            self._primary = kwargs["primary_key"]
+            del kwargs["primary_key"]
+        except KeyError:
+            self._primary = False
+        try:
+            self._dbtype = kwargs["db_type"]
+            del kwargs["db_type"]
+        except KeyError:
+            self._dbtype = None
         _range = {}
         if min is not None:
             _range["min"] = min

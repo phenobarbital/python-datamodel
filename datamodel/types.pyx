@@ -1,10 +1,13 @@
+"""
+Abstract Type, Database types and converters for Data types.
+"""
 import uuid
-import datetime
-from decimal import Decimal
 import numpy as np
+import time
+from decimal import Decimal
+from cpython cimport datetime
 
-
-DB_TYPES: dict = {
+cpdef dict DB_TYPES = {
     bool: "boolean",
     int: "integer",
     np.int64: "bigint",
@@ -12,16 +15,19 @@ DB_TYPES: dict = {
     str: "character varying",
     bytes: "byte",
     list: "Array",
+    tuple: "Array",
     Decimal: "numeric",
     datetime.date: "date",
     datetime.datetime: "timestamp without time zone",
     datetime.time: "time",
+    time: "time",
     datetime.timedelta: "timestamp without time zone",
     uuid.UUID: "uuid",
-    dict: "jsonb"
+    dict: "jsonb",
+    type(None): None
 }
 
-MODEL_TYPES = {
+cpdef dict MODEL_TYPES = {
     "boolean": bool,
     "integer": int,
     "bigint": np.int64,
@@ -45,10 +51,10 @@ MODEL_TYPES = {
     "text": str,
     "serial": int,
     "bigserial": int,
-    "inet": str,
+    "inet": str
 }
 
-JSON_TYPES = {
+cpdef dict JSON_TYPES = {
     bool: "boolean",
     int: "integer",
     np.int64: "integer",
@@ -61,5 +67,5 @@ JSON_TYPES = {
     datetime.datetime: "datetime",
     datetime.time: "time",
     datetime.timedelta: "timedelta",
-    uuid.UUID: "uuid",
+    uuid.UUID: "uuid"
 }

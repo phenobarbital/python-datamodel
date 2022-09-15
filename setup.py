@@ -5,7 +5,6 @@
 See:
 https://github.com/phenobarbital/DataModel
 """
-import sys
 from os import path
 from setuptools import find_packages, setup, Extension
 from Cython.Build import cythonize
@@ -29,6 +28,12 @@ extensions = [
     Extension(
         name='datamodel.fields',
         sources=['datamodel/fields.pyx'],
+        extra_compile_args=COMPILE_ARGS,
+        language="c"
+    ),
+    Extension(
+        name='datamodel.types',
+        sources=['datamodel/types.pyx'],
         extra_compile_args=COMPILE_ARGS,
         language="c"
     )

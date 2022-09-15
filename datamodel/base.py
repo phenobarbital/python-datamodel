@@ -20,11 +20,11 @@ from dataclasses import (
 )
 from orjson import OPT_INDENT_2
 from datamodel.fields import Field
+from datamodel.types import JSON_TYPES
 from .parsers import DefaultEncoder
 from .exceptions import (
     ValidationModel
 )
-from .types import JSON_TYPES
 
 class Meta:
     """
