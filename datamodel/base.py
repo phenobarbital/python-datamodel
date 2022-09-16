@@ -258,7 +258,7 @@ class BaseModel(metaclass=ModelMeta):
                 raise TypeError(
                     f"DataModel: Wrong type for Column {key}: {f.type}"
                 )
-            if is_dataclass(f.type): # is already a dataclass
+            elif is_dataclass(f.type): # is already a dataclass
                 if isinstance(value, dict):
                     new_val = f.type(**value)
                     setattr(self, key, new_val)
