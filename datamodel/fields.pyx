@@ -1,6 +1,7 @@
 # cython: language_level=3, embedsignature=True, boundscheck=False, wraparound=False, initializedcheck=False
 # Copyright (C) 2018-present Jesus Lara
 #
+from sys import version_info
 from typing import (
     Optional,
     Union,
@@ -148,10 +149,11 @@ class Field(ff):
                     factory = _MISSING_TYPE
                 self._default_factory = factory
         # Calling Parent init
+        if version_info.minor > 9:
+            args["kw_only"] = kw_only
         super(Field, self).__init__(
             default=self._default,
             default_factory=self._default_factory,
-            kw_only=kw_only,
             **args
         )
         # set field type and dbtype
