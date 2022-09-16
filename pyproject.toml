@@ -22,6 +22,7 @@ classifiers=[
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python",
   "Typing :: Typed",
   "Environment :: Web Environment",
@@ -51,7 +52,7 @@ filterwarnings = [
 
 [tool.black]
 line-length = 120
-target-version = ['py38', 'py39']
+target-version = ['py38', 'py39', 'py310']
 include = '\.pyi?$'
 exclude = '''
 /(
