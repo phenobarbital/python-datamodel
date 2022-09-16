@@ -238,8 +238,8 @@ def parse_type(object T, object data, object encoder = None):
                 return [arg(*x) for x in data]
             else:
                 return data
-        elif T._name is None:
-            if isinstance(T.__origin__, type(Union)):
+        elif T._name is None or T._name in ('Optional', 'Union'):
+            try:
                 t = args[0]
                 if is_dataclass(t):
                     if isinstance(data, dict):
@@ -250,7 +250,7 @@ def parse_type(object T, object data, object encoder = None):
                         data = None
                 # F.type = args[0]
                 return data
-            else:
+            except KeyError:
                 pass
     else:
         if encoder is not None:

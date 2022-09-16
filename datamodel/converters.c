@@ -1750,7 +1750,6 @@ static const char __pyx_k_import[] = "__import__";
 static const char __pyx_k_minute[] = "minute";
 static const char __pyx_k_module[] = "__module__";
 static const char __pyx_k_name_2[] = "__name__";
-static const char __pyx_k_origin[] = "__origin__";
 static const char __pyx_k_orjson[] = "orjson";
 static const char __pyx_k_parser[] = "parser";
 static const char __pyx_k_result[] = "result";
@@ -1766,6 +1765,7 @@ static const char __pyx_k_seconds[] = "seconds";
 static const char __pyx_k_to_date[] = " to date";
 static const char __pyx_k_to_time[] = "to_time";
 static const char __pyx_k_KeyError[] = "KeyError";
+static const char __pyx_k_Optional[] = "Optional";
 static const char __pyx_k_dateutil[] = "dateutil";
 static const char __pyx_k_to_float[] = "to_float";
 static const char __pyx_k_TypeError[] = "TypeError";
@@ -1808,6 +1808,7 @@ static PyObject *__pyx_n_u_Dict;
 static PyObject *__pyx_n_s_KeyError;
 static PyObject *__pyx_n_u_List;
 static PyObject *__pyx_n_s_MISSING_TYPE;
+static PyObject *__pyx_n_u_Optional;
 static PyObject *__pyx_n_s_Pyx_CFunc_object____object___t;
 static PyObject *__pyx_n_s_T;
 static PyObject *__pyx_n_s_TIMEDELTA_RE;
@@ -1815,6 +1816,7 @@ static PyObject *__pyx_n_s_TIME_RE;
 static PyObject *__pyx_n_s_TypeError;
 static PyObject *__pyx_n_s_UUID;
 static PyObject *__pyx_n_s_Union;
+static PyObject *__pyx_n_u_Union;
 static PyObject *__pyx_n_s_ValueError;
 static PyObject *__pyx_kp_u__3;
 static PyObject *__pyx_n_s_arg;
@@ -1860,7 +1862,6 @@ static PyObject *__pyx_n_s_name_2;
 static PyObject *__pyx_n_s_np;
 static PyObject *__pyx_n_s_numpy;
 static PyObject *__pyx_n_s_obj;
-static PyObject *__pyx_n_s_origin;
 static PyObject *__pyx_n_s_orjson;
 static PyObject *__pyx_n_s_parse;
 static PyObject *__pyx_n_s_parse_type;
@@ -6174,8 +6175,8 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
  *                 return [arg(*x) for x in data]
  *             else:
  *                 return data             # <<<<<<<<<<<<<<
- *         elif T._name is None:
- *             if isinstance(T.__origin__, type(Union)):
+ *         elif T._name is None or T._name in ('Optional', 'Union'):
+ *             try:
  */
       /*else*/ {
         __Pyx_XDECREF(__pyx_r);
@@ -6196,108 +6197,92 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
     /* "datamodel/converters.pyx":241
  *             else:
  *                 return data
- *         elif T._name is None:             # <<<<<<<<<<<<<<
- *             if isinstance(T.__origin__, type(Union)):
+ *         elif T._name is None or T._name in ('Optional', 'Union'):             # <<<<<<<<<<<<<<
+ *             try:
  *                 t = args[0]
  */
     __pyx_t_13 = __Pyx_PyObject_GetAttrStr(__pyx_v_T, __pyx_n_s_name); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 241, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_13);
-    __pyx_t_7 = (__pyx_t_13 == Py_None);
+    __pyx_t_2 = (__pyx_t_13 == Py_None);
     __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
-    __pyx_t_2 = (__pyx_t_7 != 0);
-    if (__pyx_t_2) {
+    __pyx_t_8 = (__pyx_t_2 != 0);
+    if (!__pyx_t_8) {
+    } else {
+      __pyx_t_7 = __pyx_t_8;
+      goto __pyx_L42_bool_binop_done;
+    }
+    __pyx_t_13 = __Pyx_PyObject_GetAttrStr(__pyx_v_T, __pyx_n_s_name); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 241, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_13);
+    __pyx_t_2 = (__Pyx_PyUnicode_Equals(__pyx_t_13, __pyx_n_u_Optional, Py_EQ)); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 241, __pyx_L1_error)
+    if (!__pyx_t_2) {
+    } else {
+      __pyx_t_8 = __pyx_t_2;
+      goto __pyx_L44_bool_binop_done;
+    }
+    __pyx_t_2 = (__Pyx_PyUnicode_Equals(__pyx_t_13, __pyx_n_u_Union, Py_EQ)); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 241, __pyx_L1_error)
+    __pyx_t_8 = __pyx_t_2;
+    __pyx_L44_bool_binop_done:;
+    __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
+    __pyx_t_2 = (__pyx_t_8 != 0);
+    __pyx_t_7 = __pyx_t_2;
+    __pyx_L42_bool_binop_done:;
+    if (__pyx_t_7) {
 
       /* "datamodel/converters.pyx":242
  *                 return data
- *         elif T._name is None:
- *             if isinstance(T.__origin__, type(Union)):             # <<<<<<<<<<<<<<
+ *         elif T._name is None or T._name in ('Optional', 'Union'):
+ *             try:             # <<<<<<<<<<<<<<
  *                 t = args[0]
  *                 if is_dataclass(t):
  */
-      __pyx_t_13 = __Pyx_PyObject_GetAttrStr(__pyx_v_T, __pyx_n_s_origin); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 242, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_13);
-      __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_Union); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 242, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_1);
-      __pyx_t_2 = PyObject_IsInstance(__pyx_t_13, ((PyObject *)Py_TYPE(__pyx_t_1))); if (unlikely(__pyx_t_2 == ((int)-1))) __PYX_ERR(0, 242, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
-      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-      __pyx_t_7 = (__pyx_t_2 != 0);
-      if (__pyx_t_7) {
+      {
+        __Pyx_PyThreadState_declare
+        __Pyx_PyThreadState_assign
+        __Pyx_ExceptionSave(&__pyx_t_3, &__pyx_t_4, &__pyx_t_5);
+        __Pyx_XGOTREF(__pyx_t_3);
+        __Pyx_XGOTREF(__pyx_t_4);
+        __Pyx_XGOTREF(__pyx_t_5);
+        /*try:*/ {
 
-        /* "datamodel/converters.pyx":243
- *         elif T._name is None:
- *             if isinstance(T.__origin__, type(Union)):
+          /* "datamodel/converters.pyx":243
+ *         elif T._name is None or T._name in ('Optional', 'Union'):
+ *             try:
  *                 t = args[0]             # <<<<<<<<<<<<<<
  *                 if is_dataclass(t):
  *                     if isinstance(data, dict):
  */
-        __pyx_t_1 = __Pyx_GetItemInt(__pyx_v_args, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 243, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_1);
-        __pyx_v_t = __pyx_t_1;
-        __pyx_t_1 = 0;
+          __pyx_t_13 = __Pyx_GetItemInt(__pyx_v_args, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 243, __pyx_L46_error)
+          __Pyx_GOTREF(__pyx_t_13);
+          __pyx_v_t = __pyx_t_13;
+          __pyx_t_13 = 0;
 
-        /* "datamodel/converters.pyx":244
- *             if isinstance(T.__origin__, type(Union)):
+          /* "datamodel/converters.pyx":244
+ *             try:
  *                 t = args[0]
  *                 if is_dataclass(t):             # <<<<<<<<<<<<<<
  *                     if isinstance(data, dict):
  *                         data = t(**data)
  */
-        __Pyx_GetModuleGlobalName(__pyx_t_13, __pyx_n_s_is_dataclass); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 244, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_13);
-        __pyx_t_12 = NULL;
-        if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_13))) {
-          __pyx_t_12 = PyMethod_GET_SELF(__pyx_t_13);
-          if (likely(__pyx_t_12)) {
-            PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_13);
-            __Pyx_INCREF(__pyx_t_12);
-            __Pyx_INCREF(function);
-            __Pyx_DECREF_SET(__pyx_t_13, function);
+          __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_is_dataclass); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 244, __pyx_L46_error)
+          __Pyx_GOTREF(__pyx_t_1);
+          __pyx_t_12 = NULL;
+          if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_1))) {
+            __pyx_t_12 = PyMethod_GET_SELF(__pyx_t_1);
+            if (likely(__pyx_t_12)) {
+              PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_1);
+              __Pyx_INCREF(__pyx_t_12);
+              __Pyx_INCREF(function);
+              __Pyx_DECREF_SET(__pyx_t_1, function);
+            }
           }
-        }
-        __pyx_t_1 = (__pyx_t_12) ? __Pyx_PyObject_Call2Args(__pyx_t_13, __pyx_t_12, __pyx_v_t) : __Pyx_PyObject_CallOneArg(__pyx_t_13, __pyx_v_t);
-        __Pyx_XDECREF(__pyx_t_12); __pyx_t_12 = 0;
-        if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 244, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_1);
-        __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
-        __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 244, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-        if (__pyx_t_7) {
-
-          /* "datamodel/converters.pyx":245
- *                 t = args[0]
- *                 if is_dataclass(t):
- *                     if isinstance(data, dict):             # <<<<<<<<<<<<<<
- *                         data = t(**data)
- *                     elif isinstance(data, (list, tuple)):
- */
-          __pyx_t_7 = PyDict_Check(__pyx_v_data); 
-          __pyx_t_2 = (__pyx_t_7 != 0);
-          if (__pyx_t_2) {
-
-            /* "datamodel/converters.pyx":246
- *                 if is_dataclass(t):
- *                     if isinstance(data, dict):
- *                         data = t(**data)             # <<<<<<<<<<<<<<
- *                     elif isinstance(data, (list, tuple)):
- *                         data = t(*data)
- */
-            if (unlikely(__pyx_v_data == Py_None)) {
-              PyErr_SetString(PyExc_TypeError, "argument after ** must be a mapping, not NoneType");
-              __PYX_ERR(0, 246, __pyx_L1_error)
-            }
-            if (likely(PyDict_CheckExact(__pyx_v_data))) {
-              __pyx_t_1 = PyDict_Copy(__pyx_v_data); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 246, __pyx_L1_error)
-              __Pyx_GOTREF(__pyx_t_1);
-            } else {
-              __pyx_t_1 = PyObject_CallFunctionObjArgs((PyObject*)&PyDict_Type, __pyx_v_data, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 246, __pyx_L1_error)
-              __Pyx_GOTREF(__pyx_t_1);
-            }
-            __pyx_t_13 = __Pyx_PyObject_Call(__pyx_v_t, __pyx_empty_tuple, __pyx_t_1); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 246, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_13);
-            __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-            __Pyx_DECREF_SET(__pyx_v_data, __pyx_t_13);
-            __pyx_t_13 = 0;
+          __pyx_t_13 = (__pyx_t_12) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_12, __pyx_v_t) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_v_t);
+          __Pyx_XDECREF(__pyx_t_12); __pyx_t_12 = 0;
+          if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 244, __pyx_L46_error)
+          __Pyx_GOTREF(__pyx_t_13);
+          __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+          __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_13); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 244, __pyx_L46_error)
+          __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
+          if (__pyx_t_7) {
 
             /* "datamodel/converters.pyx":245
  *                 t = args[0]
@@ -6306,44 +6291,43 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
  *                         data = t(**data)
  *                     elif isinstance(data, (list, tuple)):
  */
-            goto __pyx_L44;
-          }
+            __pyx_t_7 = PyDict_Check(__pyx_v_data); 
+            __pyx_t_2 = (__pyx_t_7 != 0);
+            if (__pyx_t_2) {
 
-          /* "datamodel/converters.pyx":247
+              /* "datamodel/converters.pyx":246
+ *                 if is_dataclass(t):
  *                     if isinstance(data, dict):
- *                         data = t(**data)
- *                     elif isinstance(data, (list, tuple)):             # <<<<<<<<<<<<<<
+ *                         data = t(**data)             # <<<<<<<<<<<<<<
+ *                     elif isinstance(data, (list, tuple)):
  *                         data = t(*data)
- *                     else:
  */
-          __pyx_t_7 = PyList_Check(__pyx_v_data); 
-          __pyx_t_8 = (__pyx_t_7 != 0);
-          if (!__pyx_t_8) {
-          } else {
-            __pyx_t_2 = __pyx_t_8;
-            goto __pyx_L45_bool_binop_done;
-          }
-          __pyx_t_8 = PyTuple_Check(__pyx_v_data); 
-          __pyx_t_7 = (__pyx_t_8 != 0);
-          __pyx_t_2 = __pyx_t_7;
-          __pyx_L45_bool_binop_done:;
-          __pyx_t_7 = (__pyx_t_2 != 0);
-          if (__pyx_t_7) {
+              if (unlikely(__pyx_v_data == Py_None)) {
+                PyErr_SetString(PyExc_TypeError, "argument after ** must be a mapping, not NoneType");
+                __PYX_ERR(0, 246, __pyx_L46_error)
+              }
+              if (likely(PyDict_CheckExact(__pyx_v_data))) {
+                __pyx_t_13 = PyDict_Copy(__pyx_v_data); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 246, __pyx_L46_error)
+                __Pyx_GOTREF(__pyx_t_13);
+              } else {
+                __pyx_t_13 = PyObject_CallFunctionObjArgs((PyObject*)&PyDict_Type, __pyx_v_data, NULL); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 246, __pyx_L46_error)
+                __Pyx_GOTREF(__pyx_t_13);
+              }
+              __pyx_t_1 = __Pyx_PyObject_Call(__pyx_v_t, __pyx_empty_tuple, __pyx_t_13); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 246, __pyx_L46_error)
+              __Pyx_GOTREF(__pyx_t_1);
+              __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
+              __Pyx_DECREF_SET(__pyx_v_data, __pyx_t_1);
+              __pyx_t_1 = 0;
 
-            /* "datamodel/converters.pyx":248
+              /* "datamodel/converters.pyx":245
+ *                 t = args[0]
+ *                 if is_dataclass(t):
+ *                     if isinstance(data, dict):             # <<<<<<<<<<<<<<
  *                         data = t(**data)
  *                     elif isinstance(data, (list, tuple)):
- *                         data = t(*data)             # <<<<<<<<<<<<<<
- *                     else:
- *                         data = None
  */
-            __pyx_t_13 = __Pyx_PySequence_Tuple(__pyx_v_data); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 248, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_13);
-            __pyx_t_1 = __Pyx_PyObject_Call(__pyx_v_t, __pyx_t_13, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 248, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_1);
-            __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
-            __Pyx_DECREF_SET(__pyx_v_data, __pyx_t_1);
-            __pyx_t_1 = 0;
+              goto __pyx_L53;
+            }
 
             /* "datamodel/converters.pyx":247
  *                     if isinstance(data, dict):
@@ -6352,67 +6336,141 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
  *                         data = t(*data)
  *                     else:
  */
-            goto __pyx_L44;
-          }
+            __pyx_t_7 = PyList_Check(__pyx_v_data); 
+            __pyx_t_8 = (__pyx_t_7 != 0);
+            if (!__pyx_t_8) {
+            } else {
+              __pyx_t_2 = __pyx_t_8;
+              goto __pyx_L54_bool_binop_done;
+            }
+            __pyx_t_8 = PyTuple_Check(__pyx_v_data); 
+            __pyx_t_7 = (__pyx_t_8 != 0);
+            __pyx_t_2 = __pyx_t_7;
+            __pyx_L54_bool_binop_done:;
+            __pyx_t_7 = (__pyx_t_2 != 0);
+            if (__pyx_t_7) {
 
-          /* "datamodel/converters.pyx":250
+              /* "datamodel/converters.pyx":248
+ *                         data = t(**data)
+ *                     elif isinstance(data, (list, tuple)):
+ *                         data = t(*data)             # <<<<<<<<<<<<<<
+ *                     else:
+ *                         data = None
+ */
+              __pyx_t_1 = __Pyx_PySequence_Tuple(__pyx_v_data); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 248, __pyx_L46_error)
+              __Pyx_GOTREF(__pyx_t_1);
+              __pyx_t_13 = __Pyx_PyObject_Call(__pyx_v_t, __pyx_t_1, NULL); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 248, __pyx_L46_error)
+              __Pyx_GOTREF(__pyx_t_13);
+              __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+              __Pyx_DECREF_SET(__pyx_v_data, __pyx_t_13);
+              __pyx_t_13 = 0;
+
+              /* "datamodel/converters.pyx":247
+ *                     if isinstance(data, dict):
+ *                         data = t(**data)
+ *                     elif isinstance(data, (list, tuple)):             # <<<<<<<<<<<<<<
+ *                         data = t(*data)
+ *                     else:
+ */
+              goto __pyx_L53;
+            }
+
+            /* "datamodel/converters.pyx":250
  *                         data = t(*data)
  *                     else:
  *                         data = None             # <<<<<<<<<<<<<<
  *                 # F.type = args[0]
  *                 return data
  */
-          /*else*/ {
-            __Pyx_INCREF(Py_None);
-            __Pyx_DECREF_SET(__pyx_v_data, Py_None);
-          }
-          __pyx_L44:;
+            /*else*/ {
+              __Pyx_INCREF(Py_None);
+              __Pyx_DECREF_SET(__pyx_v_data, Py_None);
+            }
+            __pyx_L53:;
 
-          /* "datamodel/converters.pyx":244
- *             if isinstance(T.__origin__, type(Union)):
+            /* "datamodel/converters.pyx":244
+ *             try:
  *                 t = args[0]
  *                 if is_dataclass(t):             # <<<<<<<<<<<<<<
  *                     if isinstance(data, dict):
  *                         data = t(**data)
  */
-        }
+          }
 
-        /* "datamodel/converters.pyx":252
+          /* "datamodel/converters.pyx":252
  *                         data = None
  *                 # F.type = args[0]
  *                 return data             # <<<<<<<<<<<<<<
- *             else:
+ *             except KeyError:
  *                 pass
  */
-        __Pyx_XDECREF(__pyx_r);
-        __Pyx_INCREF(__pyx_v_data);
-        __pyx_r = __pyx_v_data;
-        goto __pyx_L0;
+          __Pyx_XDECREF(__pyx_r);
+          __Pyx_INCREF(__pyx_v_data);
+          __pyx_r = __pyx_v_data;
+          goto __pyx_L50_try_return;
 
-        /* "datamodel/converters.pyx":242
+          /* "datamodel/converters.pyx":242
  *                 return data
- *         elif T._name is None:
- *             if isinstance(T.__origin__, type(Union)):             # <<<<<<<<<<<<<<
+ *         elif T._name is None or T._name in ('Optional', 'Union'):
+ *             try:             # <<<<<<<<<<<<<<
  *                 t = args[0]
  *                 if is_dataclass(t):
  */
-      }
+        }
+        __pyx_L46_error:;
+        __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
+        __Pyx_XDECREF(__pyx_t_12); __pyx_t_12 = 0;
+        __Pyx_XDECREF(__pyx_t_13); __pyx_t_13 = 0;
+        __Pyx_XDECREF(__pyx_t_15); __pyx_t_15 = 0;
+        __Pyx_XDECREF(__pyx_t_16); __pyx_t_16 = 0;
+        __Pyx_XDECREF(__pyx_t_17); __pyx_t_17 = 0;
+        __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-      /* "datamodel/converters.pyx":254
+        /* "datamodel/converters.pyx":253
+ *                 # F.type = args[0]
  *                 return data
- *             else:
- *                 pass             # <<<<<<<<<<<<<<
+ *             except KeyError:             # <<<<<<<<<<<<<<
+ *                 pass
  *     else:
- *         if encoder is not None:
  */
-      /*else*/ {
+        __pyx_t_6 = __Pyx_PyErr_ExceptionMatches(__pyx_builtin_KeyError);
+        if (__pyx_t_6) {
+          __Pyx_ErrRestore(0,0,0);
+          goto __pyx_L47_exception_handled;
+        }
+        goto __pyx_L48_except_error;
+        __pyx_L48_except_error:;
+
+        /* "datamodel/converters.pyx":242
+ *                 return data
+ *         elif T._name is None or T._name in ('Optional', 'Union'):
+ *             try:             # <<<<<<<<<<<<<<
+ *                 t = args[0]
+ *                 if is_dataclass(t):
+ */
+        __Pyx_XGIVEREF(__pyx_t_3);
+        __Pyx_XGIVEREF(__pyx_t_4);
+        __Pyx_XGIVEREF(__pyx_t_5);
+        __Pyx_ExceptionReset(__pyx_t_3, __pyx_t_4, __pyx_t_5);
+        goto __pyx_L1_error;
+        __pyx_L50_try_return:;
+        __Pyx_XGIVEREF(__pyx_t_3);
+        __Pyx_XGIVEREF(__pyx_t_4);
+        __Pyx_XGIVEREF(__pyx_t_5);
+        __Pyx_ExceptionReset(__pyx_t_3, __pyx_t_4, __pyx_t_5);
+        goto __pyx_L0;
+        __pyx_L47_exception_handled:;
+        __Pyx_XGIVEREF(__pyx_t_3);
+        __Pyx_XGIVEREF(__pyx_t_4);
+        __Pyx_XGIVEREF(__pyx_t_5);
+        __Pyx_ExceptionReset(__pyx_t_3, __pyx_t_4, __pyx_t_5);
       }
 
       /* "datamodel/converters.pyx":241
  *             else:
  *                 return data
- *         elif T._name is None:             # <<<<<<<<<<<<<<
- *             if isinstance(T.__origin__, type(Union)):
+ *         elif T._name is None or T._name in ('Optional', 'Union'):             # <<<<<<<<<<<<<<
+ *             try:
  *                 t = args[0]
  */
     }
@@ -6449,10 +6507,10 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
       {
         __Pyx_PyThreadState_declare
         __Pyx_PyThreadState_assign
-        __Pyx_ExceptionSave(&__pyx_t_3, &__pyx_t_4, &__pyx_t_5);
-        __Pyx_XGOTREF(__pyx_t_3);
-        __Pyx_XGOTREF(__pyx_t_4);
+        __Pyx_ExceptionSave(&__pyx_t_5, &__pyx_t_4, &__pyx_t_3);
         __Pyx_XGOTREF(__pyx_t_5);
+        __Pyx_XGOTREF(__pyx_t_4);
+        __Pyx_XGOTREF(__pyx_t_3);
         /*try:*/ {
 
           /* "datamodel/converters.pyx":259
@@ -6464,24 +6522,24 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
  */
           __Pyx_XDECREF(__pyx_r);
           __Pyx_INCREF(__pyx_v_encoder);
-          __pyx_t_13 = __pyx_v_encoder; __pyx_t_12 = NULL;
-          if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_13))) {
-            __pyx_t_12 = PyMethod_GET_SELF(__pyx_t_13);
+          __pyx_t_1 = __pyx_v_encoder; __pyx_t_12 = NULL;
+          if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_1))) {
+            __pyx_t_12 = PyMethod_GET_SELF(__pyx_t_1);
             if (likely(__pyx_t_12)) {
-              PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_13);
+              PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_1);
               __Pyx_INCREF(__pyx_t_12);
               __Pyx_INCREF(function);
-              __Pyx_DECREF_SET(__pyx_t_13, function);
+              __Pyx_DECREF_SET(__pyx_t_1, function);
             }
           }
-          __pyx_t_1 = (__pyx_t_12) ? __Pyx_PyObject_Call2Args(__pyx_t_13, __pyx_t_12, __pyx_v_data) : __Pyx_PyObject_CallOneArg(__pyx_t_13, __pyx_v_data);
+          __pyx_t_13 = (__pyx_t_12) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_12, __pyx_v_data) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_v_data);
           __Pyx_XDECREF(__pyx_t_12); __pyx_t_12 = 0;
-          if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 259, __pyx_L48_error)
-          __Pyx_GOTREF(__pyx_t_1);
-          __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
-          __pyx_r = __pyx_t_1;
-          __pyx_t_1 = 0;
-          goto __pyx_L52_try_return;
+          if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 259, __pyx_L57_error)
+          __Pyx_GOTREF(__pyx_t_13);
+          __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+          __pyx_r = __pyx_t_13;
+          __pyx_t_13 = 0;
+          goto __pyx_L61_try_return;
 
           /* "datamodel/converters.pyx":258
  *         if encoder is not None:
@@ -6491,7 +6549,7 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
  *             except ValueError:
  */
         }
-        __pyx_L48_error:;
+        __pyx_L57_error:;
         __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
         __Pyx_XDECREF(__pyx_t_12); __pyx_t_12 = 0;
         __Pyx_XDECREF(__pyx_t_13); __pyx_t_13 = 0;
@@ -6510,9 +6568,9 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
         __pyx_t_6 = __Pyx_PyErr_ExceptionMatches(__pyx_builtin_ValueError);
         if (__pyx_t_6) {
           __Pyx_AddTraceback("datamodel.converters.parse_type", __pyx_clineno, __pyx_lineno, __pyx_filename);
-          if (__Pyx_GetException(&__pyx_t_1, &__pyx_t_13, &__pyx_t_12) < 0) __PYX_ERR(0, 260, __pyx_L50_except_error)
-          __Pyx_GOTREF(__pyx_t_1);
+          if (__Pyx_GetException(&__pyx_t_13, &__pyx_t_1, &__pyx_t_12) < 0) __PYX_ERR(0, 260, __pyx_L59_except_error)
           __Pyx_GOTREF(__pyx_t_13);
+          __Pyx_GOTREF(__pyx_t_1);
           __Pyx_GOTREF(__pyx_t_12);
 
           /* "datamodel/converters.pyx":262
@@ -6522,9 +6580,9 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
  *                 )
  *         elif is_dataclass(T):
  */
-          __pyx_t_9 = __Pyx_PyObject_FormatSimple(__pyx_v_T, __pyx_empty_unicode); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 262, __pyx_L50_except_error)
+          __pyx_t_9 = __Pyx_PyObject_FormatSimple(__pyx_v_T, __pyx_empty_unicode); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 262, __pyx_L59_except_error)
           __Pyx_GOTREF(__pyx_t_9);
-          __pyx_t_17 = __Pyx_PyUnicode_Concat(__pyx_kp_u_DataModel_Error_parsing_type, __pyx_t_9); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 262, __pyx_L50_except_error)
+          __pyx_t_17 = __Pyx_PyUnicode_Concat(__pyx_kp_u_DataModel_Error_parsing_type, __pyx_t_9); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 262, __pyx_L59_except_error)
           __Pyx_GOTREF(__pyx_t_17);
           __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
@@ -6535,15 +6593,15 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
  *                     f"DataModel: Error parsing type {T}"
  *                 )
  */
-          __pyx_t_9 = __Pyx_PyObject_CallOneArg(__pyx_builtin_ValueError, __pyx_t_17); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 261, __pyx_L50_except_error)
+          __pyx_t_9 = __Pyx_PyObject_CallOneArg(__pyx_builtin_ValueError, __pyx_t_17); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 261, __pyx_L59_except_error)
           __Pyx_GOTREF(__pyx_t_9);
           __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
           __Pyx_Raise(__pyx_t_9, 0, 0, 0);
           __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-          __PYX_ERR(0, 261, __pyx_L50_except_error)
+          __PYX_ERR(0, 261, __pyx_L59_except_error)
         }
-        goto __pyx_L50_except_error;
-        __pyx_L50_except_error:;
+        goto __pyx_L59_except_error;
+        __pyx_L59_except_error:;
 
         /* "datamodel/converters.pyx":258
  *         if encoder is not None:
@@ -6552,16 +6610,16 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
  *                 return encoder(data)
  *             except ValueError:
  */
-        __Pyx_XGIVEREF(__pyx_t_3);
-        __Pyx_XGIVEREF(__pyx_t_4);
         __Pyx_XGIVEREF(__pyx_t_5);
-        __Pyx_ExceptionReset(__pyx_t_3, __pyx_t_4, __pyx_t_5);
+        __Pyx_XGIVEREF(__pyx_t_4);
+        __Pyx_XGIVEREF(__pyx_t_3);
+        __Pyx_ExceptionReset(__pyx_t_5, __pyx_t_4, __pyx_t_3);
         goto __pyx_L1_error;
-        __pyx_L52_try_return:;
-        __Pyx_XGIVEREF(__pyx_t_3);
-        __Pyx_XGIVEREF(__pyx_t_4);
+        __pyx_L61_try_return:;
         __Pyx_XGIVEREF(__pyx_t_5);
-        __Pyx_ExceptionReset(__pyx_t_3, __pyx_t_4, __pyx_t_5);
+        __Pyx_XGIVEREF(__pyx_t_4);
+        __Pyx_XGIVEREF(__pyx_t_3);
+        __Pyx_ExceptionReset(__pyx_t_5, __pyx_t_4, __pyx_t_3);
         goto __pyx_L0;
       }
 
@@ -6581,23 +6639,23 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
  *             if isinstance(data, dict):
  *                 data = T(**data)
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_13, __pyx_n_s_is_dataclass); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 264, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_13);
-    __pyx_t_1 = NULL;
-    if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_13))) {
-      __pyx_t_1 = PyMethod_GET_SELF(__pyx_t_13);
-      if (likely(__pyx_t_1)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_13);
-        __Pyx_INCREF(__pyx_t_1);
+    __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_is_dataclass); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 264, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_1);
+    __pyx_t_13 = NULL;
+    if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_1))) {
+      __pyx_t_13 = PyMethod_GET_SELF(__pyx_t_1);
+      if (likely(__pyx_t_13)) {
+        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_1);
+        __Pyx_INCREF(__pyx_t_13);
         __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_13, function);
+        __Pyx_DECREF_SET(__pyx_t_1, function);
       }
     }
-    __pyx_t_12 = (__pyx_t_1) ? __Pyx_PyObject_Call2Args(__pyx_t_13, __pyx_t_1, __pyx_v_T) : __Pyx_PyObject_CallOneArg(__pyx_t_13, __pyx_v_T);
-    __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
+    __pyx_t_12 = (__pyx_t_13) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_13, __pyx_v_T) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_v_T);
+    __Pyx_XDECREF(__pyx_t_13); __pyx_t_13 = 0;
     if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 264, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_12);
-    __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
+    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_t_12); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 264, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
     if (__pyx_t_2) {
@@ -6631,11 +6689,11 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
           __pyx_t_12 = PyObject_CallFunctionObjArgs((PyObject*)&PyDict_Type, __pyx_v_data, NULL); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 266, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_12);
         }
-        __pyx_t_13 = __Pyx_PyObject_Call(__pyx_v_T, __pyx_empty_tuple, __pyx_t_12); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 266, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_13);
+        __pyx_t_1 = __Pyx_PyObject_Call(__pyx_v_T, __pyx_empty_tuple, __pyx_t_12); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 266, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_1);
         __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
-        __Pyx_DECREF_SET(__pyx_v_data, __pyx_t_13);
-        __pyx_t_13 = 0;
+        __Pyx_DECREF_SET(__pyx_v_data, __pyx_t_1);
+        __pyx_t_1 = 0;
 
         /* "datamodel/converters.pyx":265
  *                 )
@@ -6644,7 +6702,7 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
  *                 data = T(**data)
  *             elif isinstance(data, (list, tuple)):
  */
-        goto __pyx_L56;
+        goto __pyx_L65;
       }
 
       /* "datamodel/converters.pyx":267
@@ -6659,12 +6717,12 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
       if (!__pyx_t_8) {
       } else {
         __pyx_t_7 = __pyx_t_8;
-        goto __pyx_L57_bool_binop_done;
+        goto __pyx_L66_bool_binop_done;
       }
       __pyx_t_8 = PyTuple_Check(__pyx_v_data); 
       __pyx_t_2 = (__pyx_t_8 != 0);
       __pyx_t_7 = __pyx_t_2;
-      __pyx_L57_bool_binop_done:;
+      __pyx_L66_bool_binop_done:;
       __pyx_t_2 = (__pyx_t_7 != 0);
       if (__pyx_t_2) {
 
@@ -6675,11 +6733,11 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
  *             else:
  *                 data = T(data)
  */
-        __pyx_t_13 = __Pyx_PySequence_Tuple(__pyx_v_data); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 268, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_13);
-        __pyx_t_12 = __Pyx_PyObject_Call(__pyx_v_T, __pyx_t_13, NULL); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 268, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PySequence_Tuple(__pyx_v_data); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 268, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_1);
+        __pyx_t_12 = __Pyx_PyObject_Call(__pyx_v_T, __pyx_t_1, NULL); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 268, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_12);
-        __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
+        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
         __Pyx_DECREF_SET(__pyx_v_data, __pyx_t_12);
         __pyx_t_12 = 0;
 
@@ -6690,7 +6748,7 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
  *                 data = T(*data)
  *             else:
  */
-        goto __pyx_L56;
+        goto __pyx_L65;
       }
 
       /* "datamodel/converters.pyx":270
@@ -6702,25 +6760,25 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
  */
       /*else*/ {
         __Pyx_INCREF(__pyx_v_T);
-        __pyx_t_13 = __pyx_v_T; __pyx_t_1 = NULL;
-        if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_13))) {
-          __pyx_t_1 = PyMethod_GET_SELF(__pyx_t_13);
-          if (likely(__pyx_t_1)) {
-            PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_13);
-            __Pyx_INCREF(__pyx_t_1);
+        __pyx_t_1 = __pyx_v_T; __pyx_t_13 = NULL;
+        if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_1))) {
+          __pyx_t_13 = PyMethod_GET_SELF(__pyx_t_1);
+          if (likely(__pyx_t_13)) {
+            PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_1);
+            __Pyx_INCREF(__pyx_t_13);
             __Pyx_INCREF(function);
-            __Pyx_DECREF_SET(__pyx_t_13, function);
+            __Pyx_DECREF_SET(__pyx_t_1, function);
           }
         }
-        __pyx_t_12 = (__pyx_t_1) ? __Pyx_PyObject_Call2Args(__pyx_t_13, __pyx_t_1, __pyx_v_data) : __Pyx_PyObject_CallOneArg(__pyx_t_13, __pyx_v_data);
-        __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
+        __pyx_t_12 = (__pyx_t_13) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_13, __pyx_v_data) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_v_data);
+        __Pyx_XDECREF(__pyx_t_13); __pyx_t_13 = 0;
         if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 270, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_12);
-        __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
+        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
         __Pyx_DECREF_SET(__pyx_v_data, __pyx_t_12);
         __pyx_t_12 = 0;
       }
-      __pyx_L56:;
+      __pyx_L65:;
 
       /* "datamodel/converters.pyx":271
  *             else:
@@ -6789,10 +6847,10 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
       {
         __Pyx_PyThreadState_declare
         __Pyx_PyThreadState_assign
-        __Pyx_ExceptionSave(&__pyx_t_5, &__pyx_t_4, &__pyx_t_3);
-        __Pyx_XGOTREF(__pyx_t_5);
-        __Pyx_XGOTREF(__pyx_t_4);
+        __Pyx_ExceptionSave(&__pyx_t_3, &__pyx_t_4, &__pyx_t_5);
         __Pyx_XGOTREF(__pyx_t_3);
+        __Pyx_XGOTREF(__pyx_t_4);
+        __Pyx_XGOTREF(__pyx_t_5);
         /*try:*/ {
 
           /* "datamodel/converters.pyx":276
@@ -6804,9 +6862,9 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
  */
           if (unlikely(__pyx_v_9datamodel_10converters_encoders == Py_None)) {
             PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
-            __PYX_ERR(0, 276, __pyx_L59_error)
+            __PYX_ERR(0, 276, __pyx_L68_error)
           }
-          __pyx_t_12 = __Pyx_PyDict_GetItem(__pyx_v_9datamodel_10converters_encoders, __pyx_v_T); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 276, __pyx_L59_error)
+          __pyx_t_12 = __Pyx_PyDict_GetItem(__pyx_v_9datamodel_10converters_encoders, __pyx_v_T); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 276, __pyx_L68_error)
           __Pyx_GOTREF(__pyx_t_12);
           __pyx_v_conv = __pyx_t_12;
           __pyx_t_12 = 0;
@@ -6820,24 +6878,24 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
  */
           __Pyx_XDECREF(__pyx_r);
           __Pyx_INCREF(__pyx_v_conv);
-          __pyx_t_13 = __pyx_v_conv; __pyx_t_1 = NULL;
-          if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_13))) {
-            __pyx_t_1 = PyMethod_GET_SELF(__pyx_t_13);
-            if (likely(__pyx_t_1)) {
-              PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_13);
-              __Pyx_INCREF(__pyx_t_1);
+          __pyx_t_1 = __pyx_v_conv; __pyx_t_13 = NULL;
+          if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_1))) {
+            __pyx_t_13 = PyMethod_GET_SELF(__pyx_t_1);
+            if (likely(__pyx_t_13)) {
+              PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_1);
+              __Pyx_INCREF(__pyx_t_13);
               __Pyx_INCREF(function);
-              __Pyx_DECREF_SET(__pyx_t_13, function);
+              __Pyx_DECREF_SET(__pyx_t_1, function);
             }
           }
-          __pyx_t_12 = (__pyx_t_1) ? __Pyx_PyObject_Call2Args(__pyx_t_13, __pyx_t_1, __pyx_v_data) : __Pyx_PyObject_CallOneArg(__pyx_t_13, __pyx_v_data);
-          __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
-          if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 277, __pyx_L59_error)
+          __pyx_t_12 = (__pyx_t_13) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_13, __pyx_v_data) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_v_data);
+          __Pyx_XDECREF(__pyx_t_13); __pyx_t_13 = 0;
+          if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 277, __pyx_L68_error)
           __Pyx_GOTREF(__pyx_t_12);
-          __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
+          __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
           __pyx_r = __pyx_t_12;
           __pyx_t_12 = 0;
-          goto __pyx_L63_try_return;
+          goto __pyx_L72_try_return;
 
           /* "datamodel/converters.pyx":275
  *             return str(data)
@@ -6847,7 +6905,7 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
  *                 return conv(data)
  */
         }
-        __pyx_L59_error:;
+        __pyx_L68_error:;
         __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
         __Pyx_XDECREF(__pyx_t_12); __pyx_t_12 = 0;
         __Pyx_XDECREF(__pyx_t_13); __pyx_t_13 = 0;
@@ -6866,7 +6924,7 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
         __pyx_t_6 = __Pyx_PyErr_ExceptionMatches(__pyx_builtin_KeyError);
         if (__pyx_t_6) {
           __Pyx_ErrRestore(0,0,0);
-          goto __pyx_L60_exception_handled;
+          goto __pyx_L69_exception_handled;
         }
 
         /* "datamodel/converters.pyx":280
@@ -6879,10 +6937,10 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
         __pyx_t_6 = __Pyx_PyErr_ExceptionMatches(__pyx_builtin_ValueError);
         if (__pyx_t_6) {
           __Pyx_AddTraceback("datamodel.converters.parse_type", __pyx_clineno, __pyx_lineno, __pyx_filename);
-          if (__Pyx_GetException(&__pyx_t_12, &__pyx_t_13, &__pyx_t_1) < 0) __PYX_ERR(0, 280, __pyx_L61_except_error)
+          if (__Pyx_GetException(&__pyx_t_12, &__pyx_t_1, &__pyx_t_13) < 0) __PYX_ERR(0, 280, __pyx_L70_except_error)
           __Pyx_GOTREF(__pyx_t_12);
-          __Pyx_GOTREF(__pyx_t_13);
           __Pyx_GOTREF(__pyx_t_1);
+          __Pyx_GOTREF(__pyx_t_13);
 
           /* "datamodel/converters.pyx":282
  *             except ValueError:
@@ -6891,9 +6949,9 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
  *                 )
  *         return data
  */
-          __pyx_t_9 = __Pyx_PyObject_FormatSimple(__pyx_v_T, __pyx_empty_unicode); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 282, __pyx_L61_except_error)
+          __pyx_t_9 = __Pyx_PyObject_FormatSimple(__pyx_v_T, __pyx_empty_unicode); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 282, __pyx_L70_except_error)
           __Pyx_GOTREF(__pyx_t_9);
-          __pyx_t_17 = __Pyx_PyUnicode_Concat(__pyx_kp_u_DataModel_Error_parsing_type, __pyx_t_9); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 282, __pyx_L61_except_error)
+          __pyx_t_17 = __Pyx_PyUnicode_Concat(__pyx_kp_u_DataModel_Error_parsing_type, __pyx_t_9); if (unlikely(!__pyx_t_17)) __PYX_ERR(0, 282, __pyx_L70_except_error)
           __Pyx_GOTREF(__pyx_t_17);
           __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
@@ -6904,15 +6962,15 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
  *                     f"DataModel: Error parsing type {T}"
  *                 )
  */
-          __pyx_t_9 = __Pyx_PyObject_CallOneArg(__pyx_builtin_ValueError, __pyx_t_17); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 281, __pyx_L61_except_error)
+          __pyx_t_9 = __Pyx_PyObject_CallOneArg(__pyx_builtin_ValueError, __pyx_t_17); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 281, __pyx_L70_except_error)
           __Pyx_GOTREF(__pyx_t_9);
           __Pyx_DECREF(__pyx_t_17); __pyx_t_17 = 0;
           __Pyx_Raise(__pyx_t_9, 0, 0, 0);
           __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-          __PYX_ERR(0, 281, __pyx_L61_except_error)
+          __PYX_ERR(0, 281, __pyx_L70_except_error)
         }
-        goto __pyx_L61_except_error;
-        __pyx_L61_except_error:;
+        goto __pyx_L70_except_error;
+        __pyx_L70_except_error:;
 
         /* "datamodel/converters.pyx":275
  *             return str(data)
@@ -6921,22 +6979,22 @@ static PyObject *__pyx_pf_9datamodel_10converters_20parse_type(CYTHON_UNUSED PyO
  *                 conv = encoders[T]
  *                 return conv(data)
  */
-        __Pyx_XGIVEREF(__pyx_t_5);
-        __Pyx_XGIVEREF(__pyx_t_4);
         __Pyx_XGIVEREF(__pyx_t_3);
-        __Pyx_ExceptionReset(__pyx_t_5, __pyx_t_4, __pyx_t_3);
+        __Pyx_XGIVEREF(__pyx_t_4);
+        __Pyx_XGIVEREF(__pyx_t_5);
+        __Pyx_ExceptionReset(__pyx_t_3, __pyx_t_4, __pyx_t_5);
         goto __pyx_L1_error;
-        __pyx_L63_try_return:;
-        __Pyx_XGIVEREF(__pyx_t_5);
-        __Pyx_XGIVEREF(__pyx_t_4);
+        __pyx_L72_try_return:;
         __Pyx_XGIVEREF(__pyx_t_3);
-        __Pyx_ExceptionReset(__pyx_t_5, __pyx_t_4, __pyx_t_3);
+        __Pyx_XGIVEREF(__pyx_t_4);
+        __Pyx_XGIVEREF(__pyx_t_5);
+        __Pyx_ExceptionReset(__pyx_t_3, __pyx_t_4, __pyx_t_5);
         goto __pyx_L0;
-        __pyx_L60_exception_handled:;
-        __Pyx_XGIVEREF(__pyx_t_5);
-        __Pyx_XGIVEREF(__pyx_t_4);
+        __pyx_L69_exception_handled:;
         __Pyx_XGIVEREF(__pyx_t_3);
-        __Pyx_ExceptionReset(__pyx_t_5, __pyx_t_4, __pyx_t_3);
+        __Pyx_XGIVEREF(__pyx_t_4);
+        __Pyx_XGIVEREF(__pyx_t_5);
+        __Pyx_ExceptionReset(__pyx_t_3, __pyx_t_4, __pyx_t_5);
       }
     }
 
@@ -8296,6 +8354,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_KeyError, __pyx_k_KeyError, sizeof(__pyx_k_KeyError), 0, 0, 1, 1},
   {&__pyx_n_u_List, __pyx_k_List, sizeof(__pyx_k_List), 0, 1, 0, 1},
   {&__pyx_n_s_MISSING_TYPE, __pyx_k_MISSING_TYPE, sizeof(__pyx_k_MISSING_TYPE), 0, 0, 1, 1},
+  {&__pyx_n_u_Optional, __pyx_k_Optional, sizeof(__pyx_k_Optional), 0, 1, 0, 1},
   {&__pyx_n_s_Pyx_CFunc_object____object___t, __pyx_k_Pyx_CFunc_object____object___t, sizeof(__pyx_k_Pyx_CFunc_object____object___t), 0, 0, 1, 1},
   {&__pyx_n_s_T, __pyx_k_T, sizeof(__pyx_k_T), 0, 0, 1, 1},
   {&__pyx_n_s_TIMEDELTA_RE, __pyx_k_TIMEDELTA_RE, sizeof(__pyx_k_TIMEDELTA_RE), 0, 0, 1, 1},
@@ -8303,6 +8362,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_TypeError, __pyx_k_TypeError, sizeof(__pyx_k_TypeError), 0, 0, 1, 1},
   {&__pyx_n_s_UUID, __pyx_k_UUID, sizeof(__pyx_k_UUID), 0, 0, 1, 1},
   {&__pyx_n_s_Union, __pyx_k_Union, sizeof(__pyx_k_Union), 0, 0, 1, 1},
+  {&__pyx_n_u_Union, __pyx_k_Union, sizeof(__pyx_k_Union), 0, 1, 0, 1},
   {&__pyx_n_s_ValueError, __pyx_k_ValueError, sizeof(__pyx_k_ValueError), 0, 0, 1, 1},
   {&__pyx_kp_u__3, __pyx_k__3, sizeof(__pyx_k__3), 0, 1, 0, 0},
   {&__pyx_n_s_arg, __pyx_k_arg, sizeof(__pyx_k_arg), 0, 0, 1, 1},
@@ -8348,7 +8408,6 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_np, __pyx_k_np, sizeof(__pyx_k_np), 0, 0, 1, 1},
   {&__pyx_n_s_numpy, __pyx_k_numpy, sizeof(__pyx_k_numpy), 0, 0, 1, 1},
   {&__pyx_n_s_obj, __pyx_k_obj, sizeof(__pyx_k_obj), 0, 0, 1, 1},
-  {&__pyx_n_s_origin, __pyx_k_origin, sizeof(__pyx_k_origin), 0, 0, 1, 1},
   {&__pyx_n_s_orjson, __pyx_k_orjson, sizeof(__pyx_k_orjson), 0, 0, 1, 1},
   {&__pyx_n_s_parse, __pyx_k_parse, sizeof(__pyx_k_parse), 0, 0, 1, 1},
   {&__pyx_n_s_parse_type, __pyx_k_parse_type, sizeof(__pyx_k_parse_type), 0, 0, 1, 1},
@@ -8388,7 +8447,7 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedBuiltins(void) {
   __pyx_builtin_TypeError = __Pyx_GetBuiltinName(__pyx_n_s_TypeError); if (!__pyx_builtin_TypeError) __PYX_ERR(0, 41, __pyx_L1_error)
   __pyx_builtin_map = __Pyx_GetBuiltinName(__pyx_n_s_map); if (!__pyx_builtin_map) __PYX_ERR(0, 150, __pyx_L1_error)
   __pyx_builtin_AttributeError = __Pyx_GetBuiltinName(__pyx_n_s_AttributeError); if (!__pyx_builtin_AttributeError) __PYX_ERR(0, 216, __pyx_L1_error)
-  __pyx_builtin_KeyError = __Pyx_GetBuiltinName(__pyx_n_s_KeyError); if (!__pyx_builtin_KeyError) __PYX_ERR(0, 278, __pyx_L1_error)
+  __pyx_builtin_KeyError = __Pyx_GetBuiltinName(__pyx_n_s_KeyError); if (!__pyx_builtin_KeyError) __PYX_ERR(0, 253, __pyx_L1_error)
   return 0;
   __pyx_L1_error:;
   return -1;
