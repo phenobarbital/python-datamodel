@@ -3,7 +3,7 @@ venv:
 	echo 'run `source .venv/bin/activate` to start develop DataModel'
 
 venv10:
-	python3.10 -m venv .venv
+	python3.10 -m venv .venv10
 	echo 'run `source .venv/bin/activate` to start develop DataModel'
 
 setup:
