@@ -54,6 +54,7 @@ class Field(ff):
         min: Union[int, float, Decimal] = None,
         max: Union[int, float, Decimal] = None,
         validator: Optional[Union[Callable, None]] = None,
+        kw_only: bool = False,
         **kwargs,
     ):
         args = {
@@ -150,6 +151,7 @@ class Field(ff):
         super(Field, self).__init__(
             default=self._default,
             default_factory=self._default_factory,
+            kw_only=kw_only,
             **args
         )
         # set field type and dbtype
@@ -198,6 +200,7 @@ def Column(
     min: Union[int, float, Decimal] = None,
     max: Union[int, float, Decimal] = None,
     validator: Optional[Union[Callable, None]] = None,
+    kw_only: bool = False,
     **kwargs
 ):
     """
@@ -218,5 +221,6 @@ def Column(
         min=min,
         max=max,
         validator=validator,
+        kw_only=kw_only,
         **kwargs,
     )
