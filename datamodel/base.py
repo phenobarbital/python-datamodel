@@ -21,10 +21,8 @@ from orjson import OPT_INDENT_2
 from datamodel.fields import Field
 from datamodel.types import JSON_TYPES
 from datamodel.converters import parse_type
+from datamodel.validation import validator
 from .parsers import DefaultEncoder
-from .exceptions import (
-    ValidationModel
-)
 
 
 class Meta:
@@ -316,13 +314,15 @@ class BaseModel(metaclass=ModelMeta):
         errors = {}
         for _, f in self.__columns__.items():
             name = f.name
-            val = self.__dict__[name]
+            value = getattr(self, f.name)
+            annotated_type = f.type
+            val_type = type(value)
             # Fix values of Data:
-            if hasattr(f, 'default') and self.is_callable(val):
+            if hasattr(f, 'default') and self.is_callable(value):
                 try:
-                    if val.__module__ != 'typing':
+                    if value.__module__ != 'typing':
                         try:
-                            new_val = val()
+                            new_val = value()
                         except TypeError:
                             try:
                                 new_val = f.default()
@@ -335,92 +335,31 @@ class BaseModel(metaclass=ModelMeta):
                         f'{self.modelName}: Missing *Column* {f} with name {name}'
                     )
                     setattr(self, name, None)
-            # first check: data type hint
-            val = self.__dict__[name]
-            val_type = type(val)
-            annotated_type = f.type
-            if val_type == type or val == annotated_type or val is None:
-                # data not provided
-                if f.metadata["required"] is True and self.Meta.strict is True:
-                    errors[name] = ValidationModel(
-                        field=name,
-                        value=None,
-                        value_type=val_type,
-                        error="Field Required",
-                        annotation=annotated_type,
-                        exception=None,
+            # first: check primary and required:
+            if val_type == type or value == annotated_type or value is None:
+                if f.metadata['primary'] is True:
+                    raise ValueError(
+                        f"Missing Primary Key *{name}*"
                     )
-                elif f.metadata['nullable'] is False:
-                    errors[name] = ValidationModel(
-                        field=name,
-                        value=None,
-                        value_type=val_type,
-                        error="Not Null",
-                        annotation=annotated_type,
-                        exception=None,
+                if f.metadata["required"] is True and self.Meta.strict is True:
+                    raise ValueError(
+                        f"Missing Required Field *{name}*"
+                    )
+                elif f.metadata["nullable"] is False and self.Meta.strict is True:
+                    raise ValueError(
+                        f"Missing Field *{name}* when Nullable is False."
                     )
             else:
-                try:
-                    instance = self._is_instanceof(val, annotated_type)
-                    if not instance:
-                            errors[name] = ValidationModel(
-                                field=name,
-                                value=val,
-                                error="Validation Exception",
-                                value_type=val_type,
-                                annotation=annotated_type,
-                                exception=None,
-                            )
-                except (TypeError) as e:
-                    errors[name] = ValidationModel(
-                        field=name,
-                        value=val,
-                        error="Validation Exception",
-                        value_type=val_type,
-                        annotation=annotated_type,
-                        exception=e,
-                    )
-                ## calling validator:
-                if 'validator' in f.metadata:
-                    if f.metadata['validator'] is not None:
-                        fn = f.metadata['validator']
-                        if self.is_callable(fn):
-                            try:
-                                result = fn(f, val)
-                                if result is False:
-                                    errors[name] = ValidationModel(
-                                        field=name,
-                                        value=val,
-                                        error=f"Validator: {result}",
-                                        value_type=val_type,
-                                        annotation=annotated_type,
-                                        exception=None,
-                                    )
-                            except (ValueError, AttributeError, TypeError) as e:
-                                errors[name] = ValidationModel(
-                                    field=name,
-                                    value=val,
-                                    error="Validator Exception",
-                                    value_type=val_type,
-                                    annotation=annotated_type,
-                                    exception=e,
-                                )
+                # capturing other errors from validator:
+                error = validator(f, name, value)
+                if error:
+                    errors[name] = error
         if errors:
             print("=== ERRORS ===")
             print(errors)
             object.__setattr__(self, "__valid__", False)
         else:
             object.__setattr__(self, "__valid__", True)
-
-    def _is_instanceof(self, value: Any, annotated_type: type) -> bool:
-        if annotated_type.__module__ == 'typing':
-            return True # TODO: validate subscripted generic (typing extensions)
-        else:
-            try:
-                return isinstance(value, annotated_type)
-            except (AttributeError, TypeError, ValueError) as e:
-                logging.error(e)
-                raise
 
     @classmethod
     def make_model(cls, name: str, schema: str = "public", fields: list = None):

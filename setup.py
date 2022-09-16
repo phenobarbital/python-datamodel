@@ -36,6 +36,12 @@ extensions = [
         sources=['datamodel/converters.pyx'],
         extra_compile_args=COMPILE_ARGS,
         language="c"
+    ),
+    Extension(
+        name='datamodel.validation',
+        sources=['datamodel/validation.pyx'],
+        extra_compile_args=COMPILE_ARGS,
+        language="c++"
     )
 ]
 

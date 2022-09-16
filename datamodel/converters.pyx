@@ -208,7 +208,7 @@ cdef dict encoders = {
     list: to_object
 }
 
-def parse_type(object T, object data):
+def parse_type(object T, object data, object encoder = None):
     if T.__module__ == 'typing':
         args = None
         try:
@@ -253,7 +253,15 @@ def parse_type(object T, object data):
             else:
                 pass
     else:
-        if is_dataclass(T):
+        if encoder is not None:
+            # using a function encoder:
+            try:
+                return encoder(data)
+            except ValueError:
+                raise ValueError(
+                    f"DataModel: Error parsing type {T}"
+                )
+        elif is_dataclass(T):
             if isinstance(data, dict):
                 data = T(**data)
             elif isinstance(data, (list, tuple)):

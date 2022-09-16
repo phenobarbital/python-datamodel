@@ -33,7 +33,7 @@ class User(BaseModel):
     in_time: datetime.time = Column(default='15:00')
     out_time: datetime.time = Column(default='23:00')
     birth: datetime.date = Column(required=False)
-    is_employee: str = Column(required=True, encoder=is_employee)
+    is_employee: str = Column(required=True, default='F', encoder=is_employee)
     size: float
     signup_ts: datetime.datetime = Column(default=datetime.datetime.now(), db_default='now()')
     contacts: Contact = Column(required=False)

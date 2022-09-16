@@ -71,6 +71,7 @@ class Field(ff):
         meta = {
             "required": required,
             "nullable": nullable,
+            "primary": False,
             "validator": None
         }
         self._primary = False
@@ -83,6 +84,7 @@ class Field(ff):
             self.description = None
         try:
             self._primary = kwargs["primary_key"]
+            meta['primary'] = self._primary
             del kwargs["primary_key"]
         except KeyError:
             self._primary = False
