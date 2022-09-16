@@ -14,6 +14,9 @@ from dataclasses import (
     MISSING,
     _MISSING_TYPE
 )
+from datamodel.types import (
+    DB_TYPES
+)
 
 
 class Field(ff):
@@ -37,7 +40,9 @@ class Field(ff):
         '_meta',
         '_field_type',  # Private: not to be used by user code.
         '_required',
-        '_nullable'
+        '_nullable',
+        '_primary',
+        '_dbtype'
     )
 
     def __init__(
@@ -66,14 +71,28 @@ class Field(ff):
         meta = {
             "required": required,
             "nullable": nullable,
+            "primary": False,
             "validator": None
         }
+        self._primary = False
+        self._dbtype = None
         self._required = required
         self._nullable = nullable
         if 'description' in kwargs:
             self.description = kwargs['description']
         else:
             self.description = None
+        try:
+            self._primary = kwargs["primary_key"]
+            meta['primary'] = self._primary
+            del kwargs["primary_key"]
+        except KeyError:
+            self._primary = False
+        try:
+            self._dbtype = kwargs["db_type"]
+            del kwargs["db_type"]
+        except KeyError:
+            self._dbtype = None
         _range = {}
         if min is not None:
             _range["min"] = min
@@ -100,6 +119,22 @@ class Field(ff):
             del kwargs["metadata"]
         except (KeyError, TypeError):
             pass
+        ## Encoder, decoder and widget:
+        try:
+            meta["widget"] = kwargs['widget']
+            del kwargs['widget']
+        except KeyError:
+            meta["widget"] = {}
+        try:
+            meta["encoder"] = kwargs['encoder']
+            del kwargs['encoder']
+        except KeyError:
+            meta["encoder"] = None
+        try:
+            meta["decoder"] = kwargs['decoder']
+            del kwargs['decoder']
+        except KeyError:
+            meta["decoder"] = None
         self._meta = {**meta, **_range, **kwargs}
         args["metadata"] = self._meta
         self._default_factory = MISSING
@@ -133,6 +168,26 @@ class Field(ff):
 
     def nullable(self) -> bool:
         return self._nullable
+
+    def get_dbtype(self):
+        return self._dbtype
+
+    def db_type(self):
+        if self._dbtype is not None:
+            if self._dbtype == "array":
+                t = DB_TYPES[self.type]
+                return f"{t}[]"
+            else:
+                return self._dbtype
+        else:
+            try:
+                return DB_TYPES[self.type]
+            except KeyError:
+                return 'varchar'
+
+    @property
+    def primary_key(self):
+        return self._primary
 
 
 def Column(

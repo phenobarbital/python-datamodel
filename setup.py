@@ -5,7 +5,6 @@
 See:
 https://github.com/phenobarbital/DataModel
 """
-import sys
 from os import path
 from setuptools import find_packages, setup, Extension
 from Cython.Build import cythonize
@@ -31,6 +30,18 @@ extensions = [
         sources=['datamodel/fields.pyx'],
         extra_compile_args=COMPILE_ARGS,
         language="c"
+    ),
+    Extension(
+        name='datamodel.converters',
+        sources=['datamodel/converters.pyx'],
+        extra_compile_args=COMPILE_ARGS,
+        language="c"
+    ),
+    Extension(
+        name='datamodel.validation',
+        sources=['datamodel/validation.pyx'],
+        extra_compile_args=COMPILE_ARGS,
+        language="c++"
     )
 ]
 
@@ -85,7 +96,8 @@ setup(
         "objectpath==0.6.1",
         "orjson==3.8.0",
         'typing_extensions==4.3.0',
-        "asyncpg==0.26.0"
+        "asyncpg==0.26.0",
+        "python-dateutil==2.8.2"
     ],
     tests_require=[
         'pytest>=6.0.0',

@@ -1,12 +1,12 @@
 from __future__ import annotations
 import inspect
+import types
 from typing import (
     Optional,
     Union,
     Any
 )
 import logging
-import uuid
 from collections.abc import Callable
 # Dataclass
 from dataclasses import (
@@ -19,11 +19,11 @@ from dataclasses import (
 )
 from orjson import OPT_INDENT_2
 from datamodel.fields import Field
+from datamodel.types import JSON_TYPES
+from datamodel.converters import parse_type
+from datamodel.validation import validator
 from .parsers import DefaultEncoder
-from .exceptions import (
-    ValidationModel
-)
-from .types import JSON_TYPES
+
 
 class Meta:
     """
@@ -36,13 +36,12 @@ class Meta:
     strict: bool = True
     driver: str = None
     credentials: dict = Optional[dict]
-    dsn:  Union[None, str] = None
-    datasource: Union[None, str] = None
-    connection = None
+    dsn: Optional[str] = None
+    datasource: Optional[str] = None
+    connection: Optional[Callable] = None
 
-    @classmethod
-    def set_connection(cls, conn: Callable):
-        cls.connection = conn
+def set_connection(cls, conn: Callable):
+    cls.connection = conn
 
 
 def _dc_method_setattr(
@@ -103,6 +102,8 @@ class ModelMeta(type):
     """
     __fields__: list
 
+    Meta = Meta
+
     def __new__(cls, name, bases, attrs, **kwargs):
         """__new__ is a classmethod, even without @classmethod decorator"""
         cols = []
@@ -133,7 +134,22 @@ class ModelMeta(type):
         new_cls.Meta = attr_meta or getattr(new_cls, "Meta", Meta)
         if not new_cls.Meta:
             new_cls.Meta = Meta
-        frozen = False
+        new_cls.Meta.set_connection = types.MethodType(
+            set_connection, new_cls.Meta
+        )
+        try:
+            frozen = new_cls.Meta.frozen
+        except AttributeError:
+            new_cls.Meta.frozen = False
+            frozen = False
+        # mix values from Meta to an existing Meta Class
+        new_cls.Meta.__annotations__ = Meta.__annotations__
+        for key, _ in Meta.__annotations__.items():
+            if not hasattr(new_cls.Meta, key):
+                try:
+                    setattr(new_cls.Meta, key, None)
+                except AttributeError as e:
+                    logging.warning(e)
         # adding a "class init method"
         try:
             new_cls.__model_init__(
@@ -224,55 +240,6 @@ class BaseModel(metaclass=ModelMeta):
         else:
             setattr(self, name, value)
 
-    def _parse_type(self, F, data) -> object:
-        # TODO: migrate to cython, using Type
-        _type = F.type
-        if _type.__module__ == 'typing':
-            args = None
-            try:
-                args = _type.__args__
-            except AttributeError:
-                pass
-            if _type._name == 'Dict' and isinstance(data, dict):
-                return {k: self._parse_type(F.type.__args__[1], v) for k, v in data.items()}
-            elif _type._name == 'List' and isinstance(data, (list, tuple)):
-                arg = args[0]
-                if arg.__module__ == 'typing': # nested typing
-                    try:
-                        t = arg.__args__[0]
-                        if is_dataclass(t):
-                            result = []
-                            for x in data:
-                                if isinstance(x, dict):
-                                    result.append(t(**x))
-                                else:
-                                    result.append(t(*x))
-                            return result
-                        else:
-                            return data
-                    except AttributeError:
-                        return data # data -as is-
-                elif is_dataclass(arg):
-                    return [arg(*x) for x in data]
-                else:
-                    return data
-            elif _type._name is None:
-                if isinstance(_type.__origin__, type(Union)):
-                    t = args[0]
-                    if is_dataclass(t):
-                        if isinstance(data, dict):
-                            data = t(**data)
-                        elif isinstance(data, (list, tuple)):
-                            data = t(*data)
-                        else:
-                            data = None
-                    # F.type = args[0]
-                    return data
-                else:
-                    pass
-        else:
-            return data
-
     def __post_init__(self) -> None:
         """
          Post init method.
@@ -282,44 +249,54 @@ class BaseModel(metaclass=ModelMeta):
         for _, f in self.__columns__.items():
             value = getattr(self, f.name)
             key = f.name
-            # print(f'FIELD {key} = {value}', 'TYPE : ', f.type)
+            if 'encoder' in f.metadata:
+                encoder = f.metadata['encoder']
+            else:
+                encoder = None
+            # print(f'FIELD {key} = {value}', 'TYPE : ', f.type, type(f.type))
+            if isinstance(f.type, types.MethodType):
+                raise TypeError(
+                    f"DataModel: Wrong type for Column {key}: {f.type}"
+                )
             if is_dataclass(f.type): # is already a dataclass
                 if isinstance(value, dict):
                     new_val = f.type(**value)
                     setattr(self, key, new_val)
-            elif f.type.__module__ == 'typing':  # a typing extension
-                new_val = self._parse_type(f, value)
-                setattr(self, key, new_val)
-            elif isinstance(value, list):
-                try:
-                    sub_type = f.type.__args__[0]
-                    if is_dataclass(sub_type):
-                        # for every item
-                        items = []
-                        for item in value:
-                            try:
-                                if isinstance(item, dict):
-                                    items.append(sub_type(**item))
-                                else:
-                                    items.append(item)
-                            except (TypeError, AttributeError):
-                                continue
-                        setattr(self, key, items)
-                except AttributeError:
-                    setattr(self, key, value)
-            elif value is None:
-                is_missing = isinstance(f.default, _MISSING_TYPE)
-                setattr(self, key, f.default_factory if is_missing else f.default)
-            elif f.type == uuid.UUID:
-                # TODO: Automatic conversion from other types, like datatime, etc
-                uid = None
-                try:
-                    uid = uuid.UUID(str(value))
-                except ValueError as e:
-                    print(e)
-                setattr(self, key, uid if uid else f.default)
             else:
-                continue
+                try:
+                    if f.type.__module__ == 'typing':  # a typing extension
+                        new_val = parse_type(f.type, value, encoder)
+                        setattr(self, key, new_val)
+                        continue
+                except AttributeError as e:
+                    raise TypeError(
+                        f"DataModel: Wrong type for {key}: {f.type}, error: {e}"
+                    ) from e
+                if isinstance(value, list):
+                    try:
+                        sub_type = f.type.__args__[0]
+                        if is_dataclass(sub_type):
+                            # for every item
+                            items = []
+                            for item in value:
+                                try:
+                                    if isinstance(item, dict):
+                                        items.append(sub_type(**item))
+                                    else:
+                                        items.append(item)
+                                except (TypeError, AttributeError):
+                                    continue
+                            setattr(self, key, items)
+                    except AttributeError:
+                        setattr(self, key, value)
+                elif value is None:
+                    is_missing = isinstance(f.default, _MISSING_TYPE)
+                    setattr(self, key, f.default_factory if is_missing else f.default)
+                elif new_val:= parse_type(f.type, value, encoder):
+                    # be processed by _parse_type
+                    setattr(self, key, new_val)
+                else:
+                    continue
         try:
             self._validation()
         except RuntimeError as err:
@@ -337,12 +314,15 @@ class BaseModel(metaclass=ModelMeta):
         errors = {}
         for _, f in self.__columns__.items():
             name = f.name
-            val = self.__dict__[name]
-            if hasattr(f, 'default') and self.is_callable(val):
+            value = getattr(self, f.name)
+            annotated_type = f.type
+            val_type = type(value)
+            # Fix values of Data:
+            if hasattr(f, 'default') and self.is_callable(value):
                 try:
-                    if val.__module__ != 'typing':
+                    if value.__module__ != 'typing':
                         try:
-                            new_val = val()
+                            new_val = value()
                         except TypeError:
                             try:
                                 new_val = f.default()
@@ -355,92 +335,31 @@ class BaseModel(metaclass=ModelMeta):
                         f'{self.modelName}: Missing *Column* {f} with name {name}'
                     )
                     setattr(self, name, None)
-            # first check: data type hint
-            val = self.__dict__[name]
-            val_type = type(val)
-            annotated_type = f.type
-            if val_type == type or val == annotated_type or val is None:
-                # data not provided
-                if f.metadata["required"] is True and self.Meta.strict is True:
-                    errors[name] = ValidationModel(
-                        field=name,
-                        value=None,
-                        value_type=val_type,
-                        error="Field Required",
-                        annotation=annotated_type,
-                        exception=None,
+            # first: check primary and required:
+            if val_type == type or value == annotated_type or value is None:
+                if f.metadata['primary'] is True:
+                    raise ValueError(
+                        f"Missing Primary Key *{name}*"
                     )
-                elif f.metadata['nullable'] is False:
-                    errors[name] = ValidationModel(
-                        field=name,
-                        value=None,
-                        value_type=val_type,
-                        error="Not Null",
-                        annotation=annotated_type,
-                        exception=None,
+                if f.metadata["required"] is True and self.Meta.strict is True:
+                    raise ValueError(
+                        f"Missing Required Field *{name}*"
+                    )
+                elif f.metadata["nullable"] is False and self.Meta.strict is True:
+                    raise ValueError(
+                        f"Missing Field *{name}* when Nullable is False."
                     )
             else:
-                try:
-                    instance = self._is_instanceof(val, annotated_type)
-                    if not instance:
-                            errors[name] = ValidationModel(
-                                field=name,
-                                value=val,
-                                error="Validation Exception",
-                                value_type=val_type,
-                                annotation=annotated_type,
-                                exception=None,
-                            )
-                except (TypeError) as e:
-                    errors[name] = ValidationModel(
-                        field=name,
-                        value=val,
-                        error="Validation Exception",
-                        value_type=val_type,
-                        annotation=annotated_type,
-                        exception=e,
-                    )
-                ## calling validator:
-                if 'validator' in f.metadata:
-                    if f.metadata['validator'] is not None:
-                        fn = f.metadata['validator']
-                        if self.is_callable(fn):
-                            try:
-                                result = fn(f, val)
-                                if result is False:
-                                    errors[name] = ValidationModel(
-                                        field=name,
-                                        value=val,
-                                        error=f"Validator: {result}",
-                                        value_type=val_type,
-                                        annotation=annotated_type,
-                                        exception=None,
-                                    )
-                            except (ValueError, AttributeError, TypeError) as e:
-                                errors[name] = ValidationModel(
-                                    field=name,
-                                    value=val,
-                                    error="Validator Exception",
-                                    value_type=val_type,
-                                    annotation=annotated_type,
-                                    exception=e,
-                                )
+                # capturing other errors from validator:
+                error = validator(f, name, value)
+                if error:
+                    errors[name] = error
         if errors:
             print("=== ERRORS ===")
             print(errors)
             object.__setattr__(self, "__valid__", False)
         else:
             object.__setattr__(self, "__valid__", True)
-
-    def _is_instanceof(self, value: Any, annotated_type: type) -> bool:
-        if annotated_type.__module__ == 'typing':
-            return True # TODO: validate subscripted generic (typing extensions)
-        else:
-            try:
-                return isinstance(value, annotated_type)
-            except (AttributeError, TypeError, ValueError) as e:
-                logging.error(e)
-                raise
 
     @classmethod
     def make_model(cls, name: str, schema: str = "public", fields: list = None):

@@ -1317,6 +1317,41 @@ static CYTHON_INLINE PyObject* __Pyx_PyObject_FormatAndDecref(PyObject* s, PyObj
 static PyObject* __Pyx_PyUnicode_Join(PyObject* value_tuple, Py_ssize_t value_count, Py_ssize_t result_ulength,
                                       Py_UCS4 max_char);
 
+/* BytesEquals.proto */
+static CYTHON_INLINE int __Pyx_PyBytes_Equals(PyObject* s1, PyObject* s2, int equals);
+
+/* UnicodeEquals.proto */
+static CYTHON_INLINE int __Pyx_PyUnicode_Equals(PyObject* s1, PyObject* s2, int equals);
+
+/* GetItemInt.proto */
+#define __Pyx_GetItemInt(o, i, type, is_signed, to_py_func, is_list, wraparound, boundscheck)\
+    (__Pyx_fits_Py_ssize_t(i, type, is_signed) ?\
+    __Pyx_GetItemInt_Fast(o, (Py_ssize_t)i, is_list, wraparound, boundscheck) :\
+    (is_list ? (PyErr_SetString(PyExc_IndexError, "list index out of range"), (PyObject*)NULL) :\
+               __Pyx_GetItemInt_Generic(o, to_py_func(i))))
+#define __Pyx_GetItemInt_List(o, i, type, is_signed, to_py_func, is_list, wraparound, boundscheck)\
+    (__Pyx_fits_Py_ssize_t(i, type, is_signed) ?\
+    __Pyx_GetItemInt_List_Fast(o, (Py_ssize_t)i, wraparound, boundscheck) :\
+    (PyErr_SetString(PyExc_IndexError, "list index out of range"), (PyObject*)NULL))
+static CYTHON_INLINE PyObject *__Pyx_GetItemInt_List_Fast(PyObject *o, Py_ssize_t i,
+                                                              int wraparound, int boundscheck);
+#define __Pyx_GetItemInt_Tuple(o, i, type, is_signed, to_py_func, is_list, wraparound, boundscheck)\
+    (__Pyx_fits_Py_ssize_t(i, type, is_signed) ?\
+    __Pyx_GetItemInt_Tuple_Fast(o, (Py_ssize_t)i, wraparound, boundscheck) :\
+    (PyErr_SetString(PyExc_IndexError, "tuple index out of range"), (PyObject*)NULL))
+static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Tuple_Fast(PyObject *o, Py_ssize_t i,
+                                                              int wraparound, int boundscheck);
+static PyObject *__Pyx_GetItemInt_Generic(PyObject *o, PyObject* j);
+static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Fast(PyObject *o, Py_ssize_t i,
+                                                     int is_list, int wraparound, int boundscheck);
+
+/* ObjectGetItem.proto */
+#if CYTHON_USE_TYPE_SLOTS
+static CYTHON_INLINE PyObject *__Pyx_PyObject_GetItem(PyObject *obj, PyObject* key);
+#else
+#define __Pyx_PyObject_GetItem(obj, key)  PyObject_GetItem(obj, key)
+#endif
+
 /* PyObjectFormatSimple.proto */
 #if CYTHON_COMPILING_IN_PYPY
     #define __Pyx_PyObject_FormatSimple(s, f) (\
@@ -1360,35 +1395,6 @@ static PyObject *__Pyx_CalculateMetaclass(PyTypeObject *metaclass, PyObject *bas
     (likely(PyDict_CheckExact(ns)) ? PyDict_SetItem(ns, name, value) : PyObject_SetItem(ns, name, value))
 #else
 #define __Pyx_SetNameInClass(ns, name, value)  PyObject_SetItem(ns, name, value)
-#endif
-
-/* GetItemInt.proto */
-#define __Pyx_GetItemInt(o, i, type, is_signed, to_py_func, is_list, wraparound, boundscheck)\
-    (__Pyx_fits_Py_ssize_t(i, type, is_signed) ?\
-    __Pyx_GetItemInt_Fast(o, (Py_ssize_t)i, is_list, wraparound, boundscheck) :\
-    (is_list ? (PyErr_SetString(PyExc_IndexError, "list index out of range"), (PyObject*)NULL) :\
-               __Pyx_GetItemInt_Generic(o, to_py_func(i))))
-#define __Pyx_GetItemInt_List(o, i, type, is_signed, to_py_func, is_list, wraparound, boundscheck)\
-    (__Pyx_fits_Py_ssize_t(i, type, is_signed) ?\
-    __Pyx_GetItemInt_List_Fast(o, (Py_ssize_t)i, wraparound, boundscheck) :\
-    (PyErr_SetString(PyExc_IndexError, "list index out of range"), (PyObject*)NULL))
-static CYTHON_INLINE PyObject *__Pyx_GetItemInt_List_Fast(PyObject *o, Py_ssize_t i,
-                                                              int wraparound, int boundscheck);
-#define __Pyx_GetItemInt_Tuple(o, i, type, is_signed, to_py_func, is_list, wraparound, boundscheck)\
-    (__Pyx_fits_Py_ssize_t(i, type, is_signed) ?\
-    __Pyx_GetItemInt_Tuple_Fast(o, (Py_ssize_t)i, wraparound, boundscheck) :\
-    (PyErr_SetString(PyExc_IndexError, "tuple index out of range"), (PyObject*)NULL))
-static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Tuple_Fast(PyObject *o, Py_ssize_t i,
-                                                              int wraparound, int boundscheck);
-static PyObject *__Pyx_GetItemInt_Generic(PyObject *o, PyObject* j);
-static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Fast(PyObject *o, Py_ssize_t i,
-                                                     int is_list, int wraparound, int boundscheck);
-
-/* ObjectGetItem.proto */
-#if CYTHON_USE_TYPE_SLOTS
-static CYTHON_INLINE PyObject *__Pyx_PyObject_GetItem(PyObject *obj, PyObject* key);
-#else
-#define __Pyx_PyObject_GetItem(obj, key)  PyObject_GetItem(obj, key)
 #endif
 
 /* FetchCommonType.proto */
@@ -1526,11 +1532,14 @@ extern int __pyx_module_is_main_datamodel__fields;
 int __pyx_module_is_main_datamodel__fields = 0;
 
 /* Implementation of 'datamodel.fields' */
+static PyObject *__pyx_builtin_property;
 static PyObject *__pyx_builtin_KeyError;
 static PyObject *__pyx_builtin_TypeError;
 static PyObject *__pyx_builtin_super;
 static PyObject *__pyx_builtin_ValueError;
 static const char __pyx_k_[] = ")";
+static const char __pyx_k_t[] = "t";
+static const char __pyx_k__2[] = "[]";
 static const char __pyx_k_ff[] = "ff";
 static const char __pyx_k_Any[] = "Any";
 static const char __pyx_k_doc[] = "__doc__";
@@ -1549,11 +1558,13 @@ static const char __pyx_k_type[] = "type";
 static const char __pyx_k_FIELD[] = "_FIELD";
 static const char __pyx_k_Field[] = "Field";
 static const char __pyx_k_Union[] = "Union";
+static const char __pyx_k_array[] = "array";
 static const char __pyx_k_items[] = "items";
 static const char __pyx_k_range[] = "_range";
 static const char __pyx_k_slots[] = "__slots__";
 static const char __pyx_k_super[] = "super";
 static const char __pyx_k_Column[] = "Column";
+static const char __pyx_k_dbtype[] = "_dbtype";
 static const char __pyx_k_import[] = "__import__";
 static const char __pyx_k_init_2[] = "__init__";
 static const char __pyx_k_kwargs[] = "kwargs";
@@ -1564,41 +1575,56 @@ static const char __pyx_k_repr_2[] = "__repr__";
 static const char __pyx_k_return[] = "return";
 static const char __pyx_k_type_2[] = ",type=";
 static const char __pyx_k_typing[] = "typing";
+static const char __pyx_k_widget[] = "widget";
 static const char __pyx_k_Decimal[] = "Decimal";
 static const char __pyx_k_MISSING[] = "MISSING";
 static const char __pyx_k_compare[] = "compare";
+static const char __pyx_k_db_type[] = "db_type";
 static const char __pyx_k_decimal[] = "decimal";
+static const char __pyx_k_decoder[] = "decoder";
 static const char __pyx_k_default[] = "default";
+static const char __pyx_k_encoder[] = "encoder";
 static const char __pyx_k_factory[] = "factory";
 static const char __pyx_k_prepare[] = "__prepare__";
+static const char __pyx_k_primary[] = "primary";
+static const char __pyx_k_varchar[] = "varchar";
 static const char __pyx_k_Callable[] = "Callable";
+static const char __pyx_k_DB_TYPES[] = "DB_TYPES";
 static const char __pyx_k_KeyError[] = "KeyError";
 static const char __pyx_k_Optional[] = "Optional";
 static const char __pyx_k_metadata[] = "metadata";
 static const char __pyx_k_nullable[] = "nullable";
+static const char __pyx_k_property[] = "property";
 static const char __pyx_k_qualname[] = "__qualname__";
 static const char __pyx_k_required[] = "required";
 static const char __pyx_k_TypeError[] = "TypeError";
 static const char __pyx_k_default_2[] = "_default";
 static const char __pyx_k_default_3[] = ",default=";
 static const char __pyx_k_metaclass[] = "__metaclass__";
+static const char __pyx_k_primary_2[] = "_primary";
 static const char __pyx_k_validator[] = "validator";
 static const char __pyx_k_ValueError[] = "ValueError";
 static const char __pyx_k_field_type[] = "_field_type";
+static const char __pyx_k_get_dbtype[] = "get_dbtype";
 static const char __pyx_k_nullable_2[] = "_nullable";
 static const char __pyx_k_required_2[] = "_required";
 static const char __pyx_k_and_factory[] = " and factory: ";
 static const char __pyx_k_dataclasses[] = "dataclasses";
 static const char __pyx_k_description[] = "description";
+static const char __pyx_k_primary_key[] = "primary_key";
 static const char __pyx_k_Field___init[] = "Field.__init__";
 static const char __pyx_k_Field___repr[] = "Field.__repr__";
 static const char __pyx_k_Field_column[] = "Field(column=";
 static const char __pyx_k_MISSING_TYPE[] = "_MISSING_TYPE";
+static const char __pyx_k_Field_db_type[] = "Field.db_type";
 static const char __pyx_k_Field_nullable[] = "Field.nullable";
 static const char __pyx_k_Field_required[] = "Field.required";
 static const char __pyx_k_collections_abc[] = "collections.abc";
+static const char __pyx_k_datamodel_types[] = "datamodel.types";
 static const char __pyx_k_default_factory[] = "_default_factory";
+static const char __pyx_k_Field_get_dbtype[] = "Field.get_dbtype";
 static const char __pyx_k_datamodel_fields[] = "datamodel.fields";
+static const char __pyx_k_Field_primary_key[] = "Field.primary_key";
 static const char __pyx_k_default_factory_2[] = "default_factory";
 static const char __pyx_k_cline_in_traceback[] = "cline_in_traceback";
 static const char __pyx_k_datamodel_fields_pyx[] = "datamodel/fields.pyx";
@@ -1609,14 +1635,18 @@ static PyObject *__pyx_n_s_Any;
 static PyObject *__pyx_n_s_Callable;
 static PyObject *__pyx_kp_u_Cannot_specify_both_default;
 static PyObject *__pyx_n_s_Column;
+static PyObject *__pyx_n_s_DB_TYPES;
 static PyObject *__pyx_n_s_Decimal;
 static PyObject *__pyx_n_s_FIELD;
 static PyObject *__pyx_n_s_Field;
 static PyObject *__pyx_n_s_Field___init;
 static PyObject *__pyx_n_s_Field___repr;
 static PyObject *__pyx_kp_u_Field_column;
+static PyObject *__pyx_n_s_Field_db_type;
 static PyObject *__pyx_kp_s_Field_description_Extending_Fie;
+static PyObject *__pyx_n_s_Field_get_dbtype;
 static PyObject *__pyx_n_s_Field_nullable;
+static PyObject *__pyx_n_s_Field_primary_key;
 static PyObject *__pyx_n_s_Field_required;
 static PyObject *__pyx_n_s_KeyError;
 static PyObject *__pyx_n_s_MISSING;
@@ -1625,15 +1655,23 @@ static PyObject *__pyx_n_s_Optional;
 static PyObject *__pyx_n_s_TypeError;
 static PyObject *__pyx_n_s_Union;
 static PyObject *__pyx_n_s_ValueError;
+static PyObject *__pyx_kp_u__2;
 static PyObject *__pyx_kp_u_and_factory;
 static PyObject *__pyx_n_s_args;
+static PyObject *__pyx_n_u_array;
 static PyObject *__pyx_n_s_cline_in_traceback;
 static PyObject *__pyx_n_s_collections_abc;
 static PyObject *__pyx_n_u_compare;
 static PyObject *__pyx_n_s_dataclasses;
 static PyObject *__pyx_n_s_datamodel_fields;
 static PyObject *__pyx_kp_s_datamodel_fields_pyx;
+static PyObject *__pyx_n_s_datamodel_types;
+static PyObject *__pyx_n_s_db_type;
+static PyObject *__pyx_n_u_db_type;
+static PyObject *__pyx_n_s_dbtype;
+static PyObject *__pyx_n_u_dbtype;
 static PyObject *__pyx_n_s_decimal;
+static PyObject *__pyx_n_u_decoder;
 static PyObject *__pyx_n_s_default;
 static PyObject *__pyx_n_u_default;
 static PyObject *__pyx_n_s_default_2;
@@ -1646,10 +1684,12 @@ static PyObject *__pyx_n_u_default_factory_2;
 static PyObject *__pyx_n_s_description;
 static PyObject *__pyx_n_u_description;
 static PyObject *__pyx_n_s_doc;
+static PyObject *__pyx_n_u_encoder;
 static PyObject *__pyx_n_s_factory;
 static PyObject *__pyx_n_s_ff;
 static PyObject *__pyx_n_s_field_type;
 static PyObject *__pyx_n_u_field_type;
+static PyObject *__pyx_n_s_get_dbtype;
 static PyObject *__pyx_n_u_hash;
 static PyObject *__pyx_n_s_import;
 static PyObject *__pyx_n_u_init;
@@ -1675,6 +1715,12 @@ static PyObject *__pyx_n_u_nullable;
 static PyObject *__pyx_n_s_nullable_2;
 static PyObject *__pyx_n_u_nullable_2;
 static PyObject *__pyx_n_s_prepare;
+static PyObject *__pyx_n_u_primary;
+static PyObject *__pyx_n_s_primary_2;
+static PyObject *__pyx_n_u_primary_2;
+static PyObject *__pyx_n_s_primary_key;
+static PyObject *__pyx_n_u_primary_key;
+static PyObject *__pyx_n_s_property;
 static PyObject *__pyx_n_s_qualname;
 static PyObject *__pyx_n_s_range;
 static PyObject *__pyx_n_u_repr;
@@ -1687,6 +1733,7 @@ static PyObject *__pyx_n_s_return;
 static PyObject *__pyx_n_s_self;
 static PyObject *__pyx_n_s_slots;
 static PyObject *__pyx_n_s_super;
+static PyObject *__pyx_n_s_t;
 static PyObject *__pyx_n_s_test;
 static PyObject *__pyx_n_s_type;
 static PyObject *__pyx_n_u_type;
@@ -1694,26 +1741,37 @@ static PyObject *__pyx_kp_u_type_2;
 static PyObject *__pyx_n_s_typing;
 static PyObject *__pyx_n_s_validator;
 static PyObject *__pyx_n_u_validator;
+static PyObject *__pyx_n_u_varchar;
+static PyObject *__pyx_n_u_widget;
 static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_self, PyObject *__pyx_v_default, PyObject *__pyx_v_nullable, PyObject *__pyx_v_required, PyObject *__pyx_v_factory, PyObject *__pyx_v_min, PyObject *__pyx_v_max, PyObject *__pyx_v_validator, PyObject *__pyx_v_kwargs); /* proto */
 static PyObject *__pyx_pf_9datamodel_6fields_5Field_2__repr__(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_9datamodel_6fields_5Field_4required(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_9datamodel_6fields_5Field_6nullable(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_9datamodel_6fields_5Field_8get_dbtype(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_9datamodel_6fields_5Field_10db_type(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_9datamodel_6fields_5Field_12primary_key(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_9datamodel_6fields_Column(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_default, PyObject *__pyx_v_nullable, PyObject *__pyx_v_required, PyObject *__pyx_v_factory, PyObject *__pyx_v_min, PyObject *__pyx_v_max, PyObject *__pyx_v_validator, PyObject *__pyx_v_kwargs); /* proto */
-static PyObject *__pyx_tuple__2;
 static PyObject *__pyx_tuple__3;
-static PyObject *__pyx_tuple__5;
+static PyObject *__pyx_tuple__4;
 static PyObject *__pyx_tuple__6;
-static PyObject *__pyx_tuple__8;
-static PyObject *__pyx_tuple__10;
-static PyObject *__pyx_tuple__12;
-static PyObject *__pyx_codeobj__4;
-static PyObject *__pyx_codeobj__7;
-static PyObject *__pyx_codeobj__9;
-static PyObject *__pyx_codeobj__11;
-static PyObject *__pyx_codeobj__13;
+static PyObject *__pyx_tuple__7;
+static PyObject *__pyx_tuple__9;
+static PyObject *__pyx_tuple__11;
+static PyObject *__pyx_tuple__13;
+static PyObject *__pyx_tuple__15;
+static PyObject *__pyx_tuple__17;
+static PyObject *__pyx_tuple__19;
+static PyObject *__pyx_codeobj__5;
+static PyObject *__pyx_codeobj__8;
+static PyObject *__pyx_codeobj__10;
+static PyObject *__pyx_codeobj__12;
+static PyObject *__pyx_codeobj__14;
+static PyObject *__pyx_codeobj__16;
+static PyObject *__pyx_codeobj__18;
+static PyObject *__pyx_codeobj__20;
 /* Late includes */
 
-/* "datamodel/fields.pyx":43
+/* "datamodel/fields.pyx":48
  *     )
  * 
  *     def __init__(             # <<<<<<<<<<<<<<
@@ -1747,7 +1805,7 @@ static PyObject *__pyx_pw_9datamodel_6fields_5Field_1__init__(PyObject *__pyx_se
     static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_self,&__pyx_n_s_default,&__pyx_n_s_nullable,&__pyx_n_s_required,&__pyx_n_s_factory,&__pyx_n_s_min,&__pyx_n_s_max,&__pyx_n_s_validator,0};
     PyObject* values[8] = {0,0,0,0,0,0,0,0};
 
-    /* "datamodel/fields.pyx":45
+    /* "datamodel/fields.pyx":50
  *     def __init__(
  *         self,
  *         default: Optional[Callable] = None,             # <<<<<<<<<<<<<<
@@ -1756,7 +1814,7 @@ static PyObject *__pyx_pw_9datamodel_6fields_5Field_1__init__(PyObject *__pyx_se
  */
     values[1] = ((PyObject *)((PyObject *)Py_None));
 
-    /* "datamodel/fields.pyx":46
+    /* "datamodel/fields.pyx":51
  *         self,
  *         default: Optional[Callable] = None,
  *         nullable: bool = True,             # <<<<<<<<<<<<<<
@@ -1765,7 +1823,7 @@ static PyObject *__pyx_pw_9datamodel_6fields_5Field_1__init__(PyObject *__pyx_se
  */
     values[2] = ((PyObject *)((PyObject *)Py_True));
 
-    /* "datamodel/fields.pyx":47
+    /* "datamodel/fields.pyx":52
  *         default: Optional[Callable] = None,
  *         nullable: bool = True,
  *         required: bool = False,             # <<<<<<<<<<<<<<
@@ -1774,7 +1832,7 @@ static PyObject *__pyx_pw_9datamodel_6fields_5Field_1__init__(PyObject *__pyx_se
  */
     values[3] = ((PyObject *)((PyObject *)Py_False));
 
-    /* "datamodel/fields.pyx":48
+    /* "datamodel/fields.pyx":53
  *         nullable: bool = True,
  *         required: bool = False,
  *         factory: Optional[Callable] = None,             # <<<<<<<<<<<<<<
@@ -1783,7 +1841,7 @@ static PyObject *__pyx_pw_9datamodel_6fields_5Field_1__init__(PyObject *__pyx_se
  */
     values[4] = ((PyObject *)((PyObject *)Py_None));
 
-    /* "datamodel/fields.pyx":49
+    /* "datamodel/fields.pyx":54
  *         required: bool = False,
  *         factory: Optional[Callable] = None,
  *         min: Union[int, float, Decimal] = None,             # <<<<<<<<<<<<<<
@@ -1792,7 +1850,7 @@ static PyObject *__pyx_pw_9datamodel_6fields_5Field_1__init__(PyObject *__pyx_se
  */
     values[5] = ((PyObject *)((PyObject *)Py_None));
 
-    /* "datamodel/fields.pyx":50
+    /* "datamodel/fields.pyx":55
  *         factory: Optional[Callable] = None,
  *         min: Union[int, float, Decimal] = None,
  *         max: Union[int, float, Decimal] = None,             # <<<<<<<<<<<<<<
@@ -1801,7 +1859,7 @@ static PyObject *__pyx_pw_9datamodel_6fields_5Field_1__init__(PyObject *__pyx_se
  */
     values[6] = ((PyObject *)((PyObject *)Py_None));
 
-    /* "datamodel/fields.pyx":51
+    /* "datamodel/fields.pyx":56
  *         min: Union[int, float, Decimal] = None,
  *         max: Union[int, float, Decimal] = None,
  *         validator: Optional[Union[Callable, None]] = None,             # <<<<<<<<<<<<<<
@@ -1881,7 +1939,7 @@ static PyObject *__pyx_pw_9datamodel_6fields_5Field_1__init__(PyObject *__pyx_se
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, __pyx_v_kwargs, values, pos_args, "__init__") < 0)) __PYX_ERR(0, 43, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, __pyx_v_kwargs, values, pos_args, "__init__") < 0)) __PYX_ERR(0, 48, __pyx_L3_error)
       }
     } else {
       switch (PyTuple_GET_SIZE(__pyx_args)) {
@@ -1915,7 +1973,7 @@ static PyObject *__pyx_pw_9datamodel_6fields_5Field_1__init__(PyObject *__pyx_se
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("__init__", 0, 1, 8, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 43, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("__init__", 0, 1, 8, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 48, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_DECREF(__pyx_v_kwargs); __pyx_v_kwargs = 0;
   __Pyx_AddTraceback("datamodel.fields.Field.__init__", __pyx_clineno, __pyx_lineno, __pyx_filename);
@@ -1924,7 +1982,7 @@ static PyObject *__pyx_pw_9datamodel_6fields_5Field_1__init__(PyObject *__pyx_se
   __pyx_L4_argument_unpacking_done:;
   __pyx_r = __pyx_pf_9datamodel_6fields_5Field___init__(__pyx_self, __pyx_v_self, __pyx_v_default, __pyx_v_nullable, __pyx_v_required, __pyx_v_factory, __pyx_v_min, __pyx_v_max, __pyx_v_validator, __pyx_v_kwargs);
 
-  /* "datamodel/fields.pyx":43
+  /* "datamodel/fields.pyx":48
  *     )
  * 
  *     def __init__(             # <<<<<<<<<<<<<<
@@ -1960,56 +2018,56 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
   __Pyx_RefNannySetupContext("__init__", 0);
   __Pyx_INCREF(__pyx_v_factory);
 
-  /* "datamodel/fields.pyx":55
+  /* "datamodel/fields.pyx":60
  *     ):
  *         args = {
  *             "init": True,             # <<<<<<<<<<<<<<
  *             "repr": True,
  *             "hash": True,
  */
-  __pyx_t_1 = __Pyx_PyDict_NewPresized(5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 55, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyDict_NewPresized(5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 60, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_init, Py_True) < 0) __PYX_ERR(0, 55, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_init, Py_True) < 0) __PYX_ERR(0, 60, __pyx_L1_error)
 
-  /* "datamodel/fields.pyx":56
+  /* "datamodel/fields.pyx":61
  *         args = {
  *             "init": True,
  *             "repr": True,             # <<<<<<<<<<<<<<
  *             "hash": True,
  *             "compare": True,
  */
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_repr, Py_True) < 0) __PYX_ERR(0, 55, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_repr, Py_True) < 0) __PYX_ERR(0, 60, __pyx_L1_error)
 
-  /* "datamodel/fields.pyx":57
+  /* "datamodel/fields.pyx":62
  *             "init": True,
  *             "repr": True,
  *             "hash": True,             # <<<<<<<<<<<<<<
  *             "compare": True,
  *             "metadata": None,
  */
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_hash, Py_True) < 0) __PYX_ERR(0, 55, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_hash, Py_True) < 0) __PYX_ERR(0, 60, __pyx_L1_error)
 
-  /* "datamodel/fields.pyx":58
+  /* "datamodel/fields.pyx":63
  *             "repr": True,
  *             "hash": True,
  *             "compare": True,             # <<<<<<<<<<<<<<
  *             "metadata": None,
  *         }
  */
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_compare, Py_True) < 0) __PYX_ERR(0, 55, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_compare, Py_True) < 0) __PYX_ERR(0, 60, __pyx_L1_error)
 
-  /* "datamodel/fields.pyx":59
+  /* "datamodel/fields.pyx":64
  *             "hash": True,
  *             "compare": True,
  *             "metadata": None,             # <<<<<<<<<<<<<<
  *         }
  *         try:
  */
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_metadata, Py_None) < 0) __PYX_ERR(0, 55, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_metadata, Py_None) < 0) __PYX_ERR(0, 60, __pyx_L1_error)
   __pyx_v_args = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "datamodel/fields.pyx":61
+  /* "datamodel/fields.pyx":66
  *             "metadata": None,
  *         }
  *         try:             # <<<<<<<<<<<<<<
@@ -2025,28 +2083,28 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
     __Pyx_XGOTREF(__pyx_t_4);
     /*try:*/ {
 
-      /* "datamodel/fields.pyx":62
+      /* "datamodel/fields.pyx":67
  *         }
  *         try:
  *             args["compare"] = kwargs["compare"]             # <<<<<<<<<<<<<<
  *             del kwargs["compare"]
  *         except KeyError:
  */
-      __pyx_t_1 = __Pyx_PyDict_GetItem(__pyx_v_kwargs, __pyx_n_u_compare); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 62, __pyx_L3_error)
+      __pyx_t_1 = __Pyx_PyDict_GetItem(__pyx_v_kwargs, __pyx_n_u_compare); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 67, __pyx_L3_error)
       __Pyx_GOTREF(__pyx_t_1);
-      if (unlikely(PyDict_SetItem(__pyx_v_args, __pyx_n_u_compare, __pyx_t_1) < 0)) __PYX_ERR(0, 62, __pyx_L3_error)
+      if (unlikely(PyDict_SetItem(__pyx_v_args, __pyx_n_u_compare, __pyx_t_1) < 0)) __PYX_ERR(0, 67, __pyx_L3_error)
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-      /* "datamodel/fields.pyx":63
+      /* "datamodel/fields.pyx":68
  *         try:
  *             args["compare"] = kwargs["compare"]
  *             del kwargs["compare"]             # <<<<<<<<<<<<<<
  *         except KeyError:
  *             pass
  */
-      if (unlikely(PyDict_DelItem(__pyx_v_kwargs, __pyx_n_u_compare) < 0)) __PYX_ERR(0, 63, __pyx_L3_error)
+      if (unlikely(PyDict_DelItem(__pyx_v_kwargs, __pyx_n_u_compare) < 0)) __PYX_ERR(0, 68, __pyx_L3_error)
 
-      /* "datamodel/fields.pyx":61
+      /* "datamodel/fields.pyx":66
  *             "metadata": None,
  *         }
  *         try:             # <<<<<<<<<<<<<<
@@ -2061,7 +2119,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
     __pyx_L3_error:;
     __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-    /* "datamodel/fields.pyx":64
+    /* "datamodel/fields.pyx":69
  *             args["compare"] = kwargs["compare"]
  *             del kwargs["compare"]
  *         except KeyError:             # <<<<<<<<<<<<<<
@@ -2076,7 +2134,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
     goto __pyx_L5_except_error;
     __pyx_L5_except_error:;
 
-    /* "datamodel/fields.pyx":61
+    /* "datamodel/fields.pyx":66
  *             "metadata": None,
  *         }
  *         try:             # <<<<<<<<<<<<<<
@@ -2096,79 +2154,106 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
     __pyx_L8_try_end:;
   }
 
-  /* "datamodel/fields.pyx":67
+  /* "datamodel/fields.pyx":72
  *             pass
  *         meta = {
  *             "required": required,             # <<<<<<<<<<<<<<
  *             "nullable": nullable,
- *             "validator": None
+ *             "primary": False,
  */
-  __pyx_t_1 = __Pyx_PyDict_NewPresized(3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 67, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyDict_NewPresized(4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 72, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_required, __pyx_v_required) < 0) __PYX_ERR(0, 67, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_required, __pyx_v_required) < 0) __PYX_ERR(0, 72, __pyx_L1_error)
 
-  /* "datamodel/fields.pyx":68
+  /* "datamodel/fields.pyx":73
  *         meta = {
  *             "required": required,
  *             "nullable": nullable,             # <<<<<<<<<<<<<<
+ *             "primary": False,
+ *             "validator": None
+ */
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_nullable, __pyx_v_nullable) < 0) __PYX_ERR(0, 72, __pyx_L1_error)
+
+  /* "datamodel/fields.pyx":74
+ *             "required": required,
+ *             "nullable": nullable,
+ *             "primary": False,             # <<<<<<<<<<<<<<
  *             "validator": None
  *         }
  */
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_nullable, __pyx_v_nullable) < 0) __PYX_ERR(0, 67, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_primary, Py_False) < 0) __PYX_ERR(0, 72, __pyx_L1_error)
 
-  /* "datamodel/fields.pyx":69
- *             "required": required,
+  /* "datamodel/fields.pyx":75
  *             "nullable": nullable,
+ *             "primary": False,
  *             "validator": None             # <<<<<<<<<<<<<<
  *         }
- *         self._required = required
+ *         self._primary = False
  */
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_validator, Py_None) < 0) __PYX_ERR(0, 67, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_validator, Py_None) < 0) __PYX_ERR(0, 72, __pyx_L1_error)
   __pyx_v_meta = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "datamodel/fields.pyx":71
+  /* "datamodel/fields.pyx":77
  *             "validator": None
  *         }
+ *         self._primary = False             # <<<<<<<<<<<<<<
+ *         self._dbtype = None
+ *         self._required = required
+ */
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_primary_2, Py_False) < 0) __PYX_ERR(0, 77, __pyx_L1_error)
+
+  /* "datamodel/fields.pyx":78
+ *         }
+ *         self._primary = False
+ *         self._dbtype = None             # <<<<<<<<<<<<<<
+ *         self._required = required
+ *         self._nullable = nullable
+ */
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_dbtype, Py_None) < 0) __PYX_ERR(0, 78, __pyx_L1_error)
+
+  /* "datamodel/fields.pyx":79
+ *         self._primary = False
+ *         self._dbtype = None
  *         self._required = required             # <<<<<<<<<<<<<<
  *         self._nullable = nullable
  *         if 'description' in kwargs:
  */
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_required_2, __pyx_v_required) < 0) __PYX_ERR(0, 71, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_required_2, __pyx_v_required) < 0) __PYX_ERR(0, 79, __pyx_L1_error)
 
-  /* "datamodel/fields.pyx":72
- *         }
+  /* "datamodel/fields.pyx":80
+ *         self._dbtype = None
  *         self._required = required
  *         self._nullable = nullable             # <<<<<<<<<<<<<<
  *         if 'description' in kwargs:
  *             self.description = kwargs['description']
  */
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_nullable_2, __pyx_v_nullable) < 0) __PYX_ERR(0, 72, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_nullable_2, __pyx_v_nullable) < 0) __PYX_ERR(0, 80, __pyx_L1_error)
 
-  /* "datamodel/fields.pyx":73
+  /* "datamodel/fields.pyx":81
  *         self._required = required
  *         self._nullable = nullable
  *         if 'description' in kwargs:             # <<<<<<<<<<<<<<
  *             self.description = kwargs['description']
  *         else:
  */
-  __pyx_t_6 = (__Pyx_PyDict_ContainsTF(__pyx_n_u_description, __pyx_v_kwargs, Py_EQ)); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 73, __pyx_L1_error)
+  __pyx_t_6 = (__Pyx_PyDict_ContainsTF(__pyx_n_u_description, __pyx_v_kwargs, Py_EQ)); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 81, __pyx_L1_error)
   __pyx_t_7 = (__pyx_t_6 != 0);
   if (__pyx_t_7) {
 
-    /* "datamodel/fields.pyx":74
+    /* "datamodel/fields.pyx":82
  *         self._nullable = nullable
  *         if 'description' in kwargs:
  *             self.description = kwargs['description']             # <<<<<<<<<<<<<<
  *         else:
  *             self.description = None
  */
-    __pyx_t_1 = __Pyx_PyDict_GetItem(__pyx_v_kwargs, __pyx_n_u_description); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 74, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyDict_GetItem(__pyx_v_kwargs, __pyx_n_u_description); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 82, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_description, __pyx_t_1) < 0) __PYX_ERR(0, 74, __pyx_L1_error)
+    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_description, __pyx_t_1) < 0) __PYX_ERR(0, 82, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-    /* "datamodel/fields.pyx":73
+    /* "datamodel/fields.pyx":81
  *         self._required = required
  *         self._nullable = nullable
  *         if 'description' in kwargs:             # <<<<<<<<<<<<<<
@@ -2178,32 +2263,252 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
     goto __pyx_L9;
   }
 
-  /* "datamodel/fields.pyx":76
+  /* "datamodel/fields.pyx":84
  *             self.description = kwargs['description']
  *         else:
  *             self.description = None             # <<<<<<<<<<<<<<
- *         _range = {}
- *         if min is not None:
+ *         try:
+ *             self._primary = kwargs["primary_key"]
  */
   /*else*/ {
-    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_description, Py_None) < 0) __PYX_ERR(0, 76, __pyx_L1_error)
+    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_description, Py_None) < 0) __PYX_ERR(0, 84, __pyx_L1_error)
   }
   __pyx_L9:;
 
-  /* "datamodel/fields.pyx":77
+  /* "datamodel/fields.pyx":85
  *         else:
  *             self.description = None
+ *         try:             # <<<<<<<<<<<<<<
+ *             self._primary = kwargs["primary_key"]
+ *             meta['primary'] = self._primary
+ */
+  {
+    __Pyx_PyThreadState_declare
+    __Pyx_PyThreadState_assign
+    __Pyx_ExceptionSave(&__pyx_t_4, &__pyx_t_3, &__pyx_t_2);
+    __Pyx_XGOTREF(__pyx_t_4);
+    __Pyx_XGOTREF(__pyx_t_3);
+    __Pyx_XGOTREF(__pyx_t_2);
+    /*try:*/ {
+
+      /* "datamodel/fields.pyx":86
+ *             self.description = None
+ *         try:
+ *             self._primary = kwargs["primary_key"]             # <<<<<<<<<<<<<<
+ *             meta['primary'] = self._primary
+ *             del kwargs["primary_key"]
+ */
+      __pyx_t_1 = __Pyx_PyDict_GetItem(__pyx_v_kwargs, __pyx_n_u_primary_key); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 86, __pyx_L10_error)
+      __Pyx_GOTREF(__pyx_t_1);
+      if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_primary_2, __pyx_t_1) < 0) __PYX_ERR(0, 86, __pyx_L10_error)
+      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+      /* "datamodel/fields.pyx":87
+ *         try:
+ *             self._primary = kwargs["primary_key"]
+ *             meta['primary'] = self._primary             # <<<<<<<<<<<<<<
+ *             del kwargs["primary_key"]
+ *         except KeyError:
+ */
+      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_primary_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 87, __pyx_L10_error)
+      __Pyx_GOTREF(__pyx_t_1);
+      if (unlikely(PyDict_SetItem(__pyx_v_meta, __pyx_n_u_primary, __pyx_t_1) < 0)) __PYX_ERR(0, 87, __pyx_L10_error)
+      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+      /* "datamodel/fields.pyx":88
+ *             self._primary = kwargs["primary_key"]
+ *             meta['primary'] = self._primary
+ *             del kwargs["primary_key"]             # <<<<<<<<<<<<<<
+ *         except KeyError:
+ *             self._primary = False
+ */
+      if (unlikely(PyDict_DelItem(__pyx_v_kwargs, __pyx_n_u_primary_key) < 0)) __PYX_ERR(0, 88, __pyx_L10_error)
+
+      /* "datamodel/fields.pyx":85
+ *         else:
+ *             self.description = None
+ *         try:             # <<<<<<<<<<<<<<
+ *             self._primary = kwargs["primary_key"]
+ *             meta['primary'] = self._primary
+ */
+    }
+    __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
+    __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
+    __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
+    goto __pyx_L15_try_end;
+    __pyx_L10_error:;
+    __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+    /* "datamodel/fields.pyx":89
+ *             meta['primary'] = self._primary
+ *             del kwargs["primary_key"]
+ *         except KeyError:             # <<<<<<<<<<<<<<
+ *             self._primary = False
+ *         try:
+ */
+    __pyx_t_5 = __Pyx_PyErr_ExceptionMatches(__pyx_builtin_KeyError);
+    if (__pyx_t_5) {
+      __Pyx_AddTraceback("datamodel.fields.Field.__init__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+      if (__Pyx_GetException(&__pyx_t_1, &__pyx_t_8, &__pyx_t_9) < 0) __PYX_ERR(0, 89, __pyx_L12_except_error)
+      __Pyx_GOTREF(__pyx_t_1);
+      __Pyx_GOTREF(__pyx_t_8);
+      __Pyx_GOTREF(__pyx_t_9);
+
+      /* "datamodel/fields.pyx":90
+ *             del kwargs["primary_key"]
+ *         except KeyError:
+ *             self._primary = False             # <<<<<<<<<<<<<<
+ *         try:
+ *             self._dbtype = kwargs["db_type"]
+ */
+      if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_primary_2, Py_False) < 0) __PYX_ERR(0, 90, __pyx_L12_except_error)
+      __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
+      __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
+      __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
+      goto __pyx_L11_exception_handled;
+    }
+    goto __pyx_L12_except_error;
+    __pyx_L12_except_error:;
+
+    /* "datamodel/fields.pyx":85
+ *         else:
+ *             self.description = None
+ *         try:             # <<<<<<<<<<<<<<
+ *             self._primary = kwargs["primary_key"]
+ *             meta['primary'] = self._primary
+ */
+    __Pyx_XGIVEREF(__pyx_t_4);
+    __Pyx_XGIVEREF(__pyx_t_3);
+    __Pyx_XGIVEREF(__pyx_t_2);
+    __Pyx_ExceptionReset(__pyx_t_4, __pyx_t_3, __pyx_t_2);
+    goto __pyx_L1_error;
+    __pyx_L11_exception_handled:;
+    __Pyx_XGIVEREF(__pyx_t_4);
+    __Pyx_XGIVEREF(__pyx_t_3);
+    __Pyx_XGIVEREF(__pyx_t_2);
+    __Pyx_ExceptionReset(__pyx_t_4, __pyx_t_3, __pyx_t_2);
+    __pyx_L15_try_end:;
+  }
+
+  /* "datamodel/fields.pyx":91
+ *         except KeyError:
+ *             self._primary = False
+ *         try:             # <<<<<<<<<<<<<<
+ *             self._dbtype = kwargs["db_type"]
+ *             del kwargs["db_type"]
+ */
+  {
+    __Pyx_PyThreadState_declare
+    __Pyx_PyThreadState_assign
+    __Pyx_ExceptionSave(&__pyx_t_2, &__pyx_t_3, &__pyx_t_4);
+    __Pyx_XGOTREF(__pyx_t_2);
+    __Pyx_XGOTREF(__pyx_t_3);
+    __Pyx_XGOTREF(__pyx_t_4);
+    /*try:*/ {
+
+      /* "datamodel/fields.pyx":92
+ *             self._primary = False
+ *         try:
+ *             self._dbtype = kwargs["db_type"]             # <<<<<<<<<<<<<<
+ *             del kwargs["db_type"]
+ *         except KeyError:
+ */
+      __pyx_t_9 = __Pyx_PyDict_GetItem(__pyx_v_kwargs, __pyx_n_u_db_type); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 92, __pyx_L18_error)
+      __Pyx_GOTREF(__pyx_t_9);
+      if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_dbtype, __pyx_t_9) < 0) __PYX_ERR(0, 92, __pyx_L18_error)
+      __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+
+      /* "datamodel/fields.pyx":93
+ *         try:
+ *             self._dbtype = kwargs["db_type"]
+ *             del kwargs["db_type"]             # <<<<<<<<<<<<<<
+ *         except KeyError:
+ *             self._dbtype = None
+ */
+      if (unlikely(PyDict_DelItem(__pyx_v_kwargs, __pyx_n_u_db_type) < 0)) __PYX_ERR(0, 93, __pyx_L18_error)
+
+      /* "datamodel/fields.pyx":91
+ *         except KeyError:
+ *             self._primary = False
+ *         try:             # <<<<<<<<<<<<<<
+ *             self._dbtype = kwargs["db_type"]
+ *             del kwargs["db_type"]
+ */
+    }
+    __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
+    __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
+    __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
+    goto __pyx_L23_try_end;
+    __pyx_L18_error:;
+    __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
+    __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
+    __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
+
+    /* "datamodel/fields.pyx":94
+ *             self._dbtype = kwargs["db_type"]
+ *             del kwargs["db_type"]
+ *         except KeyError:             # <<<<<<<<<<<<<<
+ *             self._dbtype = None
+ *         _range = {}
+ */
+    __pyx_t_5 = __Pyx_PyErr_ExceptionMatches(__pyx_builtin_KeyError);
+    if (__pyx_t_5) {
+      __Pyx_AddTraceback("datamodel.fields.Field.__init__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+      if (__Pyx_GetException(&__pyx_t_9, &__pyx_t_8, &__pyx_t_1) < 0) __PYX_ERR(0, 94, __pyx_L20_except_error)
+      __Pyx_GOTREF(__pyx_t_9);
+      __Pyx_GOTREF(__pyx_t_8);
+      __Pyx_GOTREF(__pyx_t_1);
+
+      /* "datamodel/fields.pyx":95
+ *             del kwargs["db_type"]
+ *         except KeyError:
+ *             self._dbtype = None             # <<<<<<<<<<<<<<
+ *         _range = {}
+ *         if min is not None:
+ */
+      if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_dbtype, Py_None) < 0) __PYX_ERR(0, 95, __pyx_L20_except_error)
+      __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
+      __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
+      __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
+      goto __pyx_L19_exception_handled;
+    }
+    goto __pyx_L20_except_error;
+    __pyx_L20_except_error:;
+
+    /* "datamodel/fields.pyx":91
+ *         except KeyError:
+ *             self._primary = False
+ *         try:             # <<<<<<<<<<<<<<
+ *             self._dbtype = kwargs["db_type"]
+ *             del kwargs["db_type"]
+ */
+    __Pyx_XGIVEREF(__pyx_t_2);
+    __Pyx_XGIVEREF(__pyx_t_3);
+    __Pyx_XGIVEREF(__pyx_t_4);
+    __Pyx_ExceptionReset(__pyx_t_2, __pyx_t_3, __pyx_t_4);
+    goto __pyx_L1_error;
+    __pyx_L19_exception_handled:;
+    __Pyx_XGIVEREF(__pyx_t_2);
+    __Pyx_XGIVEREF(__pyx_t_3);
+    __Pyx_XGIVEREF(__pyx_t_4);
+    __Pyx_ExceptionReset(__pyx_t_2, __pyx_t_3, __pyx_t_4);
+    __pyx_L23_try_end:;
+  }
+
+  /* "datamodel/fields.pyx":96
+ *         except KeyError:
+ *             self._dbtype = None
  *         _range = {}             # <<<<<<<<<<<<<<
  *         if min is not None:
  *             _range["min"] = min
  */
-  __pyx_t_1 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 77, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 96, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v__range = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "datamodel/fields.pyx":78
- *             self.description = None
+  /* "datamodel/fields.pyx":97
+ *             self._dbtype = None
  *         _range = {}
  *         if min is not None:             # <<<<<<<<<<<<<<
  *             _range["min"] = min
@@ -2213,17 +2518,17 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
   __pyx_t_6 = (__pyx_t_7 != 0);
   if (__pyx_t_6) {
 
-    /* "datamodel/fields.pyx":79
+    /* "datamodel/fields.pyx":98
  *         _range = {}
  *         if min is not None:
  *             _range["min"] = min             # <<<<<<<<<<<<<<
  *         if max is not None:
  *             _range["max"] = max
  */
-    if (unlikely(PyDict_SetItem(__pyx_v__range, __pyx_n_u_min, __pyx_v_min) < 0)) __PYX_ERR(0, 79, __pyx_L1_error)
+    if (unlikely(PyDict_SetItem(__pyx_v__range, __pyx_n_u_min, __pyx_v_min) < 0)) __PYX_ERR(0, 98, __pyx_L1_error)
 
-    /* "datamodel/fields.pyx":78
- *             self.description = None
+    /* "datamodel/fields.pyx":97
+ *             self._dbtype = None
  *         _range = {}
  *         if min is not None:             # <<<<<<<<<<<<<<
  *             _range["min"] = min
@@ -2231,7 +2536,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
  */
   }
 
-  /* "datamodel/fields.pyx":80
+  /* "datamodel/fields.pyx":99
  *         if min is not None:
  *             _range["min"] = min
  *         if max is not None:             # <<<<<<<<<<<<<<
@@ -2242,16 +2547,16 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
   __pyx_t_7 = (__pyx_t_6 != 0);
   if (__pyx_t_7) {
 
-    /* "datamodel/fields.pyx":81
+    /* "datamodel/fields.pyx":100
  *             _range["min"] = min
  *         if max is not None:
  *             _range["max"] = max             # <<<<<<<<<<<<<<
  *         try:
  *             args["repr"] = kwargs["repr"]
  */
-    if (unlikely(PyDict_SetItem(__pyx_v__range, __pyx_n_u_max, __pyx_v_max) < 0)) __PYX_ERR(0, 81, __pyx_L1_error)
+    if (unlikely(PyDict_SetItem(__pyx_v__range, __pyx_n_u_max, __pyx_v_max) < 0)) __PYX_ERR(0, 100, __pyx_L1_error)
 
-    /* "datamodel/fields.pyx":80
+    /* "datamodel/fields.pyx":99
  *         if min is not None:
  *             _range["min"] = min
  *         if max is not None:             # <<<<<<<<<<<<<<
@@ -2260,7 +2565,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
  */
   }
 
-  /* "datamodel/fields.pyx":82
+  /* "datamodel/fields.pyx":101
  *         if max is not None:
  *             _range["max"] = max
  *         try:             # <<<<<<<<<<<<<<
@@ -2276,28 +2581,28 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
     __Pyx_XGOTREF(__pyx_t_2);
     /*try:*/ {
 
-      /* "datamodel/fields.pyx":83
+      /* "datamodel/fields.pyx":102
  *             _range["max"] = max
  *         try:
  *             args["repr"] = kwargs["repr"]             # <<<<<<<<<<<<<<
  *             del kwargs["repr"]
  *         except KeyError:
  */
-      __pyx_t_1 = __Pyx_PyDict_GetItem(__pyx_v_kwargs, __pyx_n_u_repr); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 83, __pyx_L12_error)
+      __pyx_t_1 = __Pyx_PyDict_GetItem(__pyx_v_kwargs, __pyx_n_u_repr); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 102, __pyx_L28_error)
       __Pyx_GOTREF(__pyx_t_1);
-      if (unlikely(PyDict_SetItem(__pyx_v_args, __pyx_n_u_repr, __pyx_t_1) < 0)) __PYX_ERR(0, 83, __pyx_L12_error)
+      if (unlikely(PyDict_SetItem(__pyx_v_args, __pyx_n_u_repr, __pyx_t_1) < 0)) __PYX_ERR(0, 102, __pyx_L28_error)
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-      /* "datamodel/fields.pyx":84
+      /* "datamodel/fields.pyx":103
  *         try:
  *             args["repr"] = kwargs["repr"]
  *             del kwargs["repr"]             # <<<<<<<<<<<<<<
  *         except KeyError:
  *             args["repr"] = True
  */
-      if (unlikely(PyDict_DelItem(__pyx_v_kwargs, __pyx_n_u_repr) < 0)) __PYX_ERR(0, 84, __pyx_L12_error)
+      if (unlikely(PyDict_DelItem(__pyx_v_kwargs, __pyx_n_u_repr) < 0)) __PYX_ERR(0, 103, __pyx_L28_error)
 
-      /* "datamodel/fields.pyx":82
+      /* "datamodel/fields.pyx":101
  *         if max is not None:
  *             _range["max"] = max
  *         try:             # <<<<<<<<<<<<<<
@@ -2308,11 +2613,13 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-    goto __pyx_L17_try_end;
-    __pyx_L12_error:;
+    goto __pyx_L33_try_end;
+    __pyx_L28_error:;
     __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
+    __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
+    __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-    /* "datamodel/fields.pyx":85
+    /* "datamodel/fields.pyx":104
  *             args["repr"] = kwargs["repr"]
  *             del kwargs["repr"]
  *         except KeyError:             # <<<<<<<<<<<<<<
@@ -2322,28 +2629,28 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
     __pyx_t_5 = __Pyx_PyErr_ExceptionMatches(__pyx_builtin_KeyError);
     if (__pyx_t_5) {
       __Pyx_AddTraceback("datamodel.fields.Field.__init__", __pyx_clineno, __pyx_lineno, __pyx_filename);
-      if (__Pyx_GetException(&__pyx_t_1, &__pyx_t_8, &__pyx_t_9) < 0) __PYX_ERR(0, 85, __pyx_L14_except_error)
+      if (__Pyx_GetException(&__pyx_t_1, &__pyx_t_8, &__pyx_t_9) < 0) __PYX_ERR(0, 104, __pyx_L30_except_error)
       __Pyx_GOTREF(__pyx_t_1);
       __Pyx_GOTREF(__pyx_t_8);
       __Pyx_GOTREF(__pyx_t_9);
 
-      /* "datamodel/fields.pyx":86
+      /* "datamodel/fields.pyx":105
  *             del kwargs["repr"]
  *         except KeyError:
  *             args["repr"] = True             # <<<<<<<<<<<<<<
  *         try:
  *             args["init"] = kwargs["init"]
  */
-      if (unlikely(PyDict_SetItem(__pyx_v_args, __pyx_n_u_repr, Py_True) < 0)) __PYX_ERR(0, 86, __pyx_L14_except_error)
+      if (unlikely(PyDict_SetItem(__pyx_v_args, __pyx_n_u_repr, Py_True) < 0)) __PYX_ERR(0, 105, __pyx_L30_except_error)
       __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
       __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
       __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
-      goto __pyx_L13_exception_handled;
+      goto __pyx_L29_exception_handled;
     }
-    goto __pyx_L14_except_error;
-    __pyx_L14_except_error:;
+    goto __pyx_L30_except_error;
+    __pyx_L30_except_error:;
 
-    /* "datamodel/fields.pyx":82
+    /* "datamodel/fields.pyx":101
  *         if max is not None:
  *             _range["max"] = max
  *         try:             # <<<<<<<<<<<<<<
@@ -2355,15 +2662,15 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
     __Pyx_XGIVEREF(__pyx_t_2);
     __Pyx_ExceptionReset(__pyx_t_4, __pyx_t_3, __pyx_t_2);
     goto __pyx_L1_error;
-    __pyx_L13_exception_handled:;
+    __pyx_L29_exception_handled:;
     __Pyx_XGIVEREF(__pyx_t_4);
     __Pyx_XGIVEREF(__pyx_t_3);
     __Pyx_XGIVEREF(__pyx_t_2);
     __Pyx_ExceptionReset(__pyx_t_4, __pyx_t_3, __pyx_t_2);
-    __pyx_L17_try_end:;
+    __pyx_L33_try_end:;
   }
 
-  /* "datamodel/fields.pyx":87
+  /* "datamodel/fields.pyx":106
  *         except KeyError:
  *             args["repr"] = True
  *         try:             # <<<<<<<<<<<<<<
@@ -2379,28 +2686,28 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
     __Pyx_XGOTREF(__pyx_t_4);
     /*try:*/ {
 
-      /* "datamodel/fields.pyx":88
+      /* "datamodel/fields.pyx":107
  *             args["repr"] = True
  *         try:
  *             args["init"] = kwargs["init"]             # <<<<<<<<<<<<<<
  *             del kwargs["init"]
  *         except KeyError:
  */
-      __pyx_t_9 = __Pyx_PyDict_GetItem(__pyx_v_kwargs, __pyx_n_u_init); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 88, __pyx_L20_error)
+      __pyx_t_9 = __Pyx_PyDict_GetItem(__pyx_v_kwargs, __pyx_n_u_init); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 107, __pyx_L36_error)
       __Pyx_GOTREF(__pyx_t_9);
-      if (unlikely(PyDict_SetItem(__pyx_v_args, __pyx_n_u_init, __pyx_t_9) < 0)) __PYX_ERR(0, 88, __pyx_L20_error)
+      if (unlikely(PyDict_SetItem(__pyx_v_args, __pyx_n_u_init, __pyx_t_9) < 0)) __PYX_ERR(0, 107, __pyx_L36_error)
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-      /* "datamodel/fields.pyx":89
+      /* "datamodel/fields.pyx":108
  *         try:
  *             args["init"] = kwargs["init"]
  *             del kwargs["init"]             # <<<<<<<<<<<<<<
  *         except KeyError:
  *             args["init"] = True
  */
-      if (unlikely(PyDict_DelItem(__pyx_v_kwargs, __pyx_n_u_init) < 0)) __PYX_ERR(0, 89, __pyx_L20_error)
+      if (unlikely(PyDict_DelItem(__pyx_v_kwargs, __pyx_n_u_init) < 0)) __PYX_ERR(0, 108, __pyx_L36_error)
 
-      /* "datamodel/fields.pyx":87
+      /* "datamodel/fields.pyx":106
  *         except KeyError:
  *             args["repr"] = True
  *         try:             # <<<<<<<<<<<<<<
@@ -2411,13 +2718,13 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
     __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-    goto __pyx_L25_try_end;
-    __pyx_L20_error:;
+    goto __pyx_L41_try_end;
+    __pyx_L36_error:;
     __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-    /* "datamodel/fields.pyx":90
+    /* "datamodel/fields.pyx":109
  *             args["init"] = kwargs["init"]
  *             del kwargs["init"]
  *         except KeyError:             # <<<<<<<<<<<<<<
@@ -2427,28 +2734,28 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
     __pyx_t_5 = __Pyx_PyErr_ExceptionMatches(__pyx_builtin_KeyError);
     if (__pyx_t_5) {
       __Pyx_AddTraceback("datamodel.fields.Field.__init__", __pyx_clineno, __pyx_lineno, __pyx_filename);
-      if (__Pyx_GetException(&__pyx_t_9, &__pyx_t_8, &__pyx_t_1) < 0) __PYX_ERR(0, 90, __pyx_L22_except_error)
+      if (__Pyx_GetException(&__pyx_t_9, &__pyx_t_8, &__pyx_t_1) < 0) __PYX_ERR(0, 109, __pyx_L38_except_error)
       __Pyx_GOTREF(__pyx_t_9);
       __Pyx_GOTREF(__pyx_t_8);
       __Pyx_GOTREF(__pyx_t_1);
 
-      /* "datamodel/fields.pyx":91
+      /* "datamodel/fields.pyx":110
  *             del kwargs["init"]
  *         except KeyError:
  *             args["init"] = True             # <<<<<<<<<<<<<<
  *         if required is True:
  *             args["init"] = True
  */
-      if (unlikely(PyDict_SetItem(__pyx_v_args, __pyx_n_u_init, Py_True) < 0)) __PYX_ERR(0, 91, __pyx_L22_except_error)
+      if (unlikely(PyDict_SetItem(__pyx_v_args, __pyx_n_u_init, Py_True) < 0)) __PYX_ERR(0, 110, __pyx_L38_except_error)
       __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
       __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
       __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
-      goto __pyx_L21_exception_handled;
+      goto __pyx_L37_exception_handled;
     }
-    goto __pyx_L22_except_error;
-    __pyx_L22_except_error:;
+    goto __pyx_L38_except_error;
+    __pyx_L38_except_error:;
 
-    /* "datamodel/fields.pyx":87
+    /* "datamodel/fields.pyx":106
  *         except KeyError:
  *             args["repr"] = True
  *         try:             # <<<<<<<<<<<<<<
@@ -2460,15 +2767,15 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
     __Pyx_XGIVEREF(__pyx_t_4);
     __Pyx_ExceptionReset(__pyx_t_2, __pyx_t_3, __pyx_t_4);
     goto __pyx_L1_error;
-    __pyx_L21_exception_handled:;
+    __pyx_L37_exception_handled:;
     __Pyx_XGIVEREF(__pyx_t_2);
     __Pyx_XGIVEREF(__pyx_t_3);
     __Pyx_XGIVEREF(__pyx_t_4);
     __Pyx_ExceptionReset(__pyx_t_2, __pyx_t_3, __pyx_t_4);
-    __pyx_L25_try_end:;
+    __pyx_L41_try_end:;
   }
 
-  /* "datamodel/fields.pyx":92
+  /* "datamodel/fields.pyx":111
  *         except KeyError:
  *             args["init"] = True
  *         if required is True:             # <<<<<<<<<<<<<<
@@ -2479,16 +2786,16 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
   __pyx_t_6 = (__pyx_t_7 != 0);
   if (__pyx_t_6) {
 
-    /* "datamodel/fields.pyx":93
+    /* "datamodel/fields.pyx":112
  *             args["init"] = True
  *         if required is True:
  *             args["init"] = True             # <<<<<<<<<<<<<<
  *         if args["init"] is False:
  *             args["repr"] = False
  */
-    if (unlikely(PyDict_SetItem(__pyx_v_args, __pyx_n_u_init, Py_True) < 0)) __PYX_ERR(0, 93, __pyx_L1_error)
+    if (unlikely(PyDict_SetItem(__pyx_v_args, __pyx_n_u_init, Py_True) < 0)) __PYX_ERR(0, 112, __pyx_L1_error)
 
-    /* "datamodel/fields.pyx":92
+    /* "datamodel/fields.pyx":111
  *         except KeyError:
  *             args["init"] = True
  *         if required is True:             # <<<<<<<<<<<<<<
@@ -2497,30 +2804,30 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
  */
   }
 
-  /* "datamodel/fields.pyx":94
+  /* "datamodel/fields.pyx":113
  *         if required is True:
  *             args["init"] = True
  *         if args["init"] is False:             # <<<<<<<<<<<<<<
  *             args["repr"] = False
  *         if validator is not None:
  */
-  __pyx_t_1 = __Pyx_PyDict_GetItem(__pyx_v_args, __pyx_n_u_init); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 94, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyDict_GetItem(__pyx_v_args, __pyx_n_u_init); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 113, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_6 = (__pyx_t_1 == Py_False);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_7 = (__pyx_t_6 != 0);
   if (__pyx_t_7) {
 
-    /* "datamodel/fields.pyx":95
+    /* "datamodel/fields.pyx":114
  *             args["init"] = True
  *         if args["init"] is False:
  *             args["repr"] = False             # <<<<<<<<<<<<<<
  *         if validator is not None:
  *             meta["validator"] = validator
  */
-    if (unlikely(PyDict_SetItem(__pyx_v_args, __pyx_n_u_repr, Py_False) < 0)) __PYX_ERR(0, 95, __pyx_L1_error)
+    if (unlikely(PyDict_SetItem(__pyx_v_args, __pyx_n_u_repr, Py_False) < 0)) __PYX_ERR(0, 114, __pyx_L1_error)
 
-    /* "datamodel/fields.pyx":94
+    /* "datamodel/fields.pyx":113
  *         if required is True:
  *             args["init"] = True
  *         if args["init"] is False:             # <<<<<<<<<<<<<<
@@ -2529,7 +2836,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
  */
   }
 
-  /* "datamodel/fields.pyx":96
+  /* "datamodel/fields.pyx":115
  *         if args["init"] is False:
  *             args["repr"] = False
  *         if validator is not None:             # <<<<<<<<<<<<<<
@@ -2540,16 +2847,16 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
   __pyx_t_6 = (__pyx_t_7 != 0);
   if (__pyx_t_6) {
 
-    /* "datamodel/fields.pyx":97
+    /* "datamodel/fields.pyx":116
  *             args["repr"] = False
  *         if validator is not None:
  *             meta["validator"] = validator             # <<<<<<<<<<<<<<
  *         try:
  *             meta = {**meta, **kwargs["metadata"]}
  */
-    if (unlikely(PyDict_SetItem(__pyx_v_meta, __pyx_n_u_validator, __pyx_v_validator) < 0)) __PYX_ERR(0, 97, __pyx_L1_error)
+    if (unlikely(PyDict_SetItem(__pyx_v_meta, __pyx_n_u_validator, __pyx_v_validator) < 0)) __PYX_ERR(0, 116, __pyx_L1_error)
 
-    /* "datamodel/fields.pyx":96
+    /* "datamodel/fields.pyx":115
  *         if args["init"] is False:
  *             args["repr"] = False
  *         if validator is not None:             # <<<<<<<<<<<<<<
@@ -2558,7 +2865,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
  */
   }
 
-  /* "datamodel/fields.pyx":98
+  /* "datamodel/fields.pyx":117
  *         if validator is not None:
  *             meta["validator"] = validator
  *         try:             # <<<<<<<<<<<<<<
@@ -2574,39 +2881,39 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
     __Pyx_XGOTREF(__pyx_t_2);
     /*try:*/ {
 
-      /* "datamodel/fields.pyx":99
+      /* "datamodel/fields.pyx":118
  *             meta["validator"] = validator
  *         try:
  *             meta = {**meta, **kwargs["metadata"]}             # <<<<<<<<<<<<<<
  *             del kwargs["metadata"]
  *         except (KeyError, TypeError):
  */
-      __pyx_t_1 = PyDict_Copy(__pyx_v_meta); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 99, __pyx_L31_error)
+      __pyx_t_1 = PyDict_Copy(__pyx_v_meta); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 118, __pyx_L47_error)
       __Pyx_GOTREF(__pyx_t_1);
-      __pyx_t_8 = __Pyx_PyDict_GetItem(__pyx_v_kwargs, __pyx_n_u_metadata); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 99, __pyx_L31_error)
+      __pyx_t_8 = __Pyx_PyDict_GetItem(__pyx_v_kwargs, __pyx_n_u_metadata); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 118, __pyx_L47_error)
       __Pyx_GOTREF(__pyx_t_8);
       if (unlikely(__pyx_t_8 == Py_None)) {
         PyErr_SetString(PyExc_TypeError, "argument after ** must be a mapping, not NoneType");
-        __PYX_ERR(0, 99, __pyx_L31_error)
+        __PYX_ERR(0, 118, __pyx_L47_error)
       }
       if (unlikely(PyDict_Update(__pyx_t_1, __pyx_t_8) < 0)) {
         if (PyErr_ExceptionMatches(PyExc_AttributeError)) __Pyx_RaiseMappingExpectedError(__pyx_t_8);
-        __PYX_ERR(0, 99, __pyx_L31_error)
+        __PYX_ERR(0, 118, __pyx_L47_error)
       }
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
       __Pyx_DECREF_SET(__pyx_v_meta, ((PyObject*)__pyx_t_1));
       __pyx_t_1 = 0;
 
-      /* "datamodel/fields.pyx":100
+      /* "datamodel/fields.pyx":119
  *         try:
  *             meta = {**meta, **kwargs["metadata"]}
  *             del kwargs["metadata"]             # <<<<<<<<<<<<<<
  *         except (KeyError, TypeError):
  *             pass
  */
-      if (unlikely(PyDict_DelItem(__pyx_v_kwargs, __pyx_n_u_metadata) < 0)) __PYX_ERR(0, 100, __pyx_L31_error)
+      if (unlikely(PyDict_DelItem(__pyx_v_kwargs, __pyx_n_u_metadata) < 0)) __PYX_ERR(0, 119, __pyx_L47_error)
 
-      /* "datamodel/fields.pyx":98
+      /* "datamodel/fields.pyx":117
  *         if validator is not None:
  *             meta["validator"] = validator
  *         try:             # <<<<<<<<<<<<<<
@@ -2617,28 +2924,28 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-    goto __pyx_L36_try_end;
-    __pyx_L31_error:;
+    goto __pyx_L52_try_end;
+    __pyx_L47_error:;
     __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-    /* "datamodel/fields.pyx":101
+    /* "datamodel/fields.pyx":120
  *             meta = {**meta, **kwargs["metadata"]}
  *             del kwargs["metadata"]
  *         except (KeyError, TypeError):             # <<<<<<<<<<<<<<
  *             pass
- *         self._meta = {**meta, **_range, **kwargs}
+ *         ## Encoder, decoder and widget:
  */
     __pyx_t_5 = __Pyx_PyErr_ExceptionMatches(__pyx_builtin_KeyError) || __Pyx_PyErr_ExceptionMatches(__pyx_builtin_TypeError);
     if (__pyx_t_5) {
       __Pyx_ErrRestore(0,0,0);
-      goto __pyx_L32_exception_handled;
+      goto __pyx_L48_exception_handled;
     }
-    goto __pyx_L33_except_error;
-    __pyx_L33_except_error:;
+    goto __pyx_L49_except_error;
+    __pyx_L49_except_error:;
 
-    /* "datamodel/fields.pyx":98
+    /* "datamodel/fields.pyx":117
  *         if validator is not None:
  *             meta["validator"] = validator
  *         try:             # <<<<<<<<<<<<<<
@@ -2650,59 +2957,379 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
     __Pyx_XGIVEREF(__pyx_t_2);
     __Pyx_ExceptionReset(__pyx_t_4, __pyx_t_3, __pyx_t_2);
     goto __pyx_L1_error;
-    __pyx_L32_exception_handled:;
+    __pyx_L48_exception_handled:;
     __Pyx_XGIVEREF(__pyx_t_4);
     __Pyx_XGIVEREF(__pyx_t_3);
     __Pyx_XGIVEREF(__pyx_t_2);
     __Pyx_ExceptionReset(__pyx_t_4, __pyx_t_3, __pyx_t_2);
-    __pyx_L36_try_end:;
+    __pyx_L52_try_end:;
   }
 
-  /* "datamodel/fields.pyx":103
- *         except (KeyError, TypeError):
+  /* "datamodel/fields.pyx":123
  *             pass
+ *         ## Encoder, decoder and widget:
+ *         try:             # <<<<<<<<<<<<<<
+ *             meta["widget"] = kwargs['widget']
+ *             del kwargs['widget']
+ */
+  {
+    __Pyx_PyThreadState_declare
+    __Pyx_PyThreadState_assign
+    __Pyx_ExceptionSave(&__pyx_t_2, &__pyx_t_3, &__pyx_t_4);
+    __Pyx_XGOTREF(__pyx_t_2);
+    __Pyx_XGOTREF(__pyx_t_3);
+    __Pyx_XGOTREF(__pyx_t_4);
+    /*try:*/ {
+
+      /* "datamodel/fields.pyx":124
+ *         ## Encoder, decoder and widget:
+ *         try:
+ *             meta["widget"] = kwargs['widget']             # <<<<<<<<<<<<<<
+ *             del kwargs['widget']
+ *         except KeyError:
+ */
+      __pyx_t_1 = __Pyx_PyDict_GetItem(__pyx_v_kwargs, __pyx_n_u_widget); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 124, __pyx_L53_error)
+      __Pyx_GOTREF(__pyx_t_1);
+      if (unlikely(PyDict_SetItem(__pyx_v_meta, __pyx_n_u_widget, __pyx_t_1) < 0)) __PYX_ERR(0, 124, __pyx_L53_error)
+      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+      /* "datamodel/fields.pyx":125
+ *         try:
+ *             meta["widget"] = kwargs['widget']
+ *             del kwargs['widget']             # <<<<<<<<<<<<<<
+ *         except KeyError:
+ *             meta["widget"] = {}
+ */
+      if (unlikely(PyDict_DelItem(__pyx_v_kwargs, __pyx_n_u_widget) < 0)) __PYX_ERR(0, 125, __pyx_L53_error)
+
+      /* "datamodel/fields.pyx":123
+ *             pass
+ *         ## Encoder, decoder and widget:
+ *         try:             # <<<<<<<<<<<<<<
+ *             meta["widget"] = kwargs['widget']
+ *             del kwargs['widget']
+ */
+    }
+    __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
+    __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
+    __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
+    goto __pyx_L58_try_end;
+    __pyx_L53_error:;
+    __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
+    __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
+    __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
+
+    /* "datamodel/fields.pyx":126
+ *             meta["widget"] = kwargs['widget']
+ *             del kwargs['widget']
+ *         except KeyError:             # <<<<<<<<<<<<<<
+ *             meta["widget"] = {}
+ *         try:
+ */
+    __pyx_t_5 = __Pyx_PyErr_ExceptionMatches(__pyx_builtin_KeyError);
+    if (__pyx_t_5) {
+      __Pyx_AddTraceback("datamodel.fields.Field.__init__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+      if (__Pyx_GetException(&__pyx_t_1, &__pyx_t_8, &__pyx_t_9) < 0) __PYX_ERR(0, 126, __pyx_L55_except_error)
+      __Pyx_GOTREF(__pyx_t_1);
+      __Pyx_GOTREF(__pyx_t_8);
+      __Pyx_GOTREF(__pyx_t_9);
+
+      /* "datamodel/fields.pyx":127
+ *             del kwargs['widget']
+ *         except KeyError:
+ *             meta["widget"] = {}             # <<<<<<<<<<<<<<
+ *         try:
+ *             meta["encoder"] = kwargs['encoder']
+ */
+      __pyx_t_10 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 127, __pyx_L55_except_error)
+      __Pyx_GOTREF(__pyx_t_10);
+      if (unlikely(PyDict_SetItem(__pyx_v_meta, __pyx_n_u_widget, __pyx_t_10) < 0)) __PYX_ERR(0, 127, __pyx_L55_except_error)
+      __Pyx_DECREF(__pyx_t_10); __pyx_t_10 = 0;
+      __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
+      __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
+      __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
+      goto __pyx_L54_exception_handled;
+    }
+    goto __pyx_L55_except_error;
+    __pyx_L55_except_error:;
+
+    /* "datamodel/fields.pyx":123
+ *             pass
+ *         ## Encoder, decoder and widget:
+ *         try:             # <<<<<<<<<<<<<<
+ *             meta["widget"] = kwargs['widget']
+ *             del kwargs['widget']
+ */
+    __Pyx_XGIVEREF(__pyx_t_2);
+    __Pyx_XGIVEREF(__pyx_t_3);
+    __Pyx_XGIVEREF(__pyx_t_4);
+    __Pyx_ExceptionReset(__pyx_t_2, __pyx_t_3, __pyx_t_4);
+    goto __pyx_L1_error;
+    __pyx_L54_exception_handled:;
+    __Pyx_XGIVEREF(__pyx_t_2);
+    __Pyx_XGIVEREF(__pyx_t_3);
+    __Pyx_XGIVEREF(__pyx_t_4);
+    __Pyx_ExceptionReset(__pyx_t_2, __pyx_t_3, __pyx_t_4);
+    __pyx_L58_try_end:;
+  }
+
+  /* "datamodel/fields.pyx":128
+ *         except KeyError:
+ *             meta["widget"] = {}
+ *         try:             # <<<<<<<<<<<<<<
+ *             meta["encoder"] = kwargs['encoder']
+ *             del kwargs['encoder']
+ */
+  {
+    __Pyx_PyThreadState_declare
+    __Pyx_PyThreadState_assign
+    __Pyx_ExceptionSave(&__pyx_t_4, &__pyx_t_3, &__pyx_t_2);
+    __Pyx_XGOTREF(__pyx_t_4);
+    __Pyx_XGOTREF(__pyx_t_3);
+    __Pyx_XGOTREF(__pyx_t_2);
+    /*try:*/ {
+
+      /* "datamodel/fields.pyx":129
+ *             meta["widget"] = {}
+ *         try:
+ *             meta["encoder"] = kwargs['encoder']             # <<<<<<<<<<<<<<
+ *             del kwargs['encoder']
+ *         except KeyError:
+ */
+      __pyx_t_9 = __Pyx_PyDict_GetItem(__pyx_v_kwargs, __pyx_n_u_encoder); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 129, __pyx_L61_error)
+      __Pyx_GOTREF(__pyx_t_9);
+      if (unlikely(PyDict_SetItem(__pyx_v_meta, __pyx_n_u_encoder, __pyx_t_9) < 0)) __PYX_ERR(0, 129, __pyx_L61_error)
+      __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+
+      /* "datamodel/fields.pyx":130
+ *         try:
+ *             meta["encoder"] = kwargs['encoder']
+ *             del kwargs['encoder']             # <<<<<<<<<<<<<<
+ *         except KeyError:
+ *             meta["encoder"] = None
+ */
+      if (unlikely(PyDict_DelItem(__pyx_v_kwargs, __pyx_n_u_encoder) < 0)) __PYX_ERR(0, 130, __pyx_L61_error)
+
+      /* "datamodel/fields.pyx":128
+ *         except KeyError:
+ *             meta["widget"] = {}
+ *         try:             # <<<<<<<<<<<<<<
+ *             meta["encoder"] = kwargs['encoder']
+ *             del kwargs['encoder']
+ */
+    }
+    __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
+    __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
+    __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
+    goto __pyx_L66_try_end;
+    __pyx_L61_error:;
+    __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
+    __Pyx_XDECREF(__pyx_t_10); __pyx_t_10 = 0;
+    __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
+    __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
+
+    /* "datamodel/fields.pyx":131
+ *             meta["encoder"] = kwargs['encoder']
+ *             del kwargs['encoder']
+ *         except KeyError:             # <<<<<<<<<<<<<<
+ *             meta["encoder"] = None
+ *         try:
+ */
+    __pyx_t_5 = __Pyx_PyErr_ExceptionMatches(__pyx_builtin_KeyError);
+    if (__pyx_t_5) {
+      __Pyx_AddTraceback("datamodel.fields.Field.__init__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+      if (__Pyx_GetException(&__pyx_t_9, &__pyx_t_8, &__pyx_t_1) < 0) __PYX_ERR(0, 131, __pyx_L63_except_error)
+      __Pyx_GOTREF(__pyx_t_9);
+      __Pyx_GOTREF(__pyx_t_8);
+      __Pyx_GOTREF(__pyx_t_1);
+
+      /* "datamodel/fields.pyx":132
+ *             del kwargs['encoder']
+ *         except KeyError:
+ *             meta["encoder"] = None             # <<<<<<<<<<<<<<
+ *         try:
+ *             meta["decoder"] = kwargs['decoder']
+ */
+      if (unlikely(PyDict_SetItem(__pyx_v_meta, __pyx_n_u_encoder, Py_None) < 0)) __PYX_ERR(0, 132, __pyx_L63_except_error)
+      __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
+      __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
+      __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
+      goto __pyx_L62_exception_handled;
+    }
+    goto __pyx_L63_except_error;
+    __pyx_L63_except_error:;
+
+    /* "datamodel/fields.pyx":128
+ *         except KeyError:
+ *             meta["widget"] = {}
+ *         try:             # <<<<<<<<<<<<<<
+ *             meta["encoder"] = kwargs['encoder']
+ *             del kwargs['encoder']
+ */
+    __Pyx_XGIVEREF(__pyx_t_4);
+    __Pyx_XGIVEREF(__pyx_t_3);
+    __Pyx_XGIVEREF(__pyx_t_2);
+    __Pyx_ExceptionReset(__pyx_t_4, __pyx_t_3, __pyx_t_2);
+    goto __pyx_L1_error;
+    __pyx_L62_exception_handled:;
+    __Pyx_XGIVEREF(__pyx_t_4);
+    __Pyx_XGIVEREF(__pyx_t_3);
+    __Pyx_XGIVEREF(__pyx_t_2);
+    __Pyx_ExceptionReset(__pyx_t_4, __pyx_t_3, __pyx_t_2);
+    __pyx_L66_try_end:;
+  }
+
+  /* "datamodel/fields.pyx":133
+ *         except KeyError:
+ *             meta["encoder"] = None
+ *         try:             # <<<<<<<<<<<<<<
+ *             meta["decoder"] = kwargs['decoder']
+ *             del kwargs['decoder']
+ */
+  {
+    __Pyx_PyThreadState_declare
+    __Pyx_PyThreadState_assign
+    __Pyx_ExceptionSave(&__pyx_t_2, &__pyx_t_3, &__pyx_t_4);
+    __Pyx_XGOTREF(__pyx_t_2);
+    __Pyx_XGOTREF(__pyx_t_3);
+    __Pyx_XGOTREF(__pyx_t_4);
+    /*try:*/ {
+
+      /* "datamodel/fields.pyx":134
+ *             meta["encoder"] = None
+ *         try:
+ *             meta["decoder"] = kwargs['decoder']             # <<<<<<<<<<<<<<
+ *             del kwargs['decoder']
+ *         except KeyError:
+ */
+      __pyx_t_1 = __Pyx_PyDict_GetItem(__pyx_v_kwargs, __pyx_n_u_decoder); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 134, __pyx_L69_error)
+      __Pyx_GOTREF(__pyx_t_1);
+      if (unlikely(PyDict_SetItem(__pyx_v_meta, __pyx_n_u_decoder, __pyx_t_1) < 0)) __PYX_ERR(0, 134, __pyx_L69_error)
+      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+      /* "datamodel/fields.pyx":135
+ *         try:
+ *             meta["decoder"] = kwargs['decoder']
+ *             del kwargs['decoder']             # <<<<<<<<<<<<<<
+ *         except KeyError:
+ *             meta["decoder"] = None
+ */
+      if (unlikely(PyDict_DelItem(__pyx_v_kwargs, __pyx_n_u_decoder) < 0)) __PYX_ERR(0, 135, __pyx_L69_error)
+
+      /* "datamodel/fields.pyx":133
+ *         except KeyError:
+ *             meta["encoder"] = None
+ *         try:             # <<<<<<<<<<<<<<
+ *             meta["decoder"] = kwargs['decoder']
+ *             del kwargs['decoder']
+ */
+    }
+    __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
+    __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
+    __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
+    goto __pyx_L74_try_end;
+    __pyx_L69_error:;
+    __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
+    __Pyx_XDECREF(__pyx_t_10); __pyx_t_10 = 0;
+    __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
+    __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
+
+    /* "datamodel/fields.pyx":136
+ *             meta["decoder"] = kwargs['decoder']
+ *             del kwargs['decoder']
+ *         except KeyError:             # <<<<<<<<<<<<<<
+ *             meta["decoder"] = None
+ *         self._meta = {**meta, **_range, **kwargs}
+ */
+    __pyx_t_5 = __Pyx_PyErr_ExceptionMatches(__pyx_builtin_KeyError);
+    if (__pyx_t_5) {
+      __Pyx_AddTraceback("datamodel.fields.Field.__init__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+      if (__Pyx_GetException(&__pyx_t_1, &__pyx_t_8, &__pyx_t_9) < 0) __PYX_ERR(0, 136, __pyx_L71_except_error)
+      __Pyx_GOTREF(__pyx_t_1);
+      __Pyx_GOTREF(__pyx_t_8);
+      __Pyx_GOTREF(__pyx_t_9);
+
+      /* "datamodel/fields.pyx":137
+ *             del kwargs['decoder']
+ *         except KeyError:
+ *             meta["decoder"] = None             # <<<<<<<<<<<<<<
+ *         self._meta = {**meta, **_range, **kwargs}
+ *         args["metadata"] = self._meta
+ */
+      if (unlikely(PyDict_SetItem(__pyx_v_meta, __pyx_n_u_decoder, Py_None) < 0)) __PYX_ERR(0, 137, __pyx_L71_except_error)
+      __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
+      __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
+      __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
+      goto __pyx_L70_exception_handled;
+    }
+    goto __pyx_L71_except_error;
+    __pyx_L71_except_error:;
+
+    /* "datamodel/fields.pyx":133
+ *         except KeyError:
+ *             meta["encoder"] = None
+ *         try:             # <<<<<<<<<<<<<<
+ *             meta["decoder"] = kwargs['decoder']
+ *             del kwargs['decoder']
+ */
+    __Pyx_XGIVEREF(__pyx_t_2);
+    __Pyx_XGIVEREF(__pyx_t_3);
+    __Pyx_XGIVEREF(__pyx_t_4);
+    __Pyx_ExceptionReset(__pyx_t_2, __pyx_t_3, __pyx_t_4);
+    goto __pyx_L1_error;
+    __pyx_L70_exception_handled:;
+    __Pyx_XGIVEREF(__pyx_t_2);
+    __Pyx_XGIVEREF(__pyx_t_3);
+    __Pyx_XGIVEREF(__pyx_t_4);
+    __Pyx_ExceptionReset(__pyx_t_2, __pyx_t_3, __pyx_t_4);
+    __pyx_L74_try_end:;
+  }
+
+  /* "datamodel/fields.pyx":138
+ *         except KeyError:
+ *             meta["decoder"] = None
  *         self._meta = {**meta, **_range, **kwargs}             # <<<<<<<<<<<<<<
  *         args["metadata"] = self._meta
  *         self._default_factory = MISSING
  */
-  __pyx_t_1 = PyDict_Copy(__pyx_v_meta); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 103, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (unlikely(PyDict_Update(__pyx_t_1, __pyx_v__range) < 0)) {
+  __pyx_t_9 = PyDict_Copy(__pyx_v_meta); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 138, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_9);
+  if (unlikely(PyDict_Update(__pyx_t_9, __pyx_v__range) < 0)) {
     if (PyErr_ExceptionMatches(PyExc_AttributeError)) __Pyx_RaiseMappingExpectedError(__pyx_v__range);
-    __PYX_ERR(0, 103, __pyx_L1_error)
+    __PYX_ERR(0, 138, __pyx_L1_error)
   }
-  if (unlikely(PyDict_Update(__pyx_t_1, __pyx_v_kwargs) < 0)) {
+  if (unlikely(PyDict_Update(__pyx_t_9, __pyx_v_kwargs) < 0)) {
     if (PyErr_ExceptionMatches(PyExc_AttributeError)) __Pyx_RaiseMappingExpectedError(__pyx_v_kwargs);
-    __PYX_ERR(0, 103, __pyx_L1_error)
+    __PYX_ERR(0, 138, __pyx_L1_error)
   }
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_meta, __pyx_t_1) < 0) __PYX_ERR(0, 103, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_meta, __pyx_t_9) < 0) __PYX_ERR(0, 138, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-  /* "datamodel/fields.pyx":104
- *             pass
+  /* "datamodel/fields.pyx":139
+ *             meta["decoder"] = None
  *         self._meta = {**meta, **_range, **kwargs}
  *         args["metadata"] = self._meta             # <<<<<<<<<<<<<<
  *         self._default_factory = MISSING
  *         if default is not None:
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_meta); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 104, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (unlikely(PyDict_SetItem(__pyx_v_args, __pyx_n_u_metadata, __pyx_t_1) < 0)) __PYX_ERR(0, 104, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_meta); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 139, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_9);
+  if (unlikely(PyDict_SetItem(__pyx_v_args, __pyx_n_u_metadata, __pyx_t_9) < 0)) __PYX_ERR(0, 139, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-  /* "datamodel/fields.pyx":105
+  /* "datamodel/fields.pyx":140
  *         self._meta = {**meta, **_range, **kwargs}
  *         args["metadata"] = self._meta
  *         self._default_factory = MISSING             # <<<<<<<<<<<<<<
  *         if default is not None:
  *             self._default = default
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_MISSING); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 105, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_default_factory, __pyx_t_1) < 0) __PYX_ERR(0, 105, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_MISSING); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 140, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_9);
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_default_factory, __pyx_t_9) < 0) __PYX_ERR(0, 140, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-  /* "datamodel/fields.pyx":106
+  /* "datamodel/fields.pyx":141
  *         args["metadata"] = self._meta
  *         self._default_factory = MISSING
  *         if default is not None:             # <<<<<<<<<<<<<<
@@ -2713,26 +3340,26 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
   __pyx_t_7 = (__pyx_t_6 != 0);
   if (__pyx_t_7) {
 
-    /* "datamodel/fields.pyx":107
+    /* "datamodel/fields.pyx":142
  *         self._default_factory = MISSING
  *         if default is not None:
  *             self._default = default             # <<<<<<<<<<<<<<
  *         else:
  *             self._default = None
  */
-    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_default_2, __pyx_v_default) < 0) __PYX_ERR(0, 107, __pyx_L1_error)
+    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_default_2, __pyx_v_default) < 0) __PYX_ERR(0, 142, __pyx_L1_error)
 
-    /* "datamodel/fields.pyx":106
+    /* "datamodel/fields.pyx":141
  *         args["metadata"] = self._meta
  *         self._default_factory = MISSING
  *         if default is not None:             # <<<<<<<<<<<<<<
  *             self._default = default
  *         else:
  */
-    goto __pyx_L37;
+    goto __pyx_L77;
   }
 
-  /* "datamodel/fields.pyx":109
+  /* "datamodel/fields.pyx":144
  *             self._default = default
  *         else:
  *             self._default = None             # <<<<<<<<<<<<<<
@@ -2740,9 +3367,9 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
  *                 if not factory:
  */
   /*else*/ {
-    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_default_2, Py_None) < 0) __PYX_ERR(0, 109, __pyx_L1_error)
+    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_default_2, Py_None) < 0) __PYX_ERR(0, 144, __pyx_L1_error)
 
-    /* "datamodel/fields.pyx":110
+    /* "datamodel/fields.pyx":145
  *         else:
  *             self._default = None
  *             if nullable is True: # Can be null             # <<<<<<<<<<<<<<
@@ -2753,30 +3380,30 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
     __pyx_t_6 = (__pyx_t_7 != 0);
     if (__pyx_t_6) {
 
-      /* "datamodel/fields.pyx":111
+      /* "datamodel/fields.pyx":146
  *             self._default = None
  *             if nullable is True: # Can be null
  *                 if not factory:             # <<<<<<<<<<<<<<
  *                     factory = _MISSING_TYPE
  *                 self._default_factory = factory
  */
-      __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_v_factory); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 111, __pyx_L1_error)
+      __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_v_factory); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 146, __pyx_L1_error)
       __pyx_t_7 = ((!__pyx_t_6) != 0);
       if (__pyx_t_7) {
 
-        /* "datamodel/fields.pyx":112
+        /* "datamodel/fields.pyx":147
  *             if nullable is True: # Can be null
  *                 if not factory:
  *                     factory = _MISSING_TYPE             # <<<<<<<<<<<<<<
  *                 self._default_factory = factory
  *         # Calling Parent init
  */
-        __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_MISSING_TYPE); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 112, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_1);
-        __Pyx_DECREF_SET(__pyx_v_factory, __pyx_t_1);
-        __pyx_t_1 = 0;
+        __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_MISSING_TYPE); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 147, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_9);
+        __Pyx_DECREF_SET(__pyx_v_factory, __pyx_t_9);
+        __pyx_t_9 = 0;
 
-        /* "datamodel/fields.pyx":111
+        /* "datamodel/fields.pyx":146
  *             self._default = None
  *             if nullable is True: # Can be null
  *                 if not factory:             # <<<<<<<<<<<<<<
@@ -2785,16 +3412,16 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
  */
       }
 
-      /* "datamodel/fields.pyx":113
+      /* "datamodel/fields.pyx":148
  *                 if not factory:
  *                     factory = _MISSING_TYPE
  *                 self._default_factory = factory             # <<<<<<<<<<<<<<
  *         # Calling Parent init
  *         super(Field, self).__init__(
  */
-      if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_default_factory, __pyx_v_factory) < 0) __PYX_ERR(0, 113, __pyx_L1_error)
+      if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_default_factory, __pyx_v_factory) < 0) __PYX_ERR(0, 148, __pyx_L1_error)
 
-      /* "datamodel/fields.pyx":110
+      /* "datamodel/fields.pyx":145
  *         else:
  *             self._default = None
  *             if nullable is True: # Can be null             # <<<<<<<<<<<<<<
@@ -2803,95 +3430,95 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
  */
     }
   }
-  __pyx_L37:;
+  __pyx_L77:;
 
-  /* "datamodel/fields.pyx":115
+  /* "datamodel/fields.pyx":150
  *                 self._default_factory = factory
  *         # Calling Parent init
  *         super(Field, self).__init__(             # <<<<<<<<<<<<<<
  *             default=self._default,
  *             default_factory=self._default_factory,
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_Field); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 115, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_8 = PyTuple_New(2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 115, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_Field); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 150, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_9);
+  __pyx_t_8 = PyTuple_New(2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 150, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __Pyx_GIVEREF(__pyx_t_1);
-  PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_1);
+  __Pyx_GIVEREF(__pyx_t_9);
+  PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_9);
   __Pyx_INCREF(__pyx_v_self);
   __Pyx_GIVEREF(__pyx_v_self);
   PyTuple_SET_ITEM(__pyx_t_8, 1, __pyx_v_self);
-  __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_builtin_super, __pyx_t_8, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 115, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_9 = 0;
+  __pyx_t_9 = __Pyx_PyObject_Call(__pyx_builtin_super, __pyx_t_8, NULL); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 150, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_init_2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 115, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_init_2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 150, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-  /* "datamodel/fields.pyx":116
+  /* "datamodel/fields.pyx":151
  *         # Calling Parent init
  *         super(Field, self).__init__(
  *             default=self._default,             # <<<<<<<<<<<<<<
  *             default_factory=self._default_factory,
  *             **args
  */
-  __pyx_t_9 = __Pyx_PyDict_NewPresized(2); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 116, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_9);
-  __pyx_t_10 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_default_2); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 116, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyDict_NewPresized(2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 151, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_10 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_default_2); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 151, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_10);
-  if (PyDict_SetItem(__pyx_t_9, __pyx_n_s_default, __pyx_t_10) < 0) __PYX_ERR(0, 116, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_default, __pyx_t_10) < 0) __PYX_ERR(0, 151, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_10); __pyx_t_10 = 0;
 
-  /* "datamodel/fields.pyx":117
+  /* "datamodel/fields.pyx":152
  *         super(Field, self).__init__(
  *             default=self._default,
  *             default_factory=self._default_factory,             # <<<<<<<<<<<<<<
  *             **args
  *         )
  */
-  __pyx_t_10 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_default_factory); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 117, __pyx_L1_error)
+  __pyx_t_10 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_default_factory); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 152, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_10);
-  if (PyDict_SetItem(__pyx_t_9, __pyx_n_s_default_factory_2, __pyx_t_10) < 0) __PYX_ERR(0, 116, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_default_factory_2, __pyx_t_10) < 0) __PYX_ERR(0, 151, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_10); __pyx_t_10 = 0;
-  __pyx_t_1 = __pyx_t_9;
-  __pyx_t_9 = 0;
+  __pyx_t_9 = __pyx_t_1;
+  __pyx_t_1 = 0;
 
-  /* "datamodel/fields.pyx":118
+  /* "datamodel/fields.pyx":153
  *             default=self._default,
  *             default_factory=self._default_factory,
  *             **args             # <<<<<<<<<<<<<<
  *         )
  *         # set field type and dbtype
  */
-  if (__Pyx_MergeKeywords(__pyx_t_1, __pyx_v_args) < 0) __PYX_ERR(0, 118, __pyx_L1_error)
+  if (__Pyx_MergeKeywords(__pyx_t_9, __pyx_v_args) < 0) __PYX_ERR(0, 153, __pyx_L1_error)
 
-  /* "datamodel/fields.pyx":115
+  /* "datamodel/fields.pyx":150
  *                 self._default_factory = factory
  *         # Calling Parent init
  *         super(Field, self).__init__(             # <<<<<<<<<<<<<<
  *             default=self._default,
  *             default_factory=self._default_factory,
  */
-  __pyx_t_9 = __Pyx_PyObject_Call(__pyx_t_8, __pyx_empty_tuple, __pyx_t_1); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 115, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_9);
+  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_8, __pyx_empty_tuple, __pyx_t_9); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 150, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "datamodel/fields.pyx":121
+  /* "datamodel/fields.pyx":156
  *         )
  *         # set field type and dbtype
  *         self._field_type = self.type             # <<<<<<<<<<<<<<
  * 
  *     def __repr__(self):
  */
-  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_type); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 121, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_9);
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_field_type, __pyx_t_9) < 0) __PYX_ERR(0, 121, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_type); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 156, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_field_type, __pyx_t_1) < 0) __PYX_ERR(0, 156, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "datamodel/fields.pyx":43
+  /* "datamodel/fields.pyx":48
  *     )
  * 
  *     def __init__(             # <<<<<<<<<<<<<<
@@ -2919,7 +3546,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field___init__(CYTHON_UNUSED PyObj
   return __pyx_r;
 }
 
-/* "datamodel/fields.pyx":123
+/* "datamodel/fields.pyx":158
  *         self._field_type = self.type
  * 
  *     def __repr__(self):             # <<<<<<<<<<<<<<
@@ -2955,7 +3582,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field_2__repr__(CYTHON_UNUSED PyOb
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__repr__", 0);
 
-  /* "datamodel/fields.pyx":124
+  /* "datamodel/fields.pyx":159
  * 
  *     def __repr__(self):
  *         return (             # <<<<<<<<<<<<<<
@@ -2964,14 +3591,14 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field_2__repr__(CYTHON_UNUSED PyOb
  */
   __Pyx_XDECREF(__pyx_r);
 
-  /* "datamodel/fields.pyx":125
+  /* "datamodel/fields.pyx":160
  *     def __repr__(self):
  *         return (
  *             "Field("             # <<<<<<<<<<<<<<
  *             f"column={self.name!r},"
  *             f"type={self.type!r},"
  */
-  __pyx_t_1 = PyTuple_New(7); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 125, __pyx_L1_error)
+  __pyx_t_1 = PyTuple_New(7); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 160, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_2 = 0;
   __pyx_t_3 = 127;
@@ -2980,16 +3607,16 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field_2__repr__(CYTHON_UNUSED PyOb
   __Pyx_GIVEREF(__pyx_kp_u_Field_column);
   PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_kp_u_Field_column);
 
-  /* "datamodel/fields.pyx":126
+  /* "datamodel/fields.pyx":161
  *         return (
  *             "Field("
  *             f"column={self.name!r},"             # <<<<<<<<<<<<<<
  *             f"type={self.type!r},"
  *             f"default={self.default!r})"
  */
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_name); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 126, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_name); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 161, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_5 = __Pyx_PyObject_FormatSimpleAndDecref(PyObject_Repr(__pyx_t_4), __pyx_empty_unicode); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 126, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_FormatSimpleAndDecref(PyObject_Repr(__pyx_t_4), __pyx_empty_unicode); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 161, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_t_3 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_5) > __pyx_t_3) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_5) : __pyx_t_3;
@@ -3002,16 +3629,16 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field_2__repr__(CYTHON_UNUSED PyOb
   __Pyx_GIVEREF(__pyx_kp_u_type_2);
   PyTuple_SET_ITEM(__pyx_t_1, 2, __pyx_kp_u_type_2);
 
-  /* "datamodel/fields.pyx":127
+  /* "datamodel/fields.pyx":162
  *             "Field("
  *             f"column={self.name!r},"
  *             f"type={self.type!r},"             # <<<<<<<<<<<<<<
  *             f"default={self.default!r})"
  *         )
  */
-  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_type); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 127, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_type); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 162, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
-  __pyx_t_4 = __Pyx_PyObject_FormatSimpleAndDecref(PyObject_Repr(__pyx_t_5), __pyx_empty_unicode); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 127, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_FormatSimpleAndDecref(PyObject_Repr(__pyx_t_5), __pyx_empty_unicode); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 162, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __pyx_t_3 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_4) > __pyx_t_3) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_4) : __pyx_t_3;
@@ -3024,16 +3651,16 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field_2__repr__(CYTHON_UNUSED PyOb
   __Pyx_GIVEREF(__pyx_kp_u_default_3);
   PyTuple_SET_ITEM(__pyx_t_1, 4, __pyx_kp_u_default_3);
 
-  /* "datamodel/fields.pyx":128
+  /* "datamodel/fields.pyx":163
  *             f"column={self.name!r},"
  *             f"type={self.type!r},"
  *             f"default={self.default!r})"             # <<<<<<<<<<<<<<
  *         )
  * 
  */
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_default); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 128, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_default); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 163, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_5 = __Pyx_PyObject_FormatSimpleAndDecref(PyObject_Repr(__pyx_t_4), __pyx_empty_unicode); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 128, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_FormatSimpleAndDecref(PyObject_Repr(__pyx_t_4), __pyx_empty_unicode); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 163, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_t_3 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_5) > __pyx_t_3) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_5) : __pyx_t_3;
@@ -3046,21 +3673,21 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field_2__repr__(CYTHON_UNUSED PyOb
   __Pyx_GIVEREF(__pyx_kp_u_);
   PyTuple_SET_ITEM(__pyx_t_1, 6, __pyx_kp_u_);
 
-  /* "datamodel/fields.pyx":125
+  /* "datamodel/fields.pyx":160
  *     def __repr__(self):
  *         return (
  *             "Field("             # <<<<<<<<<<<<<<
  *             f"column={self.name!r},"
  *             f"type={self.type!r},"
  */
-  __pyx_t_5 = __Pyx_PyUnicode_Join(__pyx_t_1, 7, __pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 125, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyUnicode_Join(__pyx_t_1, 7, __pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 160, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_r = __pyx_t_5;
   __pyx_t_5 = 0;
   goto __pyx_L0;
 
-  /* "datamodel/fields.pyx":123
+  /* "datamodel/fields.pyx":158
  *         self._field_type = self.type
  * 
  *     def __repr__(self):             # <<<<<<<<<<<<<<
@@ -3081,7 +3708,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field_2__repr__(CYTHON_UNUSED PyOb
   return __pyx_r;
 }
 
-/* "datamodel/fields.pyx":131
+/* "datamodel/fields.pyx":166
  *         )
  * 
  *     def required(self) -> bool:             # <<<<<<<<<<<<<<
@@ -3113,7 +3740,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field_4required(CYTHON_UNUSED PyOb
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("required", 0);
 
-  /* "datamodel/fields.pyx":132
+  /* "datamodel/fields.pyx":167
  * 
  *     def required(self) -> bool:
  *         return self._required             # <<<<<<<<<<<<<<
@@ -3121,13 +3748,13 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field_4required(CYTHON_UNUSED PyOb
  *     def nullable(self) -> bool:
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_required_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 132, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_required_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 167, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "datamodel/fields.pyx":131
+  /* "datamodel/fields.pyx":166
  *         )
  * 
  *     def required(self) -> bool:             # <<<<<<<<<<<<<<
@@ -3146,7 +3773,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field_4required(CYTHON_UNUSED PyOb
   return __pyx_r;
 }
 
-/* "datamodel/fields.pyx":134
+/* "datamodel/fields.pyx":169
  *         return self._required
  * 
  *     def nullable(self) -> bool:             # <<<<<<<<<<<<<<
@@ -3178,21 +3805,21 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field_6nullable(CYTHON_UNUSED PyOb
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("nullable", 0);
 
-  /* "datamodel/fields.pyx":135
+  /* "datamodel/fields.pyx":170
  * 
  *     def nullable(self) -> bool:
  *         return self._nullable             # <<<<<<<<<<<<<<
  * 
- * 
+ *     def get_dbtype(self):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_nullable_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 135, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_nullable_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 170, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "datamodel/fields.pyx":134
+  /* "datamodel/fields.pyx":169
  *         return self._required
  * 
  *     def nullable(self) -> bool:             # <<<<<<<<<<<<<<
@@ -3211,7 +3838,406 @@ static PyObject *__pyx_pf_9datamodel_6fields_5Field_6nullable(CYTHON_UNUSED PyOb
   return __pyx_r;
 }
 
-/* "datamodel/fields.pyx":138
+/* "datamodel/fields.pyx":172
+ *         return self._nullable
+ * 
+ *     def get_dbtype(self):             # <<<<<<<<<<<<<<
+ *         return self._dbtype
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_9datamodel_6fields_5Field_9get_dbtype(PyObject *__pyx_self, PyObject *__pyx_v_self); /*proto*/
+static char __pyx_doc_9datamodel_6fields_5Field_8get_dbtype[] = "Field.get_dbtype(self)";
+static PyMethodDef __pyx_mdef_9datamodel_6fields_5Field_9get_dbtype = {"get_dbtype", (PyCFunction)__pyx_pw_9datamodel_6fields_5Field_9get_dbtype, METH_O, __pyx_doc_9datamodel_6fields_5Field_8get_dbtype};
+static PyObject *__pyx_pw_9datamodel_6fields_5Field_9get_dbtype(PyObject *__pyx_self, PyObject *__pyx_v_self) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("get_dbtype (wrapper)", 0);
+  __pyx_r = __pyx_pf_9datamodel_6fields_5Field_8get_dbtype(__pyx_self, ((PyObject *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_9datamodel_6fields_5Field_8get_dbtype(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("get_dbtype", 0);
+
+  /* "datamodel/fields.pyx":173
+ * 
+ *     def get_dbtype(self):
+ *         return self._dbtype             # <<<<<<<<<<<<<<
+ * 
+ *     def db_type(self):
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_dbtype); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 173, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_r = __pyx_t_1;
+  __pyx_t_1 = 0;
+  goto __pyx_L0;
+
+  /* "datamodel/fields.pyx":172
+ *         return self._nullable
+ * 
+ *     def get_dbtype(self):             # <<<<<<<<<<<<<<
+ *         return self._dbtype
+ * 
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_AddTraceback("datamodel.fields.Field.get_dbtype", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "datamodel/fields.pyx":175
+ *         return self._dbtype
+ * 
+ *     def db_type(self):             # <<<<<<<<<<<<<<
+ *         if self._dbtype is not None:
+ *             if self._dbtype == "array":
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_9datamodel_6fields_5Field_11db_type(PyObject *__pyx_self, PyObject *__pyx_v_self); /*proto*/
+static char __pyx_doc_9datamodel_6fields_5Field_10db_type[] = "Field.db_type(self)";
+static PyMethodDef __pyx_mdef_9datamodel_6fields_5Field_11db_type = {"db_type", (PyCFunction)__pyx_pw_9datamodel_6fields_5Field_11db_type, METH_O, __pyx_doc_9datamodel_6fields_5Field_10db_type};
+static PyObject *__pyx_pw_9datamodel_6fields_5Field_11db_type(PyObject *__pyx_self, PyObject *__pyx_v_self) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("db_type (wrapper)", 0);
+  __pyx_r = __pyx_pf_9datamodel_6fields_5Field_10db_type(__pyx_self, ((PyObject *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_9datamodel_6fields_5Field_10db_type(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_self) {
+  PyObject *__pyx_v_t = NULL;
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  int __pyx_t_2;
+  int __pyx_t_3;
+  PyObject *__pyx_t_4 = NULL;
+  PyObject *__pyx_t_5 = NULL;
+  PyObject *__pyx_t_6 = NULL;
+  PyObject *__pyx_t_7 = NULL;
+  PyObject *__pyx_t_8 = NULL;
+  int __pyx_t_9;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("db_type", 0);
+
+  /* "datamodel/fields.pyx":176
+ * 
+ *     def db_type(self):
+ *         if self._dbtype is not None:             # <<<<<<<<<<<<<<
+ *             if self._dbtype == "array":
+ *                 t = DB_TYPES[self.type]
+ */
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_dbtype); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 176, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_2 = (__pyx_t_1 != Py_None);
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_t_3 = (__pyx_t_2 != 0);
+  if (__pyx_t_3) {
+
+    /* "datamodel/fields.pyx":177
+ *     def db_type(self):
+ *         if self._dbtype is not None:
+ *             if self._dbtype == "array":             # <<<<<<<<<<<<<<
+ *                 t = DB_TYPES[self.type]
+ *                 return f"{t}[]"
+ */
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_dbtype); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 177, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_1);
+    __pyx_t_3 = (__Pyx_PyUnicode_Equals(__pyx_t_1, __pyx_n_u_array, Py_EQ)); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 177, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+    if (__pyx_t_3) {
+
+      /* "datamodel/fields.pyx":178
+ *         if self._dbtype is not None:
+ *             if self._dbtype == "array":
+ *                 t = DB_TYPES[self.type]             # <<<<<<<<<<<<<<
+ *                 return f"{t}[]"
+ *             else:
+ */
+      __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_DB_TYPES); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 178, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_1);
+      __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_type); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 178, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_4);
+      __pyx_t_5 = __Pyx_PyObject_GetItem(__pyx_t_1, __pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 178, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_5);
+      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+      __pyx_v_t = __pyx_t_5;
+      __pyx_t_5 = 0;
+
+      /* "datamodel/fields.pyx":179
+ *             if self._dbtype == "array":
+ *                 t = DB_TYPES[self.type]
+ *                 return f"{t}[]"             # <<<<<<<<<<<<<<
+ *             else:
+ *                 return self._dbtype
+ */
+      __Pyx_XDECREF(__pyx_r);
+      __pyx_t_5 = __Pyx_PyObject_FormatSimple(__pyx_v_t, __pyx_empty_unicode); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 179, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_5);
+      __pyx_t_4 = __Pyx_PyUnicode_Concat(__pyx_t_5, __pyx_kp_u__2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 179, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_4);
+      __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+      __pyx_r = __pyx_t_4;
+      __pyx_t_4 = 0;
+      goto __pyx_L0;
+
+      /* "datamodel/fields.pyx":177
+ *     def db_type(self):
+ *         if self._dbtype is not None:
+ *             if self._dbtype == "array":             # <<<<<<<<<<<<<<
+ *                 t = DB_TYPES[self.type]
+ *                 return f"{t}[]"
+ */
+    }
+
+    /* "datamodel/fields.pyx":181
+ *                 return f"{t}[]"
+ *             else:
+ *                 return self._dbtype             # <<<<<<<<<<<<<<
+ *         else:
+ *             try:
+ */
+    /*else*/ {
+      __Pyx_XDECREF(__pyx_r);
+      __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_dbtype); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 181, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_4);
+      __pyx_r = __pyx_t_4;
+      __pyx_t_4 = 0;
+      goto __pyx_L0;
+    }
+
+    /* "datamodel/fields.pyx":176
+ * 
+ *     def db_type(self):
+ *         if self._dbtype is not None:             # <<<<<<<<<<<<<<
+ *             if self._dbtype == "array":
+ *                 t = DB_TYPES[self.type]
+ */
+  }
+
+  /* "datamodel/fields.pyx":183
+ *                 return self._dbtype
+ *         else:
+ *             try:             # <<<<<<<<<<<<<<
+ *                 return DB_TYPES[self.type]
+ *             except KeyError:
+ */
+  /*else*/ {
+    {
+      __Pyx_PyThreadState_declare
+      __Pyx_PyThreadState_assign
+      __Pyx_ExceptionSave(&__pyx_t_6, &__pyx_t_7, &__pyx_t_8);
+      __Pyx_XGOTREF(__pyx_t_6);
+      __Pyx_XGOTREF(__pyx_t_7);
+      __Pyx_XGOTREF(__pyx_t_8);
+      /*try:*/ {
+
+        /* "datamodel/fields.pyx":184
+ *         else:
+ *             try:
+ *                 return DB_TYPES[self.type]             # <<<<<<<<<<<<<<
+ *             except KeyError:
+ *                 return 'varchar'
+ */
+        __Pyx_XDECREF(__pyx_r);
+        __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_DB_TYPES); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 184, __pyx_L5_error)
+        __Pyx_GOTREF(__pyx_t_4);
+        __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_type); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 184, __pyx_L5_error)
+        __Pyx_GOTREF(__pyx_t_5);
+        __pyx_t_1 = __Pyx_PyObject_GetItem(__pyx_t_4, __pyx_t_5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 184, __pyx_L5_error)
+        __Pyx_GOTREF(__pyx_t_1);
+        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+        __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+        __pyx_r = __pyx_t_1;
+        __pyx_t_1 = 0;
+        goto __pyx_L9_try_return;
+
+        /* "datamodel/fields.pyx":183
+ *                 return self._dbtype
+ *         else:
+ *             try:             # <<<<<<<<<<<<<<
+ *                 return DB_TYPES[self.type]
+ *             except KeyError:
+ */
+      }
+      __pyx_L5_error:;
+      __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
+      __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
+      __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
+
+      /* "datamodel/fields.pyx":185
+ *             try:
+ *                 return DB_TYPES[self.type]
+ *             except KeyError:             # <<<<<<<<<<<<<<
+ *                 return 'varchar'
+ * 
+ */
+      __pyx_t_9 = __Pyx_PyErr_ExceptionMatches(__pyx_builtin_KeyError);
+      if (__pyx_t_9) {
+        __Pyx_AddTraceback("datamodel.fields.Field.db_type", __pyx_clineno, __pyx_lineno, __pyx_filename);
+        if (__Pyx_GetException(&__pyx_t_1, &__pyx_t_5, &__pyx_t_4) < 0) __PYX_ERR(0, 185, __pyx_L7_except_error)
+        __Pyx_GOTREF(__pyx_t_1);
+        __Pyx_GOTREF(__pyx_t_5);
+        __Pyx_GOTREF(__pyx_t_4);
+
+        /* "datamodel/fields.pyx":186
+ *                 return DB_TYPES[self.type]
+ *             except KeyError:
+ *                 return 'varchar'             # <<<<<<<<<<<<<<
+ * 
+ *     @property
+ */
+        __Pyx_XDECREF(__pyx_r);
+        __Pyx_INCREF(__pyx_n_u_varchar);
+        __pyx_r = __pyx_n_u_varchar;
+        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+        __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+        goto __pyx_L8_except_return;
+      }
+      goto __pyx_L7_except_error;
+      __pyx_L7_except_error:;
+
+      /* "datamodel/fields.pyx":183
+ *                 return self._dbtype
+ *         else:
+ *             try:             # <<<<<<<<<<<<<<
+ *                 return DB_TYPES[self.type]
+ *             except KeyError:
+ */
+      __Pyx_XGIVEREF(__pyx_t_6);
+      __Pyx_XGIVEREF(__pyx_t_7);
+      __Pyx_XGIVEREF(__pyx_t_8);
+      __Pyx_ExceptionReset(__pyx_t_6, __pyx_t_7, __pyx_t_8);
+      goto __pyx_L1_error;
+      __pyx_L9_try_return:;
+      __Pyx_XGIVEREF(__pyx_t_6);
+      __Pyx_XGIVEREF(__pyx_t_7);
+      __Pyx_XGIVEREF(__pyx_t_8);
+      __Pyx_ExceptionReset(__pyx_t_6, __pyx_t_7, __pyx_t_8);
+      goto __pyx_L0;
+      __pyx_L8_except_return:;
+      __Pyx_XGIVEREF(__pyx_t_6);
+      __Pyx_XGIVEREF(__pyx_t_7);
+      __Pyx_XGIVEREF(__pyx_t_8);
+      __Pyx_ExceptionReset(__pyx_t_6, __pyx_t_7, __pyx_t_8);
+      goto __pyx_L0;
+    }
+  }
+
+  /* "datamodel/fields.pyx":175
+ *         return self._dbtype
+ * 
+ *     def db_type(self):             # <<<<<<<<<<<<<<
+ *         if self._dbtype is not None:
+ *             if self._dbtype == "array":
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_XDECREF(__pyx_t_4);
+  __Pyx_XDECREF(__pyx_t_5);
+  __Pyx_AddTraceback("datamodel.fields.Field.db_type", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XDECREF(__pyx_v_t);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "datamodel/fields.pyx":189
+ * 
+ *     @property
+ *     def primary_key(self):             # <<<<<<<<<<<<<<
+ *         return self._primary
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_9datamodel_6fields_5Field_13primary_key(PyObject *__pyx_self, PyObject *__pyx_v_self); /*proto*/
+static char __pyx_doc_9datamodel_6fields_5Field_12primary_key[] = "Field.primary_key(self)";
+static PyMethodDef __pyx_mdef_9datamodel_6fields_5Field_13primary_key = {"primary_key", (PyCFunction)__pyx_pw_9datamodel_6fields_5Field_13primary_key, METH_O, __pyx_doc_9datamodel_6fields_5Field_12primary_key};
+static PyObject *__pyx_pw_9datamodel_6fields_5Field_13primary_key(PyObject *__pyx_self, PyObject *__pyx_v_self) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("primary_key (wrapper)", 0);
+  __pyx_r = __pyx_pf_9datamodel_6fields_5Field_12primary_key(__pyx_self, ((PyObject *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_9datamodel_6fields_5Field_12primary_key(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("primary_key", 0);
+
+  /* "datamodel/fields.pyx":190
+ *     @property
+ *     def primary_key(self):
+ *         return self._primary             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_primary_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 190, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_r = __pyx_t_1;
+  __pyx_t_1 = 0;
+  goto __pyx_L0;
+
+  /* "datamodel/fields.pyx":189
+ * 
+ *     @property
+ *     def primary_key(self):             # <<<<<<<<<<<<<<
+ *         return self._primary
+ * 
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_AddTraceback("datamodel.fields.Field.primary_key", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "datamodel/fields.pyx":193
  * 
  * 
  * def Column(             # <<<<<<<<<<<<<<
@@ -3244,7 +4270,7 @@ static PyObject *__pyx_pw_9datamodel_6fields_1Column(PyObject *__pyx_self, PyObj
     static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_default,&__pyx_n_s_nullable,&__pyx_n_s_required,&__pyx_n_s_factory,&__pyx_n_s_min,&__pyx_n_s_max,&__pyx_n_s_validator,0};
     PyObject* values[7] = {0,0,0,0,0,0,0};
 
-    /* "datamodel/fields.pyx":139
+    /* "datamodel/fields.pyx":194
  * 
  * def Column(
  *     default: Optional[Callable] = None,             # <<<<<<<<<<<<<<
@@ -3253,7 +4279,7 @@ static PyObject *__pyx_pw_9datamodel_6fields_1Column(PyObject *__pyx_self, PyObj
  */
     values[0] = ((PyObject *)Py_None);
 
-    /* "datamodel/fields.pyx":140
+    /* "datamodel/fields.pyx":195
  * def Column(
  *     default: Optional[Callable] = None,
  *     nullable: bool = True,             # <<<<<<<<<<<<<<
@@ -3262,7 +4288,7 @@ static PyObject *__pyx_pw_9datamodel_6fields_1Column(PyObject *__pyx_self, PyObj
  */
     values[1] = ((PyObject *)Py_True);
 
-    /* "datamodel/fields.pyx":141
+    /* "datamodel/fields.pyx":196
  *     default: Optional[Callable] = None,
  *     nullable: bool = True,
  *     required: bool = False,             # <<<<<<<<<<<<<<
@@ -3271,7 +4297,7 @@ static PyObject *__pyx_pw_9datamodel_6fields_1Column(PyObject *__pyx_self, PyObj
  */
     values[2] = ((PyObject *)Py_False);
 
-    /* "datamodel/fields.pyx":142
+    /* "datamodel/fields.pyx":197
  *     nullable: bool = True,
  *     required: bool = False,
  *     factory: Optional[Callable] = None,             # <<<<<<<<<<<<<<
@@ -3280,7 +4306,7 @@ static PyObject *__pyx_pw_9datamodel_6fields_1Column(PyObject *__pyx_self, PyObj
  */
     values[3] = ((PyObject *)Py_None);
 
-    /* "datamodel/fields.pyx":143
+    /* "datamodel/fields.pyx":198
  *     required: bool = False,
  *     factory: Optional[Callable] = None,
  *     min: Union[int, float, Decimal] = None,             # <<<<<<<<<<<<<<
@@ -3289,7 +4315,7 @@ static PyObject *__pyx_pw_9datamodel_6fields_1Column(PyObject *__pyx_self, PyObj
  */
     values[4] = ((PyObject *)Py_None);
 
-    /* "datamodel/fields.pyx":144
+    /* "datamodel/fields.pyx":199
  *     factory: Optional[Callable] = None,
  *     min: Union[int, float, Decimal] = None,
  *     max: Union[int, float, Decimal] = None,             # <<<<<<<<<<<<<<
@@ -3298,7 +4324,7 @@ static PyObject *__pyx_pw_9datamodel_6fields_1Column(PyObject *__pyx_self, PyObj
  */
     values[5] = ((PyObject *)Py_None);
 
-    /* "datamodel/fields.pyx":145
+    /* "datamodel/fields.pyx":200
  *     min: Union[int, float, Decimal] = None,
  *     max: Union[int, float, Decimal] = None,
  *     validator: Optional[Union[Callable, None]] = None,             # <<<<<<<<<<<<<<
@@ -3372,7 +4398,7 @@ static PyObject *__pyx_pw_9datamodel_6fields_1Column(PyObject *__pyx_self, PyObj
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, __pyx_v_kwargs, values, pos_args, "Column") < 0)) __PYX_ERR(0, 138, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, __pyx_v_kwargs, values, pos_args, "Column") < 0)) __PYX_ERR(0, 193, __pyx_L3_error)
       }
     } else {
       switch (PyTuple_GET_SIZE(__pyx_args)) {
@@ -3404,7 +4430,7 @@ static PyObject *__pyx_pw_9datamodel_6fields_1Column(PyObject *__pyx_self, PyObj
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("Column", 0, 0, 7, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 138, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("Column", 0, 0, 7, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 193, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_DECREF(__pyx_v_kwargs); __pyx_v_kwargs = 0;
   __Pyx_AddTraceback("datamodel.fields.Column", __pyx_clineno, __pyx_lineno, __pyx_filename);
@@ -3413,7 +4439,7 @@ static PyObject *__pyx_pw_9datamodel_6fields_1Column(PyObject *__pyx_self, PyObj
   __pyx_L4_argument_unpacking_done:;
   __pyx_r = __pyx_pf_9datamodel_6fields_Column(__pyx_self, __pyx_v_default, __pyx_v_nullable, __pyx_v_required, __pyx_v_factory, __pyx_v_min, __pyx_v_max, __pyx_v_validator, __pyx_v_kwargs);
 
-  /* "datamodel/fields.pyx":138
+  /* "datamodel/fields.pyx":193
  * 
  * 
  * def Column(             # <<<<<<<<<<<<<<
@@ -3444,7 +4470,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_Column(CYTHON_UNUSED PyObject *__py
   __Pyx_RefNannySetupContext("Column", 0);
   __Pyx_INCREF(__pyx_v_factory);
 
-  /* "datamodel/fields.pyx":152
+  /* "datamodel/fields.pyx":207
  *       DataModel Function that returns a Field() object
  *     """
  *     if factory is None:             # <<<<<<<<<<<<<<
@@ -3455,19 +4481,19 @@ static PyObject *__pyx_pf_9datamodel_6fields_Column(CYTHON_UNUSED PyObject *__py
   __pyx_t_2 = (__pyx_t_1 != 0);
   if (__pyx_t_2) {
 
-    /* "datamodel/fields.pyx":153
+    /* "datamodel/fields.pyx":208
  *     """
  *     if factory is None:
  *         factory = MISSING             # <<<<<<<<<<<<<<
  *     if default is not None and factory is not MISSING:
  *         raise ValueError(
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_MISSING); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 153, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_MISSING); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 208, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF_SET(__pyx_v_factory, __pyx_t_3);
     __pyx_t_3 = 0;
 
-    /* "datamodel/fields.pyx":152
+    /* "datamodel/fields.pyx":207
  *       DataModel Function that returns a Field() object
  *     """
  *     if factory is None:             # <<<<<<<<<<<<<<
@@ -3476,7 +4502,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_Column(CYTHON_UNUSED PyObject *__py
  */
   }
 
-  /* "datamodel/fields.pyx":154
+  /* "datamodel/fields.pyx":209
  *     if factory is None:
  *         factory = MISSING
  *     if default is not None and factory is not MISSING:             # <<<<<<<<<<<<<<
@@ -3490,7 +4516,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_Column(CYTHON_UNUSED PyObject *__py
     __pyx_t_2 = __pyx_t_4;
     goto __pyx_L5_bool_binop_done;
   }
-  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_MISSING); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 154, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_MISSING); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 209, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_t_4 = (__pyx_v_factory != __pyx_t_3);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -3499,14 +4525,14 @@ static PyObject *__pyx_pf_9datamodel_6fields_Column(CYTHON_UNUSED PyObject *__py
   __pyx_L5_bool_binop_done:;
   if (unlikely(__pyx_t_2)) {
 
-    /* "datamodel/fields.pyx":156
+    /* "datamodel/fields.pyx":211
  *     if default is not None and factory is not MISSING:
  *         raise ValueError(
  *             f"Cannot specify both default: {default} and factory: {factory}"             # <<<<<<<<<<<<<<
  *         )
  *     return Field(
  */
-    __pyx_t_3 = PyTuple_New(4); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 156, __pyx_L1_error)
+    __pyx_t_3 = PyTuple_New(4); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 211, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __pyx_t_5 = 0;
     __pyx_t_6 = 127;
@@ -3514,7 +4540,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_Column(CYTHON_UNUSED PyObject *__py
     __pyx_t_5 += 29;
     __Pyx_GIVEREF(__pyx_kp_u_Cannot_specify_both_default);
     PyTuple_SET_ITEM(__pyx_t_3, 0, __pyx_kp_u_Cannot_specify_both_default);
-    __pyx_t_7 = __Pyx_PyObject_FormatSimple(__pyx_v_default, __pyx_empty_unicode); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 156, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_FormatSimple(__pyx_v_default, __pyx_empty_unicode); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 211, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __pyx_t_6 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_7) > __pyx_t_6) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_7) : __pyx_t_6;
     __pyx_t_5 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_7);
@@ -3525,32 +4551,32 @@ static PyObject *__pyx_pf_9datamodel_6fields_Column(CYTHON_UNUSED PyObject *__py
     __pyx_t_5 += 14;
     __Pyx_GIVEREF(__pyx_kp_u_and_factory);
     PyTuple_SET_ITEM(__pyx_t_3, 2, __pyx_kp_u_and_factory);
-    __pyx_t_7 = __Pyx_PyObject_FormatSimple(__pyx_v_factory, __pyx_empty_unicode); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 156, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_FormatSimple(__pyx_v_factory, __pyx_empty_unicode); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 211, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __pyx_t_6 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_7) > __pyx_t_6) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_7) : __pyx_t_6;
     __pyx_t_5 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_7);
     __Pyx_GIVEREF(__pyx_t_7);
     PyTuple_SET_ITEM(__pyx_t_3, 3, __pyx_t_7);
     __pyx_t_7 = 0;
-    __pyx_t_7 = __Pyx_PyUnicode_Join(__pyx_t_3, 4, __pyx_t_5, __pyx_t_6); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 156, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyUnicode_Join(__pyx_t_3, 4, __pyx_t_5, __pyx_t_6); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 211, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-    /* "datamodel/fields.pyx":155
+    /* "datamodel/fields.pyx":210
  *         factory = MISSING
  *     if default is not None and factory is not MISSING:
  *         raise ValueError(             # <<<<<<<<<<<<<<
  *             f"Cannot specify both default: {default} and factory: {factory}"
  *         )
  */
-    __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_builtin_ValueError, __pyx_t_7); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 155, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_builtin_ValueError, __pyx_t_7); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 210, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
     __Pyx_Raise(__pyx_t_3, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    __PYX_ERR(0, 155, __pyx_L1_error)
+    __PYX_ERR(0, 210, __pyx_L1_error)
 
-    /* "datamodel/fields.pyx":154
+    /* "datamodel/fields.pyx":209
  *     if factory is None:
  *         factory = MISSING
  *     if default is not None and factory is not MISSING:             # <<<<<<<<<<<<<<
@@ -3559,7 +4585,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_Column(CYTHON_UNUSED PyObject *__py
  */
   }
 
-  /* "datamodel/fields.pyx":158
+  /* "datamodel/fields.pyx":213
  *             f"Cannot specify both default: {default} and factory: {factory}"
  *         )
  *     return Field(             # <<<<<<<<<<<<<<
@@ -3567,92 +4593,92 @@ static PyObject *__pyx_pf_9datamodel_6fields_Column(CYTHON_UNUSED PyObject *__py
  *         nullable=nullable,
  */
   __Pyx_XDECREF(__pyx_r);
-  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_Field); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 158, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_Field); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 213, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
 
-  /* "datamodel/fields.pyx":159
+  /* "datamodel/fields.pyx":214
  *         )
  *     return Field(
  *         default=default,             # <<<<<<<<<<<<<<
  *         nullable=nullable,
  *         required=required,
  */
-  __pyx_t_8 = __Pyx_PyDict_NewPresized(7); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 159, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyDict_NewPresized(7); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 214, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_default, __pyx_v_default) < 0) __PYX_ERR(0, 159, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_default, __pyx_v_default) < 0) __PYX_ERR(0, 214, __pyx_L1_error)
 
-  /* "datamodel/fields.pyx":160
+  /* "datamodel/fields.pyx":215
  *     return Field(
  *         default=default,
  *         nullable=nullable,             # <<<<<<<<<<<<<<
  *         required=required,
  *         factory=factory,
  */
-  if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_nullable, __pyx_v_nullable) < 0) __PYX_ERR(0, 159, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_nullable, __pyx_v_nullable) < 0) __PYX_ERR(0, 214, __pyx_L1_error)
 
-  /* "datamodel/fields.pyx":161
+  /* "datamodel/fields.pyx":216
  *         default=default,
  *         nullable=nullable,
  *         required=required,             # <<<<<<<<<<<<<<
  *         factory=factory,
  *         min=min,
  */
-  if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_required, __pyx_v_required) < 0) __PYX_ERR(0, 159, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_required, __pyx_v_required) < 0) __PYX_ERR(0, 214, __pyx_L1_error)
 
-  /* "datamodel/fields.pyx":162
+  /* "datamodel/fields.pyx":217
  *         nullable=nullable,
  *         required=required,
  *         factory=factory,             # <<<<<<<<<<<<<<
  *         min=min,
  *         max=max,
  */
-  if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_factory, __pyx_v_factory) < 0) __PYX_ERR(0, 159, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_factory, __pyx_v_factory) < 0) __PYX_ERR(0, 214, __pyx_L1_error)
 
-  /* "datamodel/fields.pyx":163
+  /* "datamodel/fields.pyx":218
  *         required=required,
  *         factory=factory,
  *         min=min,             # <<<<<<<<<<<<<<
  *         max=max,
  *         validator=validator,
  */
-  if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_min, __pyx_v_min) < 0) __PYX_ERR(0, 159, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_min, __pyx_v_min) < 0) __PYX_ERR(0, 214, __pyx_L1_error)
 
-  /* "datamodel/fields.pyx":164
+  /* "datamodel/fields.pyx":219
  *         factory=factory,
  *         min=min,
  *         max=max,             # <<<<<<<<<<<<<<
  *         validator=validator,
  *         **kwargs,
  */
-  if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_max, __pyx_v_max) < 0) __PYX_ERR(0, 159, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_max, __pyx_v_max) < 0) __PYX_ERR(0, 214, __pyx_L1_error)
 
-  /* "datamodel/fields.pyx":165
+  /* "datamodel/fields.pyx":220
  *         min=min,
  *         max=max,
  *         validator=validator,             # <<<<<<<<<<<<<<
  *         **kwargs,
  *     )
  */
-  if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_validator, __pyx_v_validator) < 0) __PYX_ERR(0, 159, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_validator, __pyx_v_validator) < 0) __PYX_ERR(0, 214, __pyx_L1_error)
   __pyx_t_7 = __pyx_t_8;
   __pyx_t_8 = 0;
 
-  /* "datamodel/fields.pyx":166
+  /* "datamodel/fields.pyx":221
  *         max=max,
  *         validator=validator,
  *         **kwargs,             # <<<<<<<<<<<<<<
  *     )
  */
-  if (__Pyx_MergeKeywords(__pyx_t_7, __pyx_v_kwargs) < 0) __PYX_ERR(0, 166, __pyx_L1_error)
+  if (__Pyx_MergeKeywords(__pyx_t_7, __pyx_v_kwargs) < 0) __PYX_ERR(0, 221, __pyx_L1_error)
 
-  /* "datamodel/fields.pyx":158
+  /* "datamodel/fields.pyx":213
  *             f"Cannot specify both default: {default} and factory: {factory}"
  *         )
  *     return Field(             # <<<<<<<<<<<<<<
  *         default=default,
  *         nullable=nullable,
  */
-  __pyx_t_8 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_empty_tuple, __pyx_t_7); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 158, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_empty_tuple, __pyx_t_7); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 213, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
@@ -3660,7 +4686,7 @@ static PyObject *__pyx_pf_9datamodel_6fields_Column(CYTHON_UNUSED PyObject *__py
   __pyx_t_8 = 0;
   goto __pyx_L0;
 
-  /* "datamodel/fields.pyx":138
+  /* "datamodel/fields.pyx":193
  * 
  * 
  * def Column(             # <<<<<<<<<<<<<<
@@ -3733,14 +4759,18 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_Callable, __pyx_k_Callable, sizeof(__pyx_k_Callable), 0, 0, 1, 1},
   {&__pyx_kp_u_Cannot_specify_both_default, __pyx_k_Cannot_specify_both_default, sizeof(__pyx_k_Cannot_specify_both_default), 0, 1, 0, 0},
   {&__pyx_n_s_Column, __pyx_k_Column, sizeof(__pyx_k_Column), 0, 0, 1, 1},
+  {&__pyx_n_s_DB_TYPES, __pyx_k_DB_TYPES, sizeof(__pyx_k_DB_TYPES), 0, 0, 1, 1},
   {&__pyx_n_s_Decimal, __pyx_k_Decimal, sizeof(__pyx_k_Decimal), 0, 0, 1, 1},
   {&__pyx_n_s_FIELD, __pyx_k_FIELD, sizeof(__pyx_k_FIELD), 0, 0, 1, 1},
   {&__pyx_n_s_Field, __pyx_k_Field, sizeof(__pyx_k_Field), 0, 0, 1, 1},
   {&__pyx_n_s_Field___init, __pyx_k_Field___init, sizeof(__pyx_k_Field___init), 0, 0, 1, 1},
   {&__pyx_n_s_Field___repr, __pyx_k_Field___repr, sizeof(__pyx_k_Field___repr), 0, 0, 1, 1},
   {&__pyx_kp_u_Field_column, __pyx_k_Field_column, sizeof(__pyx_k_Field_column), 0, 1, 0, 0},
+  {&__pyx_n_s_Field_db_type, __pyx_k_Field_db_type, sizeof(__pyx_k_Field_db_type), 0, 0, 1, 1},
   {&__pyx_kp_s_Field_description_Extending_Fie, __pyx_k_Field_description_Extending_Fie, sizeof(__pyx_k_Field_description_Extending_Fie), 0, 0, 1, 0},
+  {&__pyx_n_s_Field_get_dbtype, __pyx_k_Field_get_dbtype, sizeof(__pyx_k_Field_get_dbtype), 0, 0, 1, 1},
   {&__pyx_n_s_Field_nullable, __pyx_k_Field_nullable, sizeof(__pyx_k_Field_nullable), 0, 0, 1, 1},
+  {&__pyx_n_s_Field_primary_key, __pyx_k_Field_primary_key, sizeof(__pyx_k_Field_primary_key), 0, 0, 1, 1},
   {&__pyx_n_s_Field_required, __pyx_k_Field_required, sizeof(__pyx_k_Field_required), 0, 0, 1, 1},
   {&__pyx_n_s_KeyError, __pyx_k_KeyError, sizeof(__pyx_k_KeyError), 0, 0, 1, 1},
   {&__pyx_n_s_MISSING, __pyx_k_MISSING, sizeof(__pyx_k_MISSING), 0, 0, 1, 1},
@@ -3749,15 +4779,23 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_TypeError, __pyx_k_TypeError, sizeof(__pyx_k_TypeError), 0, 0, 1, 1},
   {&__pyx_n_s_Union, __pyx_k_Union, sizeof(__pyx_k_Union), 0, 0, 1, 1},
   {&__pyx_n_s_ValueError, __pyx_k_ValueError, sizeof(__pyx_k_ValueError), 0, 0, 1, 1},
+  {&__pyx_kp_u__2, __pyx_k__2, sizeof(__pyx_k__2), 0, 1, 0, 0},
   {&__pyx_kp_u_and_factory, __pyx_k_and_factory, sizeof(__pyx_k_and_factory), 0, 1, 0, 0},
   {&__pyx_n_s_args, __pyx_k_args, sizeof(__pyx_k_args), 0, 0, 1, 1},
+  {&__pyx_n_u_array, __pyx_k_array, sizeof(__pyx_k_array), 0, 1, 0, 1},
   {&__pyx_n_s_cline_in_traceback, __pyx_k_cline_in_traceback, sizeof(__pyx_k_cline_in_traceback), 0, 0, 1, 1},
   {&__pyx_n_s_collections_abc, __pyx_k_collections_abc, sizeof(__pyx_k_collections_abc), 0, 0, 1, 1},
   {&__pyx_n_u_compare, __pyx_k_compare, sizeof(__pyx_k_compare), 0, 1, 0, 1},
   {&__pyx_n_s_dataclasses, __pyx_k_dataclasses, sizeof(__pyx_k_dataclasses), 0, 0, 1, 1},
   {&__pyx_n_s_datamodel_fields, __pyx_k_datamodel_fields, sizeof(__pyx_k_datamodel_fields), 0, 0, 1, 1},
   {&__pyx_kp_s_datamodel_fields_pyx, __pyx_k_datamodel_fields_pyx, sizeof(__pyx_k_datamodel_fields_pyx), 0, 0, 1, 0},
+  {&__pyx_n_s_datamodel_types, __pyx_k_datamodel_types, sizeof(__pyx_k_datamodel_types), 0, 0, 1, 1},
+  {&__pyx_n_s_db_type, __pyx_k_db_type, sizeof(__pyx_k_db_type), 0, 0, 1, 1},
+  {&__pyx_n_u_db_type, __pyx_k_db_type, sizeof(__pyx_k_db_type), 0, 1, 0, 1},
+  {&__pyx_n_s_dbtype, __pyx_k_dbtype, sizeof(__pyx_k_dbtype), 0, 0, 1, 1},
+  {&__pyx_n_u_dbtype, __pyx_k_dbtype, sizeof(__pyx_k_dbtype), 0, 1, 0, 1},
   {&__pyx_n_s_decimal, __pyx_k_decimal, sizeof(__pyx_k_decimal), 0, 0, 1, 1},
+  {&__pyx_n_u_decoder, __pyx_k_decoder, sizeof(__pyx_k_decoder), 0, 1, 0, 1},
   {&__pyx_n_s_default, __pyx_k_default, sizeof(__pyx_k_default), 0, 0, 1, 1},
   {&__pyx_n_u_default, __pyx_k_default, sizeof(__pyx_k_default), 0, 1, 0, 1},
   {&__pyx_n_s_default_2, __pyx_k_default_2, sizeof(__pyx_k_default_2), 0, 0, 1, 1},
@@ -3770,10 +4808,12 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_description, __pyx_k_description, sizeof(__pyx_k_description), 0, 0, 1, 1},
   {&__pyx_n_u_description, __pyx_k_description, sizeof(__pyx_k_description), 0, 1, 0, 1},
   {&__pyx_n_s_doc, __pyx_k_doc, sizeof(__pyx_k_doc), 0, 0, 1, 1},
+  {&__pyx_n_u_encoder, __pyx_k_encoder, sizeof(__pyx_k_encoder), 0, 1, 0, 1},
   {&__pyx_n_s_factory, __pyx_k_factory, sizeof(__pyx_k_factory), 0, 0, 1, 1},
   {&__pyx_n_s_ff, __pyx_k_ff, sizeof(__pyx_k_ff), 0, 0, 1, 1},
   {&__pyx_n_s_field_type, __pyx_k_field_type, sizeof(__pyx_k_field_type), 0, 0, 1, 1},
   {&__pyx_n_u_field_type, __pyx_k_field_type, sizeof(__pyx_k_field_type), 0, 1, 0, 1},
+  {&__pyx_n_s_get_dbtype, __pyx_k_get_dbtype, sizeof(__pyx_k_get_dbtype), 0, 0, 1, 1},
   {&__pyx_n_u_hash, __pyx_k_hash, sizeof(__pyx_k_hash), 0, 1, 0, 1},
   {&__pyx_n_s_import, __pyx_k_import, sizeof(__pyx_k_import), 0, 0, 1, 1},
   {&__pyx_n_u_init, __pyx_k_init, sizeof(__pyx_k_init), 0, 1, 0, 1},
@@ -3799,6 +4839,12 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_nullable_2, __pyx_k_nullable_2, sizeof(__pyx_k_nullable_2), 0, 0, 1, 1},
   {&__pyx_n_u_nullable_2, __pyx_k_nullable_2, sizeof(__pyx_k_nullable_2), 0, 1, 0, 1},
   {&__pyx_n_s_prepare, __pyx_k_prepare, sizeof(__pyx_k_prepare), 0, 0, 1, 1},
+  {&__pyx_n_u_primary, __pyx_k_primary, sizeof(__pyx_k_primary), 0, 1, 0, 1},
+  {&__pyx_n_s_primary_2, __pyx_k_primary_2, sizeof(__pyx_k_primary_2), 0, 0, 1, 1},
+  {&__pyx_n_u_primary_2, __pyx_k_primary_2, sizeof(__pyx_k_primary_2), 0, 1, 0, 1},
+  {&__pyx_n_s_primary_key, __pyx_k_primary_key, sizeof(__pyx_k_primary_key), 0, 0, 1, 1},
+  {&__pyx_n_u_primary_key, __pyx_k_primary_key, sizeof(__pyx_k_primary_key), 0, 1, 0, 1},
+  {&__pyx_n_s_property, __pyx_k_property, sizeof(__pyx_k_property), 0, 0, 1, 1},
   {&__pyx_n_s_qualname, __pyx_k_qualname, sizeof(__pyx_k_qualname), 0, 0, 1, 1},
   {&__pyx_n_s_range, __pyx_k_range, sizeof(__pyx_k_range), 0, 0, 1, 1},
   {&__pyx_n_u_repr, __pyx_k_repr, sizeof(__pyx_k_repr), 0, 1, 0, 1},
@@ -3811,6 +4857,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_self, __pyx_k_self, sizeof(__pyx_k_self), 0, 0, 1, 1},
   {&__pyx_n_s_slots, __pyx_k_slots, sizeof(__pyx_k_slots), 0, 0, 1, 1},
   {&__pyx_n_s_super, __pyx_k_super, sizeof(__pyx_k_super), 0, 0, 1, 1},
+  {&__pyx_n_s_t, __pyx_k_t, sizeof(__pyx_k_t), 0, 0, 1, 1},
   {&__pyx_n_s_test, __pyx_k_test, sizeof(__pyx_k_test), 0, 0, 1, 1},
   {&__pyx_n_s_type, __pyx_k_type, sizeof(__pyx_k_type), 0, 0, 1, 1},
   {&__pyx_n_u_type, __pyx_k_type, sizeof(__pyx_k_type), 0, 1, 0, 1},
@@ -3818,13 +4865,16 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_typing, __pyx_k_typing, sizeof(__pyx_k_typing), 0, 0, 1, 1},
   {&__pyx_n_s_validator, __pyx_k_validator, sizeof(__pyx_k_validator), 0, 0, 1, 1},
   {&__pyx_n_u_validator, __pyx_k_validator, sizeof(__pyx_k_validator), 0, 1, 0, 1},
+  {&__pyx_n_u_varchar, __pyx_k_varchar, sizeof(__pyx_k_varchar), 0, 1, 0, 1},
+  {&__pyx_n_u_widget, __pyx_k_widget, sizeof(__pyx_k_widget), 0, 1, 0, 1},
   {0, 0, 0, 0, 0, 0, 0}
 };
 static CYTHON_SMALL_CODE int __Pyx_InitCachedBuiltins(void) {
-  __pyx_builtin_KeyError = __Pyx_GetBuiltinName(__pyx_n_s_KeyError); if (!__pyx_builtin_KeyError) __PYX_ERR(0, 64, __pyx_L1_error)
-  __pyx_builtin_TypeError = __Pyx_GetBuiltinName(__pyx_n_s_TypeError); if (!__pyx_builtin_TypeError) __PYX_ERR(0, 101, __pyx_L1_error)
-  __pyx_builtin_super = __Pyx_GetBuiltinName(__pyx_n_s_super); if (!__pyx_builtin_super) __PYX_ERR(0, 115, __pyx_L1_error)
-  __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) __PYX_ERR(0, 155, __pyx_L1_error)
+  __pyx_builtin_property = __Pyx_GetBuiltinName(__pyx_n_s_property); if (!__pyx_builtin_property) __PYX_ERR(0, 188, __pyx_L1_error)
+  __pyx_builtin_KeyError = __Pyx_GetBuiltinName(__pyx_n_s_KeyError); if (!__pyx_builtin_KeyError) __PYX_ERR(0, 69, __pyx_L1_error)
+  __pyx_builtin_TypeError = __Pyx_GetBuiltinName(__pyx_n_s_TypeError); if (!__pyx_builtin_TypeError) __PYX_ERR(0, 120, __pyx_L1_error)
+  __pyx_builtin_super = __Pyx_GetBuiltinName(__pyx_n_s_super); if (!__pyx_builtin_super) __PYX_ERR(0, 150, __pyx_L1_error)
+  __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) __PYX_ERR(0, 210, __pyx_L1_error)
   return 0;
   __pyx_L1_error:;
   return -1;
@@ -3834,79 +4884,115 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__Pyx_InitCachedConstants", 0);
 
-  /* "datamodel/fields.pyx":25
+  /* "datamodel/fields.pyx":28
  *     """
  *     __slots__ = (
  *         'name',             # <<<<<<<<<<<<<<
  *         'type',
  *         'description',
  */
-  __pyx_tuple__2 = PyTuple_Pack(16, __pyx_n_u_name, __pyx_n_u_type, __pyx_n_u_description, __pyx_n_u_default, __pyx_n_u_default_factory_2, __pyx_n_u_default_factory, __pyx_n_u_default_2, __pyx_n_u_repr, __pyx_n_u_hash, __pyx_n_u_init, __pyx_n_u_compare, __pyx_n_u_metadata, __pyx_n_u_meta, __pyx_n_u_field_type, __pyx_n_u_required_2, __pyx_n_u_nullable_2); if (unlikely(!__pyx_tuple__2)) __PYX_ERR(0, 25, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__2);
-  __Pyx_GIVEREF(__pyx_tuple__2);
+  __pyx_tuple__3 = PyTuple_Pack(18, __pyx_n_u_name, __pyx_n_u_type, __pyx_n_u_description, __pyx_n_u_default, __pyx_n_u_default_factory_2, __pyx_n_u_default_factory, __pyx_n_u_default_2, __pyx_n_u_repr, __pyx_n_u_hash, __pyx_n_u_init, __pyx_n_u_compare, __pyx_n_u_metadata, __pyx_n_u_meta, __pyx_n_u_field_type, __pyx_n_u_required_2, __pyx_n_u_nullable_2, __pyx_n_u_primary_2, __pyx_n_u_dbtype); if (unlikely(!__pyx_tuple__3)) __PYX_ERR(0, 28, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__3);
+  __Pyx_GIVEREF(__pyx_tuple__3);
 
-  /* "datamodel/fields.pyx":43
+  /* "datamodel/fields.pyx":48
  *     )
  * 
  *     def __init__(             # <<<<<<<<<<<<<<
  *         self,
  *         default: Optional[Callable] = None,
  */
-  __pyx_tuple__3 = PyTuple_Pack(12, __pyx_n_s_self, __pyx_n_s_default, __pyx_n_s_nullable, __pyx_n_s_required, __pyx_n_s_factory, __pyx_n_s_min, __pyx_n_s_max, __pyx_n_s_validator, __pyx_n_s_kwargs, __pyx_n_s_args, __pyx_n_s_meta_2, __pyx_n_s_range); if (unlikely(!__pyx_tuple__3)) __PYX_ERR(0, 43, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__3);
-  __Pyx_GIVEREF(__pyx_tuple__3);
-  __pyx_codeobj__4 = (PyObject*)__Pyx_PyCode_New(8, 0, 12, 0, CO_OPTIMIZED|CO_NEWLOCALS|CO_VARKEYWORDS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__3, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_datamodel_fields_pyx, __pyx_n_s_init_2, 43, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__4)) __PYX_ERR(0, 43, __pyx_L1_error)
-  __pyx_tuple__5 = PyTuple_Pack(7, ((PyObject *)Py_None), ((PyObject *)Py_True), ((PyObject *)Py_False), ((PyObject *)Py_None), ((PyObject *)Py_None), ((PyObject *)Py_None), ((PyObject *)Py_None)); if (unlikely(!__pyx_tuple__5)) __PYX_ERR(0, 43, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__5);
-  __Pyx_GIVEREF(__pyx_tuple__5);
+  __pyx_tuple__4 = PyTuple_Pack(12, __pyx_n_s_self, __pyx_n_s_default, __pyx_n_s_nullable, __pyx_n_s_required, __pyx_n_s_factory, __pyx_n_s_min, __pyx_n_s_max, __pyx_n_s_validator, __pyx_n_s_kwargs, __pyx_n_s_args, __pyx_n_s_meta_2, __pyx_n_s_range); if (unlikely(!__pyx_tuple__4)) __PYX_ERR(0, 48, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__4);
+  __Pyx_GIVEREF(__pyx_tuple__4);
+  __pyx_codeobj__5 = (PyObject*)__Pyx_PyCode_New(8, 0, 12, 0, CO_OPTIMIZED|CO_NEWLOCALS|CO_VARKEYWORDS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__4, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_datamodel_fields_pyx, __pyx_n_s_init_2, 48, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__5)) __PYX_ERR(0, 48, __pyx_L1_error)
+  __pyx_tuple__6 = PyTuple_Pack(7, ((PyObject *)Py_None), ((PyObject *)Py_True), ((PyObject *)Py_False), ((PyObject *)Py_None), ((PyObject *)Py_None), ((PyObject *)Py_None), ((PyObject *)Py_None)); if (unlikely(!__pyx_tuple__6)) __PYX_ERR(0, 48, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__6);
+  __Pyx_GIVEREF(__pyx_tuple__6);
 
-  /* "datamodel/fields.pyx":123
+  /* "datamodel/fields.pyx":158
  *         self._field_type = self.type
  * 
  *     def __repr__(self):             # <<<<<<<<<<<<<<
  *         return (
  *             "Field("
  */
-  __pyx_tuple__6 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__6)) __PYX_ERR(0, 123, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__6);
-  __Pyx_GIVEREF(__pyx_tuple__6);
-  __pyx_codeobj__7 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__6, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_datamodel_fields_pyx, __pyx_n_s_repr_2, 123, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__7)) __PYX_ERR(0, 123, __pyx_L1_error)
+  __pyx_tuple__7 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__7)) __PYX_ERR(0, 158, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__7);
+  __Pyx_GIVEREF(__pyx_tuple__7);
+  __pyx_codeobj__8 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__7, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_datamodel_fields_pyx, __pyx_n_s_repr_2, 158, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__8)) __PYX_ERR(0, 158, __pyx_L1_error)
 
-  /* "datamodel/fields.pyx":131
+  /* "datamodel/fields.pyx":166
  *         )
  * 
  *     def required(self) -> bool:             # <<<<<<<<<<<<<<
  *         return self._required
  * 
  */
-  __pyx_tuple__8 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__8)) __PYX_ERR(0, 131, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__8);
-  __Pyx_GIVEREF(__pyx_tuple__8);
-  __pyx_codeobj__9 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__8, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_datamodel_fields_pyx, __pyx_n_s_required, 131, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__9)) __PYX_ERR(0, 131, __pyx_L1_error)
+  __pyx_tuple__9 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__9)) __PYX_ERR(0, 166, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__9);
+  __Pyx_GIVEREF(__pyx_tuple__9);
+  __pyx_codeobj__10 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__9, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_datamodel_fields_pyx, __pyx_n_s_required, 166, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__10)) __PYX_ERR(0, 166, __pyx_L1_error)
 
-  /* "datamodel/fields.pyx":134
+  /* "datamodel/fields.pyx":169
  *         return self._required
  * 
  *     def nullable(self) -> bool:             # <<<<<<<<<<<<<<
  *         return self._nullable
  * 
  */
-  __pyx_tuple__10 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__10)) __PYX_ERR(0, 134, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__10);
-  __Pyx_GIVEREF(__pyx_tuple__10);
-  __pyx_codeobj__11 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__10, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_datamodel_fields_pyx, __pyx_n_s_nullable, 134, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__11)) __PYX_ERR(0, 134, __pyx_L1_error)
+  __pyx_tuple__11 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__11)) __PYX_ERR(0, 169, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__11);
+  __Pyx_GIVEREF(__pyx_tuple__11);
+  __pyx_codeobj__12 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__11, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_datamodel_fields_pyx, __pyx_n_s_nullable, 169, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__12)) __PYX_ERR(0, 169, __pyx_L1_error)
 
-  /* "datamodel/fields.pyx":138
+  /* "datamodel/fields.pyx":172
+ *         return self._nullable
+ * 
+ *     def get_dbtype(self):             # <<<<<<<<<<<<<<
+ *         return self._dbtype
+ * 
+ */
+  __pyx_tuple__13 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__13)) __PYX_ERR(0, 172, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__13);
+  __Pyx_GIVEREF(__pyx_tuple__13);
+  __pyx_codeobj__14 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__13, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_datamodel_fields_pyx, __pyx_n_s_get_dbtype, 172, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__14)) __PYX_ERR(0, 172, __pyx_L1_error)
+
+  /* "datamodel/fields.pyx":175
+ *         return self._dbtype
+ * 
+ *     def db_type(self):             # <<<<<<<<<<<<<<
+ *         if self._dbtype is not None:
+ *             if self._dbtype == "array":
+ */
+  __pyx_tuple__15 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_t); if (unlikely(!__pyx_tuple__15)) __PYX_ERR(0, 175, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__15);
+  __Pyx_GIVEREF(__pyx_tuple__15);
+  __pyx_codeobj__16 = (PyObject*)__Pyx_PyCode_New(1, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__15, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_datamodel_fields_pyx, __pyx_n_s_db_type, 175, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__16)) __PYX_ERR(0, 175, __pyx_L1_error)
+
+  /* "datamodel/fields.pyx":189
+ * 
+ *     @property
+ *     def primary_key(self):             # <<<<<<<<<<<<<<
+ *         return self._primary
+ * 
+ */
+  __pyx_tuple__17 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__17)) __PYX_ERR(0, 189, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__17);
+  __Pyx_GIVEREF(__pyx_tuple__17);
+  __pyx_codeobj__18 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__17, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_datamodel_fields_pyx, __pyx_n_s_primary_key, 189, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__18)) __PYX_ERR(0, 189, __pyx_L1_error)
+
+  /* "datamodel/fields.pyx":193
  * 
  * 
  * def Column(             # <<<<<<<<<<<<<<
  *     default: Optional[Callable] = None,
  *     nullable: bool = True,
  */
-  __pyx_tuple__12 = PyTuple_Pack(8, __pyx_n_s_default, __pyx_n_s_nullable, __pyx_n_s_required, __pyx_n_s_factory, __pyx_n_s_min, __pyx_n_s_max, __pyx_n_s_validator, __pyx_n_s_kwargs); if (unlikely(!__pyx_tuple__12)) __PYX_ERR(0, 138, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__12);
-  __Pyx_GIVEREF(__pyx_tuple__12);
-  __pyx_codeobj__13 = (PyObject*)__Pyx_PyCode_New(7, 0, 8, 0, CO_OPTIMIZED|CO_NEWLOCALS|CO_VARKEYWORDS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__12, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_datamodel_fields_pyx, __pyx_n_s_Column, 138, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__13)) __PYX_ERR(0, 138, __pyx_L1_error)
+  __pyx_tuple__19 = PyTuple_Pack(8, __pyx_n_s_default, __pyx_n_s_nullable, __pyx_n_s_required, __pyx_n_s_factory, __pyx_n_s_min, __pyx_n_s_max, __pyx_n_s_validator, __pyx_n_s_kwargs); if (unlikely(!__pyx_tuple__19)) __PYX_ERR(0, 193, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__19);
+  __Pyx_GIVEREF(__pyx_tuple__19);
+  __pyx_codeobj__20 = (PyObject*)__Pyx_PyCode_New(7, 0, 8, 0, CO_OPTIMIZED|CO_NEWLOCALS|CO_VARKEYWORDS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__19, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_datamodel_fields_pyx, __pyx_n_s_Column, 193, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__20)) __PYX_ERR(0, 193, __pyx_L1_error)
   __Pyx_RefNannyFinishContext();
   return 0;
   __pyx_L1_error:;
@@ -4341,110 +5427,139 @@ if (!__Pyx_RefNanny) {
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "datamodel/fields.pyx":19
+  /* "datamodel/fields.pyx":18
+ * )
+ * from datamodel.types import (
+ *     DB_TYPES             # <<<<<<<<<<<<<<
+ * )
+ * 
+ */
+  __pyx_t_2 = PyList_New(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 18, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  __Pyx_INCREF(__pyx_n_s_DB_TYPES);
+  __Pyx_GIVEREF(__pyx_n_s_DB_TYPES);
+  PyList_SET_ITEM(__pyx_t_2, 0, __pyx_n_s_DB_TYPES);
+
+  /* "datamodel/fields.pyx":17
+ *     _MISSING_TYPE
+ * )
+ * from datamodel.types import (             # <<<<<<<<<<<<<<
+ *     DB_TYPES
+ * )
+ */
+  __pyx_t_1 = __Pyx_Import(__pyx_n_s_datamodel_types, __pyx_t_2, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 17, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __pyx_t_2 = __Pyx_ImportFrom(__pyx_t_1, __pyx_n_s_DB_TYPES); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 17, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_DB_TYPES, __pyx_t_2) < 0) __PYX_ERR(0, 18, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "datamodel/fields.pyx":22
  * 
  * 
  * class Field(ff):             # <<<<<<<<<<<<<<
  *     """
  *     Field.
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_ff); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 19, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_1 = PyTuple_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 19, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_ff); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 22, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __Pyx_GIVEREF(__pyx_t_2);
-  PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_t_2);
-  __pyx_t_2 = 0;
-  __pyx_t_2 = __Pyx_CalculateMetaclass(NULL, __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 19, __pyx_L1_error)
+  __pyx_t_2 = PyTuple_New(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 22, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_Py3MetaclassPrepare(__pyx_t_2, __pyx_t_1, __pyx_n_s_Field, __pyx_n_s_Field, (PyObject *) NULL, __pyx_n_s_datamodel_fields, __pyx_kp_s_Field_description_Extending_Fie); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 19, __pyx_L1_error)
+  __Pyx_GIVEREF(__pyx_t_1);
+  PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_t_1);
+  __pyx_t_1 = 0;
+  __pyx_t_1 = __Pyx_CalculateMetaclass(NULL, __pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 22, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_3 = __Pyx_Py3MetaclassPrepare(__pyx_t_1, __pyx_t_2, __pyx_n_s_Field, __pyx_n_s_Field, (PyObject *) NULL, __pyx_n_s_datamodel_fields, __pyx_kp_s_Field_description_Extending_Fie); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 22, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
 
-  /* "datamodel/fields.pyx":25
+  /* "datamodel/fields.pyx":28
  *     """
  *     __slots__ = (
  *         'name',             # <<<<<<<<<<<<<<
  *         'type',
  *         'description',
  */
-  if (__Pyx_SetNameInClass(__pyx_t_3, __pyx_n_s_slots, __pyx_tuple__2) < 0) __PYX_ERR(0, 24, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_3, __pyx_n_s_slots, __pyx_tuple__3) < 0) __PYX_ERR(0, 27, __pyx_L1_error)
 
-  /* "datamodel/fields.pyx":43
+  /* "datamodel/fields.pyx":48
  *     )
  * 
  *     def __init__(             # <<<<<<<<<<<<<<
  *         self,
  *         default: Optional[Callable] = None,
  */
-  __pyx_t_4 = __Pyx_PyDict_NewPresized(7); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 43, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyDict_NewPresized(7); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 48, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
 
-  /* "datamodel/fields.pyx":45
+  /* "datamodel/fields.pyx":50
  *     def __init__(
  *         self,
  *         default: Optional[Callable] = None,             # <<<<<<<<<<<<<<
  *         nullable: bool = True,
  *         required: bool = False,
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_Optional); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 45, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_Optional); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 50, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
-  __Pyx_GetModuleGlobalName(__pyx_t_6, __pyx_n_s_Callable); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 45, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_6, __pyx_n_s_Callable); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 50, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
-  __pyx_t_7 = __Pyx_PyObject_GetItem(__pyx_t_5, __pyx_t_6); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 45, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyObject_GetItem(__pyx_t_5, __pyx_t_6); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 50, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_default, __pyx_t_7) < 0) __PYX_ERR(0, 43, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_default, __pyx_t_7) < 0) __PYX_ERR(0, 48, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
 
-  /* "datamodel/fields.pyx":46
+  /* "datamodel/fields.pyx":51
  *         self,
  *         default: Optional[Callable] = None,
  *         nullable: bool = True,             # <<<<<<<<<<<<<<
  *         required: bool = False,
  *         factory: Optional[Callable] = None,
  */
-  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_nullable, ((PyObject*)&PyBool_Type)) < 0) __PYX_ERR(0, 43, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_nullable, ((PyObject*)&PyBool_Type)) < 0) __PYX_ERR(0, 48, __pyx_L1_error)
 
-  /* "datamodel/fields.pyx":47
+  /* "datamodel/fields.pyx":52
  *         default: Optional[Callable] = None,
  *         nullable: bool = True,
  *         required: bool = False,             # <<<<<<<<<<<<<<
  *         factory: Optional[Callable] = None,
  *         min: Union[int, float, Decimal] = None,
  */
-  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_required, ((PyObject*)&PyBool_Type)) < 0) __PYX_ERR(0, 43, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_required, ((PyObject*)&PyBool_Type)) < 0) __PYX_ERR(0, 48, __pyx_L1_error)
 
-  /* "datamodel/fields.pyx":48
+  /* "datamodel/fields.pyx":53
  *         nullable: bool = True,
  *         required: bool = False,
  *         factory: Optional[Callable] = None,             # <<<<<<<<<<<<<<
  *         min: Union[int, float, Decimal] = None,
  *         max: Union[int, float, Decimal] = None,
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_Optional); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 48, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_Optional); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 53, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  __Pyx_GetModuleGlobalName(__pyx_t_6, __pyx_n_s_Callable); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 48, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_6, __pyx_n_s_Callable); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 53, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
-  __pyx_t_5 = __Pyx_PyObject_GetItem(__pyx_t_7, __pyx_t_6); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 48, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_GetItem(__pyx_t_7, __pyx_t_6); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 53, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_factory, __pyx_t_5) < 0) __PYX_ERR(0, 43, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_factory, __pyx_t_5) < 0) __PYX_ERR(0, 48, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
 
-  /* "datamodel/fields.pyx":49
+  /* "datamodel/fields.pyx":54
  *         required: bool = False,
  *         factory: Optional[Callable] = None,
  *         min: Union[int, float, Decimal] = None,             # <<<<<<<<<<<<<<
  *         max: Union[int, float, Decimal] = None,
  *         validator: Optional[Union[Callable, None]] = None,
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_Union); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 49, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_Union); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 54, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
-  __Pyx_GetModuleGlobalName(__pyx_t_6, __pyx_n_s_Decimal); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 49, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_6, __pyx_n_s_Decimal); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 54, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
-  __pyx_t_7 = PyTuple_New(3); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 49, __pyx_L1_error)
+  __pyx_t_7 = PyTuple_New(3); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 54, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_INCREF(((PyObject *)(&PyInt_Type)));
   __Pyx_GIVEREF(((PyObject *)(&PyInt_Type)));
@@ -4455,25 +5570,25 @@ if (!__Pyx_RefNanny) {
   __Pyx_GIVEREF(__pyx_t_6);
   PyTuple_SET_ITEM(__pyx_t_7, 2, __pyx_t_6);
   __pyx_t_6 = 0;
-  __pyx_t_6 = __Pyx_PyObject_GetItem(__pyx_t_5, __pyx_t_7); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 49, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_GetItem(__pyx_t_5, __pyx_t_7); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 54, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_min, __pyx_t_6) < 0) __PYX_ERR(0, 43, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_min, __pyx_t_6) < 0) __PYX_ERR(0, 48, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
 
-  /* "datamodel/fields.pyx":50
+  /* "datamodel/fields.pyx":55
  *         factory: Optional[Callable] = None,
  *         min: Union[int, float, Decimal] = None,
  *         max: Union[int, float, Decimal] = None,             # <<<<<<<<<<<<<<
  *         validator: Optional[Union[Callable, None]] = None,
  *         **kwargs,
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_6, __pyx_n_s_Union); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 50, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_6, __pyx_n_s_Union); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 55, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
-  __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_Decimal); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 50, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_Decimal); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 55, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  __pyx_t_5 = PyTuple_New(3); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 50, __pyx_L1_error)
+  __pyx_t_5 = PyTuple_New(3); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 55, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_INCREF(((PyObject *)(&PyInt_Type)));
   __Pyx_GIVEREF(((PyObject *)(&PyInt_Type)));
@@ -4484,27 +5599,27 @@ if (!__Pyx_RefNanny) {
   __Pyx_GIVEREF(__pyx_t_7);
   PyTuple_SET_ITEM(__pyx_t_5, 2, __pyx_t_7);
   __pyx_t_7 = 0;
-  __pyx_t_7 = __Pyx_PyObject_GetItem(__pyx_t_6, __pyx_t_5); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 50, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyObject_GetItem(__pyx_t_6, __pyx_t_5); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 55, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_max, __pyx_t_7) < 0) __PYX_ERR(0, 43, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_max, __pyx_t_7) < 0) __PYX_ERR(0, 48, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
 
-  /* "datamodel/fields.pyx":51
+  /* "datamodel/fields.pyx":56
  *         min: Union[int, float, Decimal] = None,
  *         max: Union[int, float, Decimal] = None,
  *         validator: Optional[Union[Callable, None]] = None,             # <<<<<<<<<<<<<<
  *         **kwargs,
  *     ):
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_Optional); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_Optional); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 56, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_Union); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_Union); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 56, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
-  __Pyx_GetModuleGlobalName(__pyx_t_6, __pyx_n_s_Callable); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_6, __pyx_n_s_Callable); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 56, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
-  __pyx_t_8 = PyTuple_New(2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __pyx_t_8 = PyTuple_New(2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 56, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_GIVEREF(__pyx_t_6);
   PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_6);
@@ -4512,114 +5627,161 @@ if (!__Pyx_RefNanny) {
   __Pyx_GIVEREF(Py_None);
   PyTuple_SET_ITEM(__pyx_t_8, 1, Py_None);
   __pyx_t_6 = 0;
-  __pyx_t_6 = __Pyx_PyObject_GetItem(__pyx_t_5, __pyx_t_8); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_GetItem(__pyx_t_5, __pyx_t_8); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 56, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_8 = __Pyx_PyObject_GetItem(__pyx_t_7, __pyx_t_6); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetItem(__pyx_t_7, __pyx_t_6); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 56, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_validator, __pyx_t_8) < 0) __PYX_ERR(0, 43, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_validator, __pyx_t_8) < 0) __PYX_ERR(0, 48, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-  /* "datamodel/fields.pyx":43
+  /* "datamodel/fields.pyx":48
  *     )
  * 
  *     def __init__(             # <<<<<<<<<<<<<<
  *         self,
  *         default: Optional[Callable] = None,
  */
-  __pyx_t_8 = __Pyx_CyFunction_New(&__pyx_mdef_9datamodel_6fields_5Field_1__init__, 0, __pyx_n_s_Field___init, NULL, __pyx_n_s_datamodel_fields, __pyx_d, ((PyObject *)__pyx_codeobj__4)); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 43, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_CyFunction_New(&__pyx_mdef_9datamodel_6fields_5Field_1__init__, 0, __pyx_n_s_Field___init, NULL, __pyx_n_s_datamodel_fields, __pyx_d, ((PyObject *)__pyx_codeobj__5)); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 48, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __Pyx_CyFunction_SetDefaultsTuple(__pyx_t_8, __pyx_tuple__5);
+  __Pyx_CyFunction_SetDefaultsTuple(__pyx_t_8, __pyx_tuple__6);
   __Pyx_CyFunction_SetAnnotationsDict(__pyx_t_8, __pyx_t_4);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (__Pyx_SetNameInClass(__pyx_t_3, __pyx_n_s_init_2, __pyx_t_8) < 0) __PYX_ERR(0, 43, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_3, __pyx_n_s_init_2, __pyx_t_8) < 0) __PYX_ERR(0, 48, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-  /* "datamodel/fields.pyx":123
+  /* "datamodel/fields.pyx":158
  *         self._field_type = self.type
  * 
  *     def __repr__(self):             # <<<<<<<<<<<<<<
  *         return (
  *             "Field("
  */
-  __pyx_t_8 = __Pyx_CyFunction_New(&__pyx_mdef_9datamodel_6fields_5Field_3__repr__, 0, __pyx_n_s_Field___repr, NULL, __pyx_n_s_datamodel_fields, __pyx_d, ((PyObject *)__pyx_codeobj__7)); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 123, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_CyFunction_New(&__pyx_mdef_9datamodel_6fields_5Field_3__repr__, 0, __pyx_n_s_Field___repr, NULL, __pyx_n_s_datamodel_fields, __pyx_d, ((PyObject *)__pyx_codeobj__8)); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 158, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  if (__Pyx_SetNameInClass(__pyx_t_3, __pyx_n_s_repr_2, __pyx_t_8) < 0) __PYX_ERR(0, 123, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_3, __pyx_n_s_repr_2, __pyx_t_8) < 0) __PYX_ERR(0, 158, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-  /* "datamodel/fields.pyx":131
+  /* "datamodel/fields.pyx":166
  *         )
  * 
  *     def required(self) -> bool:             # <<<<<<<<<<<<<<
  *         return self._required
  * 
  */
-  __pyx_t_8 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 131, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 166, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_return, ((PyObject*)&PyBool_Type)) < 0) __PYX_ERR(0, 131, __pyx_L1_error)
-  __pyx_t_4 = __Pyx_CyFunction_New(&__pyx_mdef_9datamodel_6fields_5Field_5required, 0, __pyx_n_s_Field_required, NULL, __pyx_n_s_datamodel_fields, __pyx_d, ((PyObject *)__pyx_codeobj__9)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 131, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_return, ((PyObject*)&PyBool_Type)) < 0) __PYX_ERR(0, 166, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_CyFunction_New(&__pyx_mdef_9datamodel_6fields_5Field_5required, 0, __pyx_n_s_Field_required, NULL, __pyx_n_s_datamodel_fields, __pyx_d, ((PyObject *)__pyx_codeobj__10)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 166, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_CyFunction_SetAnnotationsDict(__pyx_t_4, __pyx_t_8);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  if (__Pyx_SetNameInClass(__pyx_t_3, __pyx_n_s_required, __pyx_t_4) < 0) __PYX_ERR(0, 131, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_3, __pyx_n_s_required, __pyx_t_4) < 0) __PYX_ERR(0, 166, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-  /* "datamodel/fields.pyx":134
+  /* "datamodel/fields.pyx":169
  *         return self._required
  * 
  *     def nullable(self) -> bool:             # <<<<<<<<<<<<<<
  *         return self._nullable
  * 
  */
-  __pyx_t_4 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 134, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 169, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_return, ((PyObject*)&PyBool_Type)) < 0) __PYX_ERR(0, 134, __pyx_L1_error)
-  __pyx_t_8 = __Pyx_CyFunction_New(&__pyx_mdef_9datamodel_6fields_5Field_7nullable, 0, __pyx_n_s_Field_nullable, NULL, __pyx_n_s_datamodel_fields, __pyx_d, ((PyObject *)__pyx_codeobj__11)); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 134, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_return, ((PyObject*)&PyBool_Type)) < 0) __PYX_ERR(0, 169, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_CyFunction_New(&__pyx_mdef_9datamodel_6fields_5Field_7nullable, 0, __pyx_n_s_Field_nullable, NULL, __pyx_n_s_datamodel_fields, __pyx_d, ((PyObject *)__pyx_codeobj__12)); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 169, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_CyFunction_SetAnnotationsDict(__pyx_t_8, __pyx_t_4);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (__Pyx_SetNameInClass(__pyx_t_3, __pyx_n_s_nullable, __pyx_t_8) < 0) __PYX_ERR(0, 134, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_3, __pyx_n_s_nullable, __pyx_t_8) < 0) __PYX_ERR(0, 169, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-  /* "datamodel/fields.pyx":19
+  /* "datamodel/fields.pyx":172
+ *         return self._nullable
+ * 
+ *     def get_dbtype(self):             # <<<<<<<<<<<<<<
+ *         return self._dbtype
+ * 
+ */
+  __pyx_t_8 = __Pyx_CyFunction_New(&__pyx_mdef_9datamodel_6fields_5Field_9get_dbtype, 0, __pyx_n_s_Field_get_dbtype, NULL, __pyx_n_s_datamodel_fields, __pyx_d, ((PyObject *)__pyx_codeobj__14)); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 172, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_8);
+  if (__Pyx_SetNameInClass(__pyx_t_3, __pyx_n_s_get_dbtype, __pyx_t_8) < 0) __PYX_ERR(0, 172, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+
+  /* "datamodel/fields.pyx":175
+ *         return self._dbtype
+ * 
+ *     def db_type(self):             # <<<<<<<<<<<<<<
+ *         if self._dbtype is not None:
+ *             if self._dbtype == "array":
+ */
+  __pyx_t_8 = __Pyx_CyFunction_New(&__pyx_mdef_9datamodel_6fields_5Field_11db_type, 0, __pyx_n_s_Field_db_type, NULL, __pyx_n_s_datamodel_fields, __pyx_d, ((PyObject *)__pyx_codeobj__16)); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 175, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_8);
+  if (__Pyx_SetNameInClass(__pyx_t_3, __pyx_n_s_db_type, __pyx_t_8) < 0) __PYX_ERR(0, 175, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+
+  /* "datamodel/fields.pyx":189
+ * 
+ *     @property
+ *     def primary_key(self):             # <<<<<<<<<<<<<<
+ *         return self._primary
+ * 
+ */
+  __pyx_t_8 = __Pyx_CyFunction_New(&__pyx_mdef_9datamodel_6fields_5Field_13primary_key, 0, __pyx_n_s_Field_primary_key, NULL, __pyx_n_s_datamodel_fields, __pyx_d, ((PyObject *)__pyx_codeobj__18)); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 189, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_8);
+
+  /* "datamodel/fields.pyx":188
+ *                 return 'varchar'
+ * 
+ *     @property             # <<<<<<<<<<<<<<
+ *     def primary_key(self):
+ *         return self._primary
+ */
+  __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_builtin_property, __pyx_t_8); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 188, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_4);
+  __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+  if (__Pyx_SetNameInClass(__pyx_t_3, __pyx_n_s_primary_key, __pyx_t_4) < 0) __PYX_ERR(0, 189, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+
+  /* "datamodel/fields.pyx":22
  * 
  * 
  * class Field(ff):             # <<<<<<<<<<<<<<
  *     """
  *     Field.
  */
-  __pyx_t_8 = __Pyx_Py3ClassCreate(__pyx_t_2, __pyx_n_s_Field, __pyx_t_1, __pyx_t_3, NULL, 0, 0); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 19, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_8);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_Field, __pyx_t_8) < 0) __PYX_ERR(0, 19, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+  __pyx_t_4 = __Pyx_Py3ClassCreate(__pyx_t_1, __pyx_n_s_Field, __pyx_t_2, __pyx_t_3, NULL, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 22, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_4);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_Field, __pyx_t_4) < 0) __PYX_ERR(0, 22, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "datamodel/fields.pyx":138
+  /* "datamodel/fields.pyx":193
  * 
  * 
  * def Column(             # <<<<<<<<<<<<<<
  *     default: Optional[Callable] = None,
  *     nullable: bool = True,
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_9datamodel_6fields_1Column, NULL, __pyx_n_s_datamodel_fields); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 138, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_Column, __pyx_t_1) < 0) __PYX_ERR(0, 138, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_t_2 = PyCFunction_NewEx(&__pyx_mdef_9datamodel_6fields_1Column, NULL, __pyx_n_s_datamodel_fields); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 193, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_Column, __pyx_t_2) < 0) __PYX_ERR(0, 193, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
   /* "datamodel/fields.pyx":1
  * # cython: language_level=3, embedsignature=True, boundscheck=False, wraparound=False, initializedcheck=False             # <<<<<<<<<<<<<<
  * # Copyright (C) 2018-present Jesus Lara
  * #
  */
-  __pyx_t_1 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_test, __pyx_t_1) < 0) __PYX_ERR(0, 1, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_t_2 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 1, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_test, __pyx_t_2) < 0) __PYX_ERR(0, 1, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
   /*--- Wrapped vars code ---*/
 
@@ -5843,6 +7005,271 @@ bad:
 #endif
 }
 
+/* BytesEquals */
+static CYTHON_INLINE int __Pyx_PyBytes_Equals(PyObject* s1, PyObject* s2, int equals) {
+#if CYTHON_COMPILING_IN_PYPY
+    return PyObject_RichCompareBool(s1, s2, equals);
+#else
+    if (s1 == s2) {
+        return (equals == Py_EQ);
+    } else if (PyBytes_CheckExact(s1) & PyBytes_CheckExact(s2)) {
+        const char *ps1, *ps2;
+        Py_ssize_t length = PyBytes_GET_SIZE(s1);
+        if (length != PyBytes_GET_SIZE(s2))
+            return (equals == Py_NE);
+        ps1 = PyBytes_AS_STRING(s1);
+        ps2 = PyBytes_AS_STRING(s2);
+        if (ps1[0] != ps2[0]) {
+            return (equals == Py_NE);
+        } else if (length == 1) {
+            return (equals == Py_EQ);
+        } else {
+            int result;
+#if CYTHON_USE_UNICODE_INTERNALS && (PY_VERSION_HEX < 0x030B0000)
+            Py_hash_t hash1, hash2;
+            hash1 = ((PyBytesObject*)s1)->ob_shash;
+            hash2 = ((PyBytesObject*)s2)->ob_shash;
+            if (hash1 != hash2 && hash1 != -1 && hash2 != -1) {
+                return (equals == Py_NE);
+            }
+#endif
+            result = memcmp(ps1, ps2, (size_t)length);
+            return (equals == Py_EQ) ? (result == 0) : (result != 0);
+        }
+    } else if ((s1 == Py_None) & PyBytes_CheckExact(s2)) {
+        return (equals == Py_NE);
+    } else if ((s2 == Py_None) & PyBytes_CheckExact(s1)) {
+        return (equals == Py_NE);
+    } else {
+        int result;
+        PyObject* py_result = PyObject_RichCompare(s1, s2, equals);
+        if (!py_result)
+            return -1;
+        result = __Pyx_PyObject_IsTrue(py_result);
+        Py_DECREF(py_result);
+        return result;
+    }
+#endif
+}
+
+/* UnicodeEquals */
+static CYTHON_INLINE int __Pyx_PyUnicode_Equals(PyObject* s1, PyObject* s2, int equals) {
+#if CYTHON_COMPILING_IN_PYPY
+    return PyObject_RichCompareBool(s1, s2, equals);
+#else
+#if PY_MAJOR_VERSION < 3
+    PyObject* owned_ref = NULL;
+#endif
+    int s1_is_unicode, s2_is_unicode;
+    if (s1 == s2) {
+        goto return_eq;
+    }
+    s1_is_unicode = PyUnicode_CheckExact(s1);
+    s2_is_unicode = PyUnicode_CheckExact(s2);
+#if PY_MAJOR_VERSION < 3
+    if ((s1_is_unicode & (!s2_is_unicode)) && PyString_CheckExact(s2)) {
+        owned_ref = PyUnicode_FromObject(s2);
+        if (unlikely(!owned_ref))
+            return -1;
+        s2 = owned_ref;
+        s2_is_unicode = 1;
+    } else if ((s2_is_unicode & (!s1_is_unicode)) && PyString_CheckExact(s1)) {
+        owned_ref = PyUnicode_FromObject(s1);
+        if (unlikely(!owned_ref))
+            return -1;
+        s1 = owned_ref;
+        s1_is_unicode = 1;
+    } else if (((!s2_is_unicode) & (!s1_is_unicode))) {
+        return __Pyx_PyBytes_Equals(s1, s2, equals);
+    }
+#endif
+    if (s1_is_unicode & s2_is_unicode) {
+        Py_ssize_t length;
+        int kind;
+        void *data1, *data2;
+        if (unlikely(__Pyx_PyUnicode_READY(s1) < 0) || unlikely(__Pyx_PyUnicode_READY(s2) < 0))
+            return -1;
+        length = __Pyx_PyUnicode_GET_LENGTH(s1);
+        if (length != __Pyx_PyUnicode_GET_LENGTH(s2)) {
+            goto return_ne;
+        }
+#if CYTHON_USE_UNICODE_INTERNALS
+        {
+            Py_hash_t hash1, hash2;
+        #if CYTHON_PEP393_ENABLED
+            hash1 = ((PyASCIIObject*)s1)->hash;
+            hash2 = ((PyASCIIObject*)s2)->hash;
+        #else
+            hash1 = ((PyUnicodeObject*)s1)->hash;
+            hash2 = ((PyUnicodeObject*)s2)->hash;
+        #endif
+            if (hash1 != hash2 && hash1 != -1 && hash2 != -1) {
+                goto return_ne;
+            }
+        }
+#endif
+        kind = __Pyx_PyUnicode_KIND(s1);
+        if (kind != __Pyx_PyUnicode_KIND(s2)) {
+            goto return_ne;
+        }
+        data1 = __Pyx_PyUnicode_DATA(s1);
+        data2 = __Pyx_PyUnicode_DATA(s2);
+        if (__Pyx_PyUnicode_READ(kind, data1, 0) != __Pyx_PyUnicode_READ(kind, data2, 0)) {
+            goto return_ne;
+        } else if (length == 1) {
+            goto return_eq;
+        } else {
+            int result = memcmp(data1, data2, (size_t)(length * kind));
+            #if PY_MAJOR_VERSION < 3
+            Py_XDECREF(owned_ref);
+            #endif
+            return (equals == Py_EQ) ? (result == 0) : (result != 0);
+        }
+    } else if ((s1 == Py_None) & s2_is_unicode) {
+        goto return_ne;
+    } else if ((s2 == Py_None) & s1_is_unicode) {
+        goto return_ne;
+    } else {
+        int result;
+        PyObject* py_result = PyObject_RichCompare(s1, s2, equals);
+        #if PY_MAJOR_VERSION < 3
+        Py_XDECREF(owned_ref);
+        #endif
+        if (!py_result)
+            return -1;
+        result = __Pyx_PyObject_IsTrue(py_result);
+        Py_DECREF(py_result);
+        return result;
+    }
+return_eq:
+    #if PY_MAJOR_VERSION < 3
+    Py_XDECREF(owned_ref);
+    #endif
+    return (equals == Py_EQ);
+return_ne:
+    #if PY_MAJOR_VERSION < 3
+    Py_XDECREF(owned_ref);
+    #endif
+    return (equals == Py_NE);
+#endif
+}
+
+/* GetItemInt */
+static PyObject *__Pyx_GetItemInt_Generic(PyObject *o, PyObject* j) {
+    PyObject *r;
+    if (!j) return NULL;
+    r = PyObject_GetItem(o, j);
+    Py_DECREF(j);
+    return r;
+}
+static CYTHON_INLINE PyObject *__Pyx_GetItemInt_List_Fast(PyObject *o, Py_ssize_t i,
+                                                              CYTHON_NCP_UNUSED int wraparound,
+                                                              CYTHON_NCP_UNUSED int boundscheck) {
+#if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
+    Py_ssize_t wrapped_i = i;
+    if (wraparound & unlikely(i < 0)) {
+        wrapped_i += PyList_GET_SIZE(o);
+    }
+    if ((!boundscheck) || likely(__Pyx_is_valid_index(wrapped_i, PyList_GET_SIZE(o)))) {
+        PyObject *r = PyList_GET_ITEM(o, wrapped_i);
+        Py_INCREF(r);
+        return r;
+    }
+    return __Pyx_GetItemInt_Generic(o, PyInt_FromSsize_t(i));
+#else
+    return PySequence_GetItem(o, i);
+#endif
+}
+static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Tuple_Fast(PyObject *o, Py_ssize_t i,
+                                                              CYTHON_NCP_UNUSED int wraparound,
+                                                              CYTHON_NCP_UNUSED int boundscheck) {
+#if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
+    Py_ssize_t wrapped_i = i;
+    if (wraparound & unlikely(i < 0)) {
+        wrapped_i += PyTuple_GET_SIZE(o);
+    }
+    if ((!boundscheck) || likely(__Pyx_is_valid_index(wrapped_i, PyTuple_GET_SIZE(o)))) {
+        PyObject *r = PyTuple_GET_ITEM(o, wrapped_i);
+        Py_INCREF(r);
+        return r;
+    }
+    return __Pyx_GetItemInt_Generic(o, PyInt_FromSsize_t(i));
+#else
+    return PySequence_GetItem(o, i);
+#endif
+}
+static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Fast(PyObject *o, Py_ssize_t i, int is_list,
+                                                     CYTHON_NCP_UNUSED int wraparound,
+                                                     CYTHON_NCP_UNUSED int boundscheck) {
+#if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS && CYTHON_USE_TYPE_SLOTS
+    if (is_list || PyList_CheckExact(o)) {
+        Py_ssize_t n = ((!wraparound) | likely(i >= 0)) ? i : i + PyList_GET_SIZE(o);
+        if ((!boundscheck) || (likely(__Pyx_is_valid_index(n, PyList_GET_SIZE(o))))) {
+            PyObject *r = PyList_GET_ITEM(o, n);
+            Py_INCREF(r);
+            return r;
+        }
+    }
+    else if (PyTuple_CheckExact(o)) {
+        Py_ssize_t n = ((!wraparound) | likely(i >= 0)) ? i : i + PyTuple_GET_SIZE(o);
+        if ((!boundscheck) || likely(__Pyx_is_valid_index(n, PyTuple_GET_SIZE(o)))) {
+            PyObject *r = PyTuple_GET_ITEM(o, n);
+            Py_INCREF(r);
+            return r;
+        }
+    } else {
+        PySequenceMethods *m = Py_TYPE(o)->tp_as_sequence;
+        if (likely(m && m->sq_item)) {
+            if (wraparound && unlikely(i < 0) && likely(m->sq_length)) {
+                Py_ssize_t l = m->sq_length(o);
+                if (likely(l >= 0)) {
+                    i += l;
+                } else {
+                    if (!PyErr_ExceptionMatches(PyExc_OverflowError))
+                        return NULL;
+                    PyErr_Clear();
+                }
+            }
+            return m->sq_item(o, i);
+        }
+    }
+#else
+    if (is_list || PySequence_Check(o)) {
+        return PySequence_GetItem(o, i);
+    }
+#endif
+    return __Pyx_GetItemInt_Generic(o, PyInt_FromSsize_t(i));
+}
+
+/* ObjectGetItem */
+#if CYTHON_USE_TYPE_SLOTS
+static PyObject *__Pyx_PyObject_GetIndex(PyObject *obj, PyObject* index) {
+    PyObject *runerr;
+    Py_ssize_t key_value;
+    PySequenceMethods *m = Py_TYPE(obj)->tp_as_sequence;
+    if (unlikely(!(m && m->sq_item))) {
+        PyErr_Format(PyExc_TypeError, "'%.200s' object is not subscriptable", Py_TYPE(obj)->tp_name);
+        return NULL;
+    }
+    key_value = __Pyx_PyIndex_AsSsize_t(index);
+    if (likely(key_value != -1 || !(runerr = PyErr_Occurred()))) {
+        return __Pyx_GetItemInt_Fast(obj, key_value, 0, 1, 1);
+    }
+    if (PyErr_GivenExceptionMatches(runerr, PyExc_OverflowError)) {
+        PyErr_Clear();
+        PyErr_Format(PyExc_IndexError, "cannot fit '%.200s' into an index-sized integer", Py_TYPE(index)->tp_name);
+    }
+    return NULL;
+}
+static PyObject *__Pyx_PyObject_GetItem(PyObject *obj, PyObject* key) {
+    PyMappingMethods *m = Py_TYPE(obj)->tp_as_mapping;
+    if (likely(m && m->mp_subscript)) {
+        return m->mp_subscript(obj, key);
+    }
+    return __Pyx_PyObject_GetIndex(obj, key);
+}
+#endif
+
 /* RaiseException */
 #if PY_MAJOR_VERSION < 3
 static void __Pyx_Raise(PyObject *type, PyObject *value, PyObject *tb,
@@ -6119,122 +7546,6 @@ static PyObject *__Pyx_CalculateMetaclass(PyTypeObject *metaclass, PyObject *bas
     Py_INCREF((PyObject*) metaclass);
     return (PyObject*) metaclass;
 }
-
-/* GetItemInt */
-static PyObject *__Pyx_GetItemInt_Generic(PyObject *o, PyObject* j) {
-    PyObject *r;
-    if (!j) return NULL;
-    r = PyObject_GetItem(o, j);
-    Py_DECREF(j);
-    return r;
-}
-static CYTHON_INLINE PyObject *__Pyx_GetItemInt_List_Fast(PyObject *o, Py_ssize_t i,
-                                                              CYTHON_NCP_UNUSED int wraparound,
-                                                              CYTHON_NCP_UNUSED int boundscheck) {
-#if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-    Py_ssize_t wrapped_i = i;
-    if (wraparound & unlikely(i < 0)) {
-        wrapped_i += PyList_GET_SIZE(o);
-    }
-    if ((!boundscheck) || likely(__Pyx_is_valid_index(wrapped_i, PyList_GET_SIZE(o)))) {
-        PyObject *r = PyList_GET_ITEM(o, wrapped_i);
-        Py_INCREF(r);
-        return r;
-    }
-    return __Pyx_GetItemInt_Generic(o, PyInt_FromSsize_t(i));
-#else
-    return PySequence_GetItem(o, i);
-#endif
-}
-static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Tuple_Fast(PyObject *o, Py_ssize_t i,
-                                                              CYTHON_NCP_UNUSED int wraparound,
-                                                              CYTHON_NCP_UNUSED int boundscheck) {
-#if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-    Py_ssize_t wrapped_i = i;
-    if (wraparound & unlikely(i < 0)) {
-        wrapped_i += PyTuple_GET_SIZE(o);
-    }
-    if ((!boundscheck) || likely(__Pyx_is_valid_index(wrapped_i, PyTuple_GET_SIZE(o)))) {
-        PyObject *r = PyTuple_GET_ITEM(o, wrapped_i);
-        Py_INCREF(r);
-        return r;
-    }
-    return __Pyx_GetItemInt_Generic(o, PyInt_FromSsize_t(i));
-#else
-    return PySequence_GetItem(o, i);
-#endif
-}
-static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Fast(PyObject *o, Py_ssize_t i, int is_list,
-                                                     CYTHON_NCP_UNUSED int wraparound,
-                                                     CYTHON_NCP_UNUSED int boundscheck) {
-#if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS && CYTHON_USE_TYPE_SLOTS
-    if (is_list || PyList_CheckExact(o)) {
-        Py_ssize_t n = ((!wraparound) | likely(i >= 0)) ? i : i + PyList_GET_SIZE(o);
-        if ((!boundscheck) || (likely(__Pyx_is_valid_index(n, PyList_GET_SIZE(o))))) {
-            PyObject *r = PyList_GET_ITEM(o, n);
-            Py_INCREF(r);
-            return r;
-        }
-    }
-    else if (PyTuple_CheckExact(o)) {
-        Py_ssize_t n = ((!wraparound) | likely(i >= 0)) ? i : i + PyTuple_GET_SIZE(o);
-        if ((!boundscheck) || likely(__Pyx_is_valid_index(n, PyTuple_GET_SIZE(o)))) {
-            PyObject *r = PyTuple_GET_ITEM(o, n);
-            Py_INCREF(r);
-            return r;
-        }
-    } else {
-        PySequenceMethods *m = Py_TYPE(o)->tp_as_sequence;
-        if (likely(m && m->sq_item)) {
-            if (wraparound && unlikely(i < 0) && likely(m->sq_length)) {
-                Py_ssize_t l = m->sq_length(o);
-                if (likely(l >= 0)) {
-                    i += l;
-                } else {
-                    if (!PyErr_ExceptionMatches(PyExc_OverflowError))
-                        return NULL;
-                    PyErr_Clear();
-                }
-            }
-            return m->sq_item(o, i);
-        }
-    }
-#else
-    if (is_list || PySequence_Check(o)) {
-        return PySequence_GetItem(o, i);
-    }
-#endif
-    return __Pyx_GetItemInt_Generic(o, PyInt_FromSsize_t(i));
-}
-
-/* ObjectGetItem */
-#if CYTHON_USE_TYPE_SLOTS
-static PyObject *__Pyx_PyObject_GetIndex(PyObject *obj, PyObject* index) {
-    PyObject *runerr;
-    Py_ssize_t key_value;
-    PySequenceMethods *m = Py_TYPE(obj)->tp_as_sequence;
-    if (unlikely(!(m && m->sq_item))) {
-        PyErr_Format(PyExc_TypeError, "'%.200s' object is not subscriptable", Py_TYPE(obj)->tp_name);
-        return NULL;
-    }
-    key_value = __Pyx_PyIndex_AsSsize_t(index);
-    if (likely(key_value != -1 || !(runerr = PyErr_Occurred()))) {
-        return __Pyx_GetItemInt_Fast(obj, key_value, 0, 1, 1);
-    }
-    if (PyErr_GivenExceptionMatches(runerr, PyExc_OverflowError)) {
-        PyErr_Clear();
-        PyErr_Format(PyExc_IndexError, "cannot fit '%.200s' into an index-sized integer", Py_TYPE(index)->tp_name);
-    }
-    return NULL;
-}
-static PyObject *__Pyx_PyObject_GetItem(PyObject *obj, PyObject* key) {
-    PyMappingMethods *m = Py_TYPE(obj)->tp_as_mapping;
-    if (likely(m && m->mp_subscript)) {
-        return m->mp_subscript(obj, key);
-    }
-    return __Pyx_PyObject_GetIndex(obj, key);
-}
-#endif
 
 /* FetchCommonType */
 static PyTypeObject* __Pyx_FetchCommonType(PyTypeObject* type) {
