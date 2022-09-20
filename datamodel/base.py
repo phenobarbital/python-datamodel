@@ -206,6 +206,9 @@ class BaseModel(metaclass=ModelMeta):
     def dict(self):
         return asdict(self)
 
+    def to_dict(self):
+        return asdict(self)
+
     def json(self, **kwargs):
         encoder = self.__encoder__
         if len(kwargs) > 0: # re-configure the encoder
