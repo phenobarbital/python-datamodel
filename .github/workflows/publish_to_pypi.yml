@@ -33,4 +33,4 @@ jobs:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.PYTHON_DATAMODEL_PYPI_API_TOKEN }}
       run: |
-        twine upload -r testpypi dist/*-manylinux*.whl
+        twine upload  dist/*-manylinux*.whl
