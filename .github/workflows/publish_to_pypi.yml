@@ -22,9 +22,15 @@ jobs:
       with:
         python-versions: 'cp38-cp38 cp39-cp39'
         build-requirements: 'cython numpy'
-    - name: Publish wheels to PyPI
+    - name: Publish wheels to Test PyPI
       env:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.PYTHON_DATAMODEL_TEST_PYPI_API_TOKEN }}
+      run: |
+        twine upload -r testpypi dist/*-manylinux*.whl
+    - name: Publish wheels to Production PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYTHON_DATAMODEL_PYPI_API_TOKEN }}
       run: |
         twine upload -r testpypi dist/*-manylinux*.whl
