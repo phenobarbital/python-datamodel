@@ -22,7 +22,7 @@ from datamodel.fields import Field
 from datamodel.types import JSON_TYPES
 from datamodel.converters import parse_type
 from datamodel.validation import validator
-from .parsers import DefaultEncoder
+from .parsers.encoders import DefaultEncoder
 
 
 class Meta:
@@ -264,7 +264,14 @@ class BaseModel(metaclass=ModelMeta):
             elif is_dataclass(f.type): # is already a dataclass
                 if isinstance(value, dict):
                     new_val = f.type(**value)
-                    setattr(self, key, new_val)
+                elif isinstance(value, list):
+                    new_val = f.type(*value)
+                else:
+                    try:
+                        new_val = f.type(value)
+                    except (ValueError, AttributeError, TypeError):
+                        new_val = value
+                setattr(self, key, new_val)
             else:
                 try:
                     if f.type.__module__ == 'typing':  # a typing extension
@@ -354,7 +361,7 @@ class BaseModel(metaclass=ModelMeta):
                     )
             else:
                 # capturing other errors from validator:
-                error = validator(f, name, value)
+                error = validator(f, name, value, annotated_type)
                 if error:
                     errors[name] = error
         if errors:

@@ -23,9 +23,10 @@ cpdef bool is_instanceof(object value, type annotated_type):
                 f"{e}"
             )
 
-def validator(object F, str name, object value):
+def validator(object F, str name, object value, object annotated_type):
     val_type = type(value)
-    annotated_type = F.type
+    if not annotated_type:
+        annotated_type = F.type
     errors = []
     # first: calling (if exists) custom validator:
     if 'validator' in F.metadata:
@@ -56,7 +57,7 @@ def validator(object F, str name, object value):
         if annotated_type.__module__ == 'typing':
             # TODO: validation of annotated types
             pass
-        else:
+        elif val_type <> annotated_type:
             instance = is_instanceof(value, annotated_type)
             if not instance:
                 errors.append({
@@ -67,6 +68,8 @@ def validator(object F, str name, object value):
                     "annotation": annotated_type,
                     "exception": None
                 })
+        else:
+            return errors
     except (TypeError, ValueError) as e:
         errors.append({
             "field": name,

@@ -7,7 +7,6 @@ from typing import (
     Union,
     Any
 )
-from decimal import Decimal
 from collections.abc import Callable
 from dataclasses import Field as ff
 from dataclasses import (
@@ -52,9 +51,9 @@ class Field(ff):
         nullable: bool = True,
         required: bool = False,
         factory: Optional[Callable] = None,
-        min: Union[int, float, Decimal] = None,
-        max: Union[int, float, Decimal] = None,
-        validator: Optional[Union[Callable, None]] = None,
+        min: Union[int, float] = None,
+        max: Union[int, float] = None,
+        validator: Optional[Callable] = None,
         kw_only: bool = False,
         **kwargs,
     ):
@@ -199,9 +198,9 @@ def Column(
     nullable: bool = True,
     required: bool = False,
     factory: Optional[Callable] = None,
-    min: Union[int, float, Decimal] = None,
-    max: Union[int, float, Decimal] = None,
-    validator: Optional[Union[Callable, None]] = None,
+    min: Union[int, float] = None,
+    max: Union[int, float] = None,
+    validator: Optional[Callable] = None,
     kw_only: bool = False,
     **kwargs
 ):
