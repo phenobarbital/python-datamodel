@@ -1,8 +1,32 @@
 """
 This example covers a basic polymorphism concept, avoid Data Ambiguity.
 """
+from dataclasses import dataclass
 from typing import List
 from datamodel import BaseModel, Column
+
+@dataclass
+class Animal:
+    name: str
+
+@dataclass
+class Tiger(Animal):
+    weight_lbs: int
+
+@dataclass
+class Elephant(Animal):
+    trunk_length_cm: int
+
+@dataclass
+class Zoo:
+    animals: List[Animal]
+
+animals = [Elephant(name="Eldor", trunk_length_cm=176), Tiger(name="Roy", weight_lbs=405)]
+zoo = Zoo(animals=animals)
+
+print('ZOO DATACLASS: ', zoo)
+for animal in zoo.animals:
+    print('DC: ', animal)
 
 class Animal(BaseModel):
     name: str
@@ -21,7 +45,7 @@ class Elephant(Mammal):
     trunk_length: int
 
 class Zoo(BaseModel):
-    animals: list
+    animals: List[Animal]
 
 animals = [
     Elephant(name="Eldor", trunk_length=176),

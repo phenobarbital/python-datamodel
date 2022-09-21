@@ -251,7 +251,19 @@ def parse_type(object T, object data, object encoder = None):
                 except AttributeError:
                     return data # data -as is-
             elif is_dataclass(arg):
-                return [arg(*x) for x in data]
+                if isinstance(data, list):
+                    result = []
+                    for d in data:
+                        # is already a dataclass:
+                        if is_dataclass(d):
+                            result.append(d)
+                        elif isinstance(d, list):
+                            result.append(arg(*d))
+                        elif isinstance(d, dict):
+                            result.append(arg(**d))
+                        else:
+                            result.append(arg(d))
+                return result
             else:
                 return data
         elif T._name is None or T._name in ('Optional', 'Union'):
