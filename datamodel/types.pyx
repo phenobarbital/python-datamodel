@@ -1,29 +1,30 @@
-"""
-Abstract Type, Database types and converters for Data types.
-"""
-import uuid
-import datetime
-import time
+# cython: language_level=3, embedsignature=True, boundscheck=False, wraparound=False, initializedcheck=False
+# Copyright (C) 2018-present Jesus Lara
+#
+from datetime import (
+    datetime,
+    time,
+    date,
+    timedelta
+)
+from uuid import UUID
 from decimal import Decimal
-import numpy as np
 
 
 DB_TYPES: dict = {
     bool: "boolean",
     int: "integer",
-    np.int64: "bigint",
     float: "float",
     str: "character varying",
     bytes: "byte",
     list: "Array",
     tuple: "Array",
     Decimal: "numeric",
-    datetime.date: "date",
-    datetime.datetime: "timestamp without time zone",
-    datetime.time: "time",
+    date: "date",
+    datetime: "timestamp without time zone",
     time: "time",
-    datetime.timedelta: "timestamp without time zone",
-    uuid.UUID: "uuid",
+    timedelta: "timestamp without time zone",
+    UUID: "uuid",
     dict: "jsonb",
     type(None): None
 }
@@ -32,7 +33,7 @@ DB_TYPES: dict = {
 MODEL_TYPES: dict = {
     "boolean": bool,
     "integer": int,
-    "bigint": np.int64,
+    "bigint": int,
     "float": float,
     "character varying": str,
     "string": str,
@@ -43,11 +44,11 @@ MODEL_TYPES: dict = {
     "hstore": dict,
     "character varying[]": list,
     "numeric": Decimal,
-    "date": datetime.date,
-    "timestamp with time zone": datetime.datetime,
-    "time": datetime.time,
-    "timestamp without time zone": datetime.datetime,
-    "uuid": uuid.UUID,
+    "date": date,
+    "timestamp with time zone": datetime,
+    "time": time,
+    "timestamp without time zone": datetime,
+    "uuid": UUID,
     "json": dict,
     "jsonb": dict,
     "text": str,
@@ -60,15 +61,14 @@ MODEL_TYPES: dict = {
 JSON_TYPES: dict = {
     bool: "boolean",
     int: "integer",
-    np.int64: "integer",
     float: "float",
     str: "string",
     bytes: "byte",
     list: "list",
     Decimal: "decimal",
-    datetime.date: "date",
-    datetime.datetime: "datetime",
-    datetime.time: "time",
-    datetime.timedelta: "timedelta",
-    uuid.UUID: "uuid"
+    date: "date",
+    datetime: "datetime",
+    time: "time",
+    timedelta: "timedelta",
+    UUID: "uuid"
 }

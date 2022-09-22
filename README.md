@@ -5,12 +5,14 @@ and work with Data in the same way, is a reimplementation of python Dataclasses 
 
 The key features are:
 * **Easy to use**: No more using decorators, concerns abour re-ordering attributes or common problems with using dataclasses with inheritance.
+* **Extensibility**: Can use other dataclasses, Data objects or primitives as data-types.
+* **Fast**: DataModel is a replacement 100% full compatible with dataclasses, without any overhead.
 
 
 
 ## Requirements
 
-Python 3.7+
+Python 3.8+
 
 ## Installation
 

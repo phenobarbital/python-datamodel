@@ -42,10 +42,20 @@ extensions = [
         sources=['datamodel/validation.pyx'],
         extra_compile_args=COMPILE_ARGS,
         language="c++"
+    ),
+    Extension(
+        name='datamodel.exceptions',
+        sources=['datamodel/exceptions.pyx'],
+        extra_compile_args=COMPILE_ARGS,
+        language="c"
+    ),
+    Extension(
+        name='datamodel.types',
+        sources=['datamodel/types.pyx'],
+        extra_compile_args=COMPILE_ARGS,
+        language="c"
     )
 ]
-
-# sys.argv.extend(['--plat-name', 'manylinux_2_28_x86_64'])
 
 setup(
     name="python-datamodel",
@@ -63,6 +73,7 @@ setup(
         "Intended Audience :: System Administrators",
         "Topic :: Software Development :: Build Tools",
         "Topic :: Software Development :: Libraries :: Python Modules",
+        "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",

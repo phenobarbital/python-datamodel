@@ -1,12 +1,11 @@
 # cython: language_level=3, embedsignature=True, boundscheck=False, wraparound=True, initializedcheck=False
 # Copyright (C) 2018-present Jesus Lara
 #
-import time
 import re
-import numpy as np
+import inspect
+import logging
 from typing import Union
 from dataclasses import is_dataclass, _MISSING_TYPE
-from distutils.util import strtobool
 from decimal import Decimal
 from cpython cimport datetime
 from dateutil import parser
@@ -166,6 +165,24 @@ cpdef object to_time(object obj):
         except ValueError:
             return obj
 
+
+cdef object strtobool (str val):
+    """Convert a string representation of truth to true (1) or false (0).
+
+    True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values
+    are 'n', 'no', 'f', 'false', 'off', and '0'.  Raises ValueError if
+    'val' is anything else.
+    """
+    val = val.lower()
+    if val in ('y', 'yes', 't', 'true', 'on', '1'):
+        return True
+    elif val in ('n', 'no', 'f', 'false', 'off', '0'):
+        return False
+    else:
+        raise ValueError(
+            f"invalid truth value for {val}"
+        )
+
 cpdef object to_boolean(object obj):
     """to_boolean.
 
@@ -198,7 +215,6 @@ cdef dict encoders = {
     bool: to_boolean,
     int: to_integer,
     float: to_float,
-    np.int64: to_integer,
     datetime.date: to_date,
     datetime.datetime: to_datetime,
     datetime.timedelta: to_timedelta,
@@ -235,7 +251,19 @@ def parse_type(object T, object data, object encoder = None):
                 except AttributeError:
                     return data # data -as is-
             elif is_dataclass(arg):
-                return [arg(*x) for x in data]
+                if isinstance(data, list):
+                    result = []
+                    for d in data:
+                        # is already a dataclass:
+                        if is_dataclass(d):
+                            result.append(d)
+                        elif isinstance(d, list):
+                            result.append(arg(*d))
+                        elif isinstance(d, dict):
+                            result.append(arg(**d))
+                        else:
+                            result.append(arg(d))
+                return result
             else:
                 return data
         elif T._name is None or T._name in ('Optional', 'Union'):
@@ -281,4 +309,16 @@ def parse_type(object T, object data, object encoder = None):
                 raise ValueError(
                     f"DataModel: Error parsing type {T}"
                 )
+            # making last conversion:
+            if inspect.isclass(T):
+                try:
+                    if isinstance(data, dict):
+                        data = T(**data)
+                    elif isinstance(data, (list, tuple)):
+                        data = T(*data)
+                    elif isinstance(data, str):
+                        data = T(data)
+                except (TypeError, ValueError) as e:
+                    logging.error(f'Conversion Error {T!r}: {e}')
+                return data
         return data

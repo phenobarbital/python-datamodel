@@ -2,11 +2,8 @@
 JSON Encoders.
 """
 from dataclasses import _MISSING_TYPE, MISSING
-import decimal
 from typing import Any, Union
 from decimal import Decimal
-import asyncpg
-import numpy as np
 import orjson
 
 
@@ -22,22 +19,12 @@ class DefaultEncoder:
         return self.encode(obj, **kwargs)
 
     def default(self, obj):
-        if isinstance(obj, decimal.Decimal):
+        if isinstance(obj, Decimal):
             return float(obj)
-        elif isinstance(obj, Decimal):
-            return str(obj)
         elif hasattr(obj, "isoformat"):
             return obj.isoformat()
-        elif isinstance(obj, asyncpg.Range):
-            return [obj.lower, obj.upper]
         elif hasattr(obj, "hex"):
             return obj.hex
-        elif isinstance(obj, np.integer):
-            return int(obj)
-        elif isinstance(obj, np.floating):
-            return float(obj)
-        elif isinstance(obj, np.ndarray):
-            return obj.tolist()
         elif obj == _MISSING_TYPE:
             return None
         elif obj == MISSING:

@@ -1,19 +1,11 @@
-"""
-Base Exceptions for DataModel.
-"""
-from dataclasses import dataclass
-from typing import (
-    Optional,
-    Union,
-    Any
-)
-
-
-class ModelException(Exception):
-    """Base class for other exceptions"""
-    message: str = ''
-
-    def __init__(self, message: str, *args: list) -> None:
+# cython: language_level=3, embedsignature=True
+# Copyright (C) 2018-present Jesus Lara
+#
+cdef class ModelException(Exception):
+    """Base class for other Data-Model exceptions"""
+    def __init__(self, str message, *args):
+        if not message:
+            message = f"{args!s}"
         self.args = (
             message,
             *args
@@ -27,6 +19,8 @@ class ModelException(Exception):
     def __str__(self):
         return f"{__name__}: {self.message}"
 
+    def get(self):
+        return self.message
 
 class ValidationError(ModelException):
     """Validation Error."""
@@ -42,16 +36,3 @@ class ParsingError(ModelException):
     def __init__(self, message: str, *args: list) -> None:
         message = f'Parsing Error: {message}'
         super().__init__(message)
-
-
-@dataclass
-class ValidationModel:
-    """
-    Class for Error validation on DataModels.
-    """
-    field: str
-    value: Optional[Union[str, Any]]
-    error: str
-    value_type: Any
-    annotation: type
-    exception: Optional[Exception]

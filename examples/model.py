@@ -1,6 +1,9 @@
+from datetime import (
+    datetime,
+    time,
+    date
+)
 import uuid
-# import datetime
-import datetime
 from decimal import Decimal
 from datamodel import BaseModel, Column
 
@@ -30,12 +33,12 @@ class User(BaseModel):
     name: str = Column(required=True, default='John Doe')
     age: int = Column(default=18, required=True)
     salary: Decimal = Column(default=10.0)
-    in_time: datetime.time = Column(default='15:00')
-    out_time: datetime.time = Column(default='23:00')
-    birth: datetime.date = Column(required=False)
+    in_time: time = Column(default='15:00')
+    out_time: time = Column(default='23:00')
+    birth: date = Column(required=False)
     is_employee: str = Column(required=True, default='F', encoder=is_employee)
     size: float
-    signup_ts: datetime.datetime = Column(default=datetime.datetime.now(), db_default='now()')
+    signup_ts: datetime = Column(default=datetime.now(), db_default='now()')
     contacts: Contact = Column(required=False)
 
     class Meta:
