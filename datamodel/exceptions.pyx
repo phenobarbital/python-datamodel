@@ -25,8 +25,8 @@ cdef class ModelException(Exception):
 class ValidationError(ModelException):
     """Validation Error."""
 
-    def __init__(self, message: str, *args: list) -> None:
-        message = f'Validator Error: {message}'
+    def __init__(self, message: str, *args: list, payload: dict = None) -> None:
+        self.payload = payload
         super().__init__(message)
 
 

@@ -20,6 +20,12 @@ cdef object to_uuid(object obj):
     if isinstance(obj, UUID):
         # already an uuid
         return obj
+    elif callable(obj):
+        # its a function callable returning a value
+        try:
+            return obj()
+        except:
+            pass
     try:
         return UUID(str(obj))
     except ValueError:
@@ -39,7 +45,7 @@ cpdef datetime.date to_date(object obj):
             return parser.parse(obj).date()
         except (ValueError, TypeError):
             raise ValueError(
-                f"DataModel: can't convert invalid data {obj} to date"
+                f"Can't convert invalid data *{obj}* to date"
             )
 
 cpdef datetime.datetime to_datetime(object obj):
@@ -49,6 +55,8 @@ cpdef datetime.datetime to_datetime(object obj):
     """
     if isinstance(obj, datetime.datetime):
         return obj
+    elif obj == _MISSING_TYPE:
+        return None
     else:
         if isinstance(obj, (bytes, bytearray)):
             obj = obj.decode("ascii")
@@ -56,7 +64,7 @@ cpdef datetime.datetime to_datetime(object obj):
             return parser.parse(obj)
         except (ValueError, TypeError):
             raise ValueError(
-                f"DataModel: can't convert invalid data {obj} to datetime"
+                f"Can't convert invalid data *{obj}* to datetime"
             )
 
 cpdef object to_integer(object obj):
@@ -66,11 +74,19 @@ cpdef object to_integer(object obj):
     """
     if isinstance(obj, int):
         return obj
+    elif callable(obj):
+        # its a function callable returning a value
+        try:
+            return obj()
+        except:
+            pass
     else:
         try:
             return int(obj)
-        except (TypeError, ValueError):
-            return None
+        except (TypeError, ValueError) as e:
+            return ValueError(
+                f"Invalid conversion to Integer of {obj}: {e}"
+            )
 
 cpdef object to_float(object obj):
     """to_float.
@@ -81,6 +97,12 @@ cpdef object to_float(object obj):
         return obj
     elif isinstance(obj, _MISSING_TYPE):
         return None
+    elif callable(obj):
+        # its a function callable returning a value
+        try:
+            return obj()
+        except:
+            pass
     else:
         try:
             return float(obj)
@@ -94,6 +116,12 @@ cpdef object to_decimal(object obj):
     """
     if isinstance(obj, Decimal):
         return obj
+    elif callable(obj):
+        # its a function callable returning a value
+        try:
+            return obj()
+        except:
+            pass
     else:
         try:
             return Decimal(obj)
@@ -133,7 +161,9 @@ cpdef datetime.timedelta to_timedelta(object obj):
         )
         return tdelta
     except ValueError:
-        return obj
+        return ValueError(
+            f"Invalid timedelta Object: {obj}"
+        )
 
 TIME_RE = re.compile(r"(\d{1,2}):(\d{1,2}):(\d{1,2})(?:.(\d{1,6}))?")
 
@@ -144,6 +174,12 @@ cpdef object to_time(object obj):
     """
     if isinstance(obj, datetime.time):
         return obj
+    elif callable(obj):
+        # its a function callable returning a value
+        try:
+            return obj()
+        except:
+            pass
     else:
         try:
             return datetime.time(*map(int, obj.split(':')))
@@ -162,8 +198,10 @@ cpdef object to_time(object obj):
                 second=int(seconds),
                 microsecond=int(microseconds),
             )
-        except ValueError:
-            return obj
+        except (TypeError, ValueError) as e:
+            raise ValueError(
+                f"Invalid Time/Timestamp Object {obj}: {e}"
+            )
 
 
 cdef object strtobool (str val):
@@ -180,7 +218,7 @@ cdef object strtobool (str val):
         return False
     else:
         raise ValueError(
-            f"invalid truth value for {val}"
+            f"Invalid truth value for {val}"
         )
 
 cpdef object to_boolean(object obj):
@@ -194,12 +232,24 @@ cpdef object to_boolean(object obj):
         obj = obj.decode("ascii")
     if isinstance(obj, str):
         return strtobool(obj)
+    elif callable(obj):
+        # its a function callable returning a value
+        try:
+            return obj()
+        except:
+            pass
     else:
         return bool(obj)
 
 cpdef object to_object(object obj):
     if isinstance(obj, (list, dict)):
         return obj
+    elif callable(obj):
+        # its a function callable returning a value
+        try:
+            return obj()
+        except:
+            pass
     elif isinstance(obj, str):
         try:
             return orjson.loads(obj)
@@ -207,7 +257,7 @@ cpdef object to_object(object obj):
             return None
     else:
         raise ValueError(
-            f"DataModel: can't convert invalid data {obj} to Object"
+            f"Can't convert invalid data {obj} to Object"
         )
 
 cdef dict encoders = {
@@ -285,9 +335,9 @@ def parse_type(object T, object data, object encoder = None):
             # using a function encoder:
             try:
                 return encoder(data)
-            except ValueError:
+            except ValueError as e:
                 raise ValueError(
-                    f"DataModel: Error parsing type {T}"
+                    f"DataModel: Error parsing type {T}, {e}"
                 )
         elif is_dataclass(T):
             if isinstance(data, dict):
@@ -305,9 +355,9 @@ def parse_type(object T, object data, object encoder = None):
                 return conv(data)
             except KeyError:
                 pass
-            except ValueError:
+            except ValueError as e:
                 raise ValueError(
-                    f"DataModel: Error parsing type {T}"
+                    f"DataModel: Error parsing type {T}, {e}"
                 )
             # making last conversion:
             if inspect.isclass(T):
