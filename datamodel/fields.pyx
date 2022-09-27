@@ -145,7 +145,8 @@ class Field(ff):
             self._default = None
             if nullable is True: # Can be null
                 if not factory:
-                    factory = _MISSING_TYPE
+                    # factory = _MISSING_TYPE
+                    factory = MISSING
                 self._default_factory = factory
         # Calling Parent init
         if version_info.minor > 9:
