@@ -170,7 +170,7 @@ class ModelMeta(type):
             if v._field_type == _FIELD
         }
         dc.__columns__ = cols
-        dc.__fields__ = tuple(cols.keys())
+        dc.__fields__ = list(cols.keys())
         return dc
 
     def __init__(cls, *args, **kwargs) -> None:
@@ -225,7 +225,13 @@ class BaseModel(metaclass=ModelMeta):
         Args:
             name (str): name of the field
             value (Any): value to be assigned.
+        Raises:
+            TypeError: when try to create a new field on an Strict Model.
         """
+        if self.Meta.strict is True:
+            raise TypeError(
+                f'Cannot create a new field {name} on a Strict Model.'
+            )
         f = Field(required=False, default=value)
         f.name = name
         f.type = type(value)
