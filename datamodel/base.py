@@ -181,6 +181,7 @@ class ModelMeta(type):
             cls.__frozen__ = False
         # Initialized Data Model = True
         cls.__initialised__ = True
+        cls.__errors__ = None
         super(ModelMeta, cls).__init__(*args, **kwargs)
 
 
@@ -395,16 +396,18 @@ class BaseModel(metaclass=ModelMeta):
                     errors[name] = error
         if errors:
             if self.Meta.strict is True:
-
                 raise ValidationError(
                     message="""There are errors in your data.
                     Hint: please check the "payload" attribute in the exception.""",
                     payload=errors
                 )
-            print(errors)
+            self.__errors__ = errors
             object.__setattr__(self, "__valid__", False)
         else:
             object.__setattr__(self, "__valid__", True)
+
+    def get_errors(self):
+        return self.__errors__
 
     @classmethod
     def make_model(cls, name: str, schema: str = "public", fields: list = None):
