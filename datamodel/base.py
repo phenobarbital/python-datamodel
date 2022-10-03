@@ -397,8 +397,8 @@ class BaseModel(metaclass=ModelMeta):
         if errors:
             if self.Meta.strict is True:
                 raise ValidationError(
-                    message="""There are errors in your data.
-                    Hint: please check the "payload" attribute in the exception.""",
+                    message=f"""{self.modelName}: There are errors in your data.
+ Hint: please check the "payload" attribute in the exception.""",
                     payload=errors
                 )
             self.__errors__ = errors

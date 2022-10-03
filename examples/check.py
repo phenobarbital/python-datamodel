@@ -67,3 +67,24 @@ try:
     jesus = User(airport=True)
 except ValidationError as ex:
     print(ex)
+except TypeError as ex:
+    print(ex)
+
+class Animal(BaseModel):
+    name: str
+    specie: str
+    age: int
+
+try:
+    animal = Animal(**{
+        "name": "Human",
+        "specie": "Homo Sapiens",
+        "age": "otra verga"
+    })
+except ValidationError as ex:
+    print(ex)
+    print(ex.payload)
+except TypeError as ex:
+    print(ex)
+except ValueError as ex:
+    print(ex)
