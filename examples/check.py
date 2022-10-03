@@ -60,6 +60,10 @@ try:
     print(jesus)
 except ValidationError as ex:
     print(ex)
+    print(ex.payload)
 
 # try to adding a missing keyword:
-jesus = User(airport=True)
+try:
+    jesus = User(airport=True)
+except ValidationError as ex:
+    print(ex)
