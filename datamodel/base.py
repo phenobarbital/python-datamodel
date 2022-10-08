@@ -22,7 +22,7 @@ from datamodel.fields import Field
 from datamodel.types import JSON_TYPES
 from datamodel.converters import parse_type
 from datamodel.validation import validator
-from datamodel.exceptions import ValidationError
+from datamodel import exceptions
 from .parsers.encoders import DefaultEncoder
 
 
@@ -247,7 +247,8 @@ class BaseModel(metaclass=ModelMeta):
             value (Any): value to be assigned.
         """
         if name not in self.__columns__:
-            self.create_field(name, value)
+            if self.Meta.strict is False: # can be created new Fields
+                self.create_field(name, value)
         else:
             setattr(self, name, value)
 
@@ -396,7 +397,7 @@ class BaseModel(metaclass=ModelMeta):
                     errors[name] = error
         if errors:
             if self.Meta.strict is True:
-                raise ValidationError(
+                raise exceptions.ValidationError(
                     message=f"""{self.modelName}: There are errors in your data.
  Hint: please check the "payload" attribute in the exception.""",
                     payload=errors
