@@ -22,11 +22,12 @@ cdef class ModelException(Exception):
     def get(self):
         return self.message
 
-class ValidationError(ModelException):
+class ValidationError(Exception):
     """Validation Error."""
 
-    def __init__(self, message: str, *args: list) -> None:
-        message = f'Validator Error: {message}'
+    def __init__(self, message: str, *args, payload: dict = None) -> None:
+        self.message = message
+        self.payload = payload
         super().__init__(message)
 
 

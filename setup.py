@@ -91,7 +91,7 @@ setup(
     include_package_data=True,
     license=__license__,
     setup_requires=[
-        "setuptools==65.3.0",
+        "setuptools==65.4.1",
         "wheel==0.37.1",
         "Cython==0.29.32",
         "asyncio==3.4.3",
@@ -106,7 +106,7 @@ setup(
         "cchardet==2.1.7",
         "objectpath==0.6.1",
         "orjson==3.8.0",
-        'typing_extensions==4.3.0',
+        'typing_extensions==4.4.0',
         "asyncpg==0.26.0",
         "python-dateutil==2.8.2"
     ],

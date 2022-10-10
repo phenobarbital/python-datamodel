@@ -22,6 +22,7 @@ from datamodel.fields import Field
 from datamodel.types import JSON_TYPES
 from datamodel.converters import parse_type
 from datamodel.validation import validator
+from datamodel import exceptions
 from .parsers.encoders import DefaultEncoder
 
 
@@ -169,7 +170,7 @@ class ModelMeta(type):
             if v._field_type == _FIELD
         }
         dc.__columns__ = cols
-        dc.__fields__ = tuple(cols.keys())
+        dc.__fields__ = list(cols.keys())
         return dc
 
     def __init__(cls, *args, **kwargs) -> None:
@@ -180,6 +181,7 @@ class ModelMeta(type):
             cls.__frozen__ = False
         # Initialized Data Model = True
         cls.__initialised__ = True
+        cls.__errors__ = None
         super(ModelMeta, cls).__init__(*args, **kwargs)
 
 
@@ -224,7 +226,13 @@ class BaseModel(metaclass=ModelMeta):
         Args:
             name (str): name of the field
             value (Any): value to be assigned.
+        Raises:
+            TypeError: when try to create a new field on an Strict Model.
         """
+        if self.Meta.strict is True:
+            raise TypeError(
+                f'Cannot create a new field {name} on a Strict Model.'
+            )
         f = Field(required=False, default=value)
         f.name = name
         f.type = type(value)
@@ -239,7 +247,8 @@ class BaseModel(metaclass=ModelMeta):
             value (Any): value to be assigned.
         """
         if name not in self.__columns__:
-            self.create_field(name, value)
+            if self.Meta.strict is False: # can be created new Fields
+                self.create_field(name, value)
         else:
             setattr(self, name, value)
 
@@ -256,7 +265,7 @@ class BaseModel(metaclass=ModelMeta):
                 encoder = f.metadata['encoder']
             else:
                 encoder = None
-            # print(f'FIELD {key} = {value}', 'TYPE : ', f.type, type(f.type))
+            ### Factory Value:
             if isinstance(f.type, types.MethodType):
                 raise TypeError(
                     f"DataModel: Wrong type for Column {key}: {f.type}"
@@ -282,6 +291,7 @@ class BaseModel(metaclass=ModelMeta):
                     raise TypeError(
                         f"DataModel: Wrong type for {key}: {f.type}, error: {e}"
                     ) from e
+                # print(f'FIELD {key} = {value}', 'TYPE : ', f.type, type(f.type))
                 if isinstance(value, list):
                     try:
                         sub_type = f.type.__args__[0]
@@ -299,7 +309,7 @@ class BaseModel(metaclass=ModelMeta):
                             setattr(self, key, items)
                     except AttributeError:
                         setattr(self, key, value)
-                elif value is None:
+                elif self.is_empty(value):
                     is_missing = isinstance(f.default, _MISSING_TYPE)
                     setattr(self, key, f.default_factory if is_missing else f.default)
                 elif new_val:= parse_type(f.type, value, encoder):
@@ -316,6 +326,18 @@ class BaseModel(metaclass=ModelMeta):
         is_missing = (value == _MISSING_TYPE)
         return callable(value) if not is_missing else False
 
+    def is_empty(self, value) -> bool:
+        if isinstance(value, _MISSING_TYPE):
+            return True
+        elif (value == _MISSING_TYPE):
+            return True
+        elif value is None:
+            return True
+        elif str(value) == '':
+            return True
+        return False
+
+
     def _validation(self) -> None:
         """
         _validation.
@@ -327,7 +349,7 @@ class BaseModel(metaclass=ModelMeta):
             value = getattr(self, f.name)
             annotated_type = f.type
             val_type = type(value)
-            # Fix values of Data:
+            # Fix values of Data based on Default factory
             if hasattr(f, 'default') and self.is_callable(value):
                 try:
                     if value.__module__ != 'typing':
@@ -346,30 +368,47 @@ class BaseModel(metaclass=ModelMeta):
                     )
                     setattr(self, name, None)
             # first: check primary and required:
-            if val_type == type or value == annotated_type or value is None:
-                if f.metadata['primary'] is True:
-                    raise ValueError(
-                        f"Missing Primary Key *{name}*"
-                    )
-                if f.metadata["required"] is True and self.Meta.strict is True:
-                    raise ValueError(
-                        f"Missing Required Field *{name}*"
-                    )
-                elif f.metadata["nullable"] is False and self.Meta.strict is True:
-                    raise ValueError(
-                        f"Missing Field *{name}* when Nullable is False."
-                    )
+            if val_type == type or value == annotated_type or self.is_empty(value):
+                try:
+                    if f.metadata['primary'] is True:
+                        raise ValueError(
+                            f"::{self.modelName}:: Missing Primary Key *{name}*"
+                        )
+                except KeyError:
+                    pass
+                try:
+                    if f.metadata["required"] is True and self.Meta.strict is True:
+                        raise ValueError(
+                            f"::{self.modelName}:: Missing Required Field *{name}*"
+                        )
+                except KeyError:
+                    pass
+                try:
+                    if f.metadata["nullable"] is False and self.Meta.strict is True:
+                        raise ValueError(
+                            f"::{self.modelName}:: Cannot null *{name}*"
+                        )
+                except KeyError:
+                    pass
             else:
                 # capturing other errors from validator:
                 error = validator(f, name, value, annotated_type)
                 if error:
                     errors[name] = error
         if errors:
-            print("=== ERRORS ===")
-            print(errors)
+            if self.Meta.strict is True:
+                raise exceptions.ValidationError(
+                    message=f"""{self.modelName}: There are errors in your data.
+ Hint: please check the "payload" attribute in the exception.""",
+                    payload=errors
+                )
+            self.__errors__ = errors
             object.__setattr__(self, "__valid__", False)
         else:
             object.__setattr__(self, "__valid__", True)
+
+    def get_errors(self):
+        return self.__errors__
 
     @classmethod
     def make_model(cls, name: str, schema: str = "public", fields: list = None):
