@@ -1,28 +1,28 @@
 from __future__ import annotations
+
 import inspect
-import types
-from typing import (
-    Optional,
-    Union,
-    Any
-)
 import logging
+import types
 from collections.abc import Callable
 # Dataclass
 from dataclasses import (
+    _FIELD,
+    _MISSING_TYPE,
+    asdict,
     dataclass,
     is_dataclass,
-    _FIELD,
-    asdict,
     make_dataclass,
-    _MISSING_TYPE
 )
+from typing import Any, Optional, Union
+
 from orjson import OPT_INDENT_2
+
+from datamodel.converters import parse_type
 from datamodel.fields import Field
 from datamodel.types import JSON_TYPES
-from datamodel.converters import parse_type
 from datamodel.validation import validator
-from datamodel import exceptions
+
+from .exceptions import ValidationError
 from .parsers.encoders import DefaultEncoder
 
 
@@ -88,7 +88,7 @@ def create_dataclass(
     create_dataclass.
        Create a Dataclass from a simple Class
     """
-    dc = dataclass(unsafe_hash=True, init=True, frozen=frozen)(new_cls)
+    dc = dataclass(unsafe_hash=True, init=True, order=False, eq=True, frozen=frozen)(new_cls)
     setattr(dc, "__setattr__", _dc_method_setattr)
     # adding a properly internal json encoder:
     dc.__encoder__ = DefaultEncoder()
@@ -397,10 +397,9 @@ class BaseModel(metaclass=ModelMeta):
                     errors[name] = error
         if errors:
             if self.Meta.strict is True:
-                raise exceptions.ValidationError(
-                    message=f"""{self.modelName}: There are errors in your data.
- Hint: please check the "payload" attribute in the exception.""",
-                    payload=errors
+                raise ValidationError(
+                    f"""{self.modelName}: There are errors in your data. Hint: please check the "payload" attribute in the exception.""",
+                    payload = errors
                 )
             self.__errors__ = errors
             object.__setattr__(self, "__valid__", False)
