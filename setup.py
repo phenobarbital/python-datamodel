@@ -82,6 +82,12 @@ extensions = [
         sources=['datamodel/types.pyx'],
         extra_compile_args=COMPILE_ARGS,
         language="c"
+    ),
+    Extension(
+        name='datamodel.parsers.json',
+        sources=['datamodel/parsers/json.pyx'],
+        extra_compile_args=COMPILE_ARGS,
+        language="c++"
     )
 ]
 

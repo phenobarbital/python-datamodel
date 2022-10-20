@@ -20,6 +20,16 @@ print(a)
 print(fields(a))
 print('IS a Dataclass?: ', is_dataclass(a))
 
+# @dataclass(init=False, repr=True, eq=True, order=False, unsafe_hash=True, frozen=False)
+# class Point:
+#     x: int = Field(default=0, min=0, max=10)
+#     y: int = Field(default=0, min=0, max=10)
+#     c: float = Field(default=10, init=False)
+
+#     def __init__(self, **kwargs):
+#         for key, val in kwargs.items():
+#             setattr(self, key, val)
+
 
 class intSum(object):
     def get_coordinate(self):

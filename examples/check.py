@@ -1,8 +1,9 @@
 import uuid
-from datetime import datetime, date, time
+from datetime import date, datetime, time
 from decimal import Decimal
+
+from datamodel import BaseModel, Column, Field
 from datamodel.exceptions import ValidationError
-from datamodel import BaseModel, Field, Column
 
 
 def auto_now_add():
