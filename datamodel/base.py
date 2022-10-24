@@ -371,9 +371,12 @@ class BaseModel(metaclass=ModelMeta):
             if val_type == type or value == annotated_type or self.is_empty(value):
                 try:
                     if f.metadata['primary'] is True:
-                        raise ValueError(
-                            f"::{self.modelName}:: Missing Primary Key *{name}*"
-                        )
+                        if 'db_default' in f.metadata:
+                            pass
+                        else:
+                            raise ValueError(
+                                f"::{self.modelName}:: Missing Primary Key *{name}*"
+                            )
                 except KeyError:
                     pass
                 try:
