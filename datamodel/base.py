@@ -464,9 +464,9 @@ class BaseModel(metaclass=ModelMeta):
                 if _type.__module__ == 'typing':
                     # TODO: discover real value of typing
                     if _type._name == 'List':
-                        t = 'list'
+                        t = 'array'
                     elif _type._name == 'Dict':
-                        t = 'dict'
+                        t = 'object'
                     else:
                         try:
                             t = _type.__args__[0]
@@ -480,11 +480,15 @@ class BaseModel(metaclass=ModelMeta):
                         t = 'object'
                 cols[key] = {"name": key, "type": t}
             doc = {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": f"/schemas/{table}",
                 "name": clsname,
                 "description": cls.__doc__.strip("\n").strip(),
+                "additionalProperties": False,
                 "table": table,
                 "schema": schema,
-                "fields": cols,
+                "type": "object",
+                "properties": cols,
             }
             result = cls.__encoder__.dumps(doc, option=OPT_INDENT_2)
         return result

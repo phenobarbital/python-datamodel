@@ -45,7 +45,7 @@ cdef class JSONContent:
         # decode back to str, as orjson returns bytes
         options = {
             "default": self.default,
-            "option": orjson.OPT_NAIVE_UTC | orjson.OPT_SERIALIZE_NUMPY| orjson.OPT_UTC_Z
+            "option": orjson.OPT_NAIVE_UTC | orjson.OPT_SERIALIZE_NUMPY| orjson.OPT_UTC_Z | orjson.OPT_NON_STR_KEYS
         }
         if kwargs:
             options = {**options, **kwargs}
