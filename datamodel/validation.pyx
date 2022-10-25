@@ -3,6 +3,7 @@
 #
 from libcpp cimport bool
 from dataclasses import _MISSING_TYPE
+from functools import partial
 
 
 cpdef bool is_callable(object value):
@@ -22,6 +23,9 @@ cpdef bool is_instanceof(object value, type annotated_type):
             raise TypeError(
                 f"{e}"
             )
+
+cdef bool is_function(object value):
+    return isinstance(value, (types.BuiltinFunctionType, types.FunctionType, partial))
 
 def validator(object F, str name, object value, object annotated_type):
     val_type = type(value)
@@ -54,9 +58,15 @@ def validator(object F, str name, object value, object annotated_type):
                 })
     # check: data type hint
     try:
+        print('VALIDATION ', val_type, annotated_type)
         if annotated_type.__module__ == 'typing':
             # TODO: validation of annotated types
             pass
+        elif F.metadata['required'] is False or F.metadata['nullable'] is True:
+            if value is None:
+                pass
+        elif is_function(val_type):
+            pass # value will be calculated.
         elif val_type <> annotated_type:
             instance = is_instanceof(value, annotated_type)
             if not instance:

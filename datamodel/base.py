@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import inspect
 import logging
 import types
@@ -14,9 +13,9 @@ from dataclasses import (
     make_dataclass,
 )
 from typing import Any, Optional, Union
-
-from orjson import OPT_INDENT_2
+from functools import partial
 from enum import EnumMeta
+from orjson import OPT_INDENT_2
 from datamodel.converters import parse_type
 from datamodel.fields import Field
 from datamodel.types import JSON_TYPES
@@ -234,11 +233,12 @@ class BaseModel(metaclass=ModelMeta):
             raise TypeError(
                 f'Cannot create a new field {name} on a Strict Model.'
             )
-        f = Field(required=False, default=value)
-        f.name = name
-        f.type = type(value)
-        self.__columns__[name] = f
-        setattr(self, name, value)
+        if name != '__errors__':
+            f = Field(required=False, default=value)
+            f.name = name
+            f.type = type(value)
+            self.__columns__[name] = f
+            setattr(self, name, value)
 
     def set(self, name: str, value: Any) -> None:
         """set.
@@ -248,7 +248,7 @@ class BaseModel(metaclass=ModelMeta):
             value (Any): value to be assigned.
         """
         if name not in self.__columns__:
-            if self.Meta.strict is False: # can be created new Fields
+            if name != '__errors__' and self.Meta.strict is False: # can be created new Fields
                 self.create_field(name, value)
         else:
             setattr(self, name, value)
@@ -266,8 +266,12 @@ class BaseModel(metaclass=ModelMeta):
                 encoder = f.metadata['encoder']
             else:
                 encoder = None
+            if hasattr(f, 'default') and self.is_callable(value):
+                print('CHECK ::: ', f, ':: VALUE ::',  value, 'DEF::: ', f.default)
+                print('TYPE ', type(value))
+                continue
             ### Factory Value:
-            if isinstance(f.type, types.MethodType):
+            elif isinstance(f.type, types.MethodType):
                 raise TypeError(
                     f"DataModel: Wrong type for Column {key}: {f.type}"
                 )
@@ -292,7 +296,7 @@ class BaseModel(metaclass=ModelMeta):
                     raise TypeError(
                         f"DataModel: Wrong type for {key}: {f.type}, error: {e}"
                     ) from e
-                # print(f'FIELD {key} = {value}', 'TYPE : ', f.type, type(f.type))
+                print(f'FIELD {key} = {value}', 'TYPE : ', f.type, type(f.type))
                 if isinstance(value, list):
                     try:
                         sub_type = f.type.__args__[0]
@@ -313,10 +317,13 @@ class BaseModel(metaclass=ModelMeta):
                 elif self.is_empty(value):
                     is_missing = isinstance(f.default, _MISSING_TYPE)
                     setattr(self, key, f.default_factory if is_missing else f.default)
-                elif new_val:= parse_type(f.type, value, encoder):
-                    # be processed by _parse_type
-                    setattr(self, key, new_val)
                 else:
+                    try:
+                        # be processed by _parse_type
+                        new_val= parse_type(f.type, value, encoder)
+                        setattr(self, key, new_val)
+                    except (TypeError, ValueError):
+                        pass
                     continue
         try:
             self._validation()
@@ -325,7 +332,8 @@ class BaseModel(metaclass=ModelMeta):
 
     def is_callable(self, value) -> bool:
         is_missing = (value == _MISSING_TYPE)
-        return callable(value) if not is_missing else False
+        is_function = isinstance(value, (types.BuiltinFunctionType, types.FunctionType, partial))
+        return callable(value) if not is_missing and is_function else False
 
     def is_empty(self, value) -> bool:
         if isinstance(value, _MISSING_TYPE):
@@ -382,6 +390,9 @@ class BaseModel(metaclass=ModelMeta):
                     pass
                 try:
                     if f.metadata["required"] is True and self.Meta.strict is True:
+                        # if this has db_default:
+                        if 'db_default' in f.metadata:
+                            continue
                         raise ValueError(
                             f"::{self.modelName}:: Missing Required Field *{name}*"
                         )
