@@ -4,7 +4,7 @@
 from libcpp cimport bool
 from dataclasses import _MISSING_TYPE
 from functools import partial
-
+import types
 
 cpdef bool is_callable(object value):
     if value is None:
@@ -58,13 +58,13 @@ def validator(object F, str name, object value, object annotated_type):
                 })
     # check: data type hint
     try:
-        print('VALIDATION ', val_type, annotated_type)
         if annotated_type.__module__ == 'typing':
             # TODO: validation of annotated types
             pass
-        elif F.metadata['required'] is False or F.metadata['nullable'] is True:
-            if value is None:
-                pass
+        elif hasattr(F, 'required'):
+            if F.required() is False or F.nullable() is True:
+                if value is None:
+                    pass
         elif is_function(val_type):
             pass # value will be calculated.
         elif val_type <> annotated_type:
