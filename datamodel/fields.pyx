@@ -136,6 +136,12 @@ class Field(ff):
             del kwargs['decoder']
         except KeyError:
             meta["decoder"] = None
+        ## field is read-only
+        try:
+            meta["readonly"] = bool(kwargs['readonly'])
+            del kwargs['readonly']
+        except KeyError:
+            meta["readonly"] = False
         self._meta = {**meta, **_range, **kwargs}
         args["metadata"] = self._meta
         self._default_factory = MISSING
