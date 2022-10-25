@@ -1,7 +1,7 @@
 """
 JSON Encoders.
 """
-from .json import JSONContent
+from .json import JSONContent, json_encoder
 
 DefaultEncoder = JSONContent
 

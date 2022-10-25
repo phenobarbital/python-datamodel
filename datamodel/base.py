@@ -16,14 +16,14 @@ from dataclasses import (
 from typing import Any, Optional, Union
 
 from orjson import OPT_INDENT_2
-
+from enum import EnumMeta
 from datamodel.converters import parse_type
 from datamodel.fields import Field
 from datamodel.types import JSON_TYPES
 from datamodel.validation import validator
 
 from .exceptions import ValidationError
-from .parsers.encoders import DefaultEncoder
+from .parsers.encoders import DefaultEncoder, json_encoder
 
 
 class Meta:
@@ -31,6 +31,7 @@ class Meta:
     Metadata information about Model.
     """
     name: str = ""
+    description: str = ""
     schema: str = ""
     app_label: str = ""
     frozen: bool = False
@@ -371,9 +372,12 @@ class BaseModel(metaclass=ModelMeta):
             if val_type == type or value == annotated_type or self.is_empty(value):
                 try:
                     if f.metadata['primary'] is True:
-                        raise ValueError(
-                            f"::{self.modelName}:: Missing Primary Key *{name}*"
-                        )
+                        if 'db_default' in f.metadata:
+                            pass
+                        else:
+                            raise ValueError(
+                                f"::{self.modelName}:: Missing Primary Key *{name}*"
+                            )
                 except KeyError:
                     pass
                 try:
@@ -484,3 +488,127 @@ class BaseModel(metaclass=ModelMeta):
             }
             result = cls.__encoder__.dumps(doc, option=OPT_INDENT_2)
         return result
+
+    @classmethod
+    def schema(cls, as_dict: bool = False) -> Any:
+        """schema.
+
+        Get JSON Schema of Current Model.
+        Returns: str: string (json) version of model.
+
+        TODO: using Nested Models to create the $ref/schemas/{name}
+        * Using $defs to define sub-schemas based on custom types.
+        * using "definitions" to create "enum" of enum fields.
+        """
+        title = cls.__name__
+        schema = cls.Meta.schema
+        table = cls.Meta.name if cls.Meta.name else title.lower()
+        columns = cls.columns(cls).items()
+        description = cls.__doc__.strip("\n").strip()
+        if not description:
+            description = cls.Meta.description
+        fields = {}
+        required = []
+        defs = {}
+        for name, field in columns:
+            _type = field.type
+            if _type.__module__ == 'typing':
+                # TODO: discover real value of typing
+                if _type._name == 'List':
+                    t = 'array'
+                elif _type._name == 'Dict':
+                    t = 'object'
+                else:
+                    try:
+                        t = _type.__args__[0]
+                        t = t.__name__
+                    except (AttributeError, ValueError):
+                        t = 'string'
+            else:
+                if isinstance(_type, EnumMeta):
+                    t = 'array'
+                    enum_type = {
+                        "type": "string",
+                        "enum": list(map(lambda c: c.value, _type))
+                    }
+                elif isinstance(_type, ModelMeta):
+                    t = 'object'
+                    ref = f"/schemas/{_type.__name__}"
+                    sch = _type.schema(as_dict = True)
+                    defs[name] = sch
+                else:
+                    ref = None
+                    enum_type = None
+                    try:
+                        t = JSON_TYPES[_type]
+                    except KeyError:
+                        t = 'string'
+            ## check of min and max:
+            minimum = field.metadata.get('min', None)
+            maximum = field.metadata.get('max', None)
+            # secret:
+            secret = field.metadata.get('secret', None)
+            label = field.metadata.get('label', None)
+            try:
+                if field.metadata["required"] is True or field.metadata['primary'] is True:
+                    required.append(name)
+            except KeyError:
+                pass
+            fields[name] = {
+                "type": t,
+                "nullable": field.metadata.get('nullable', False),
+                "label": label,
+                "attrs": {
+                    "placeholder": field.metadata.get('description', None),
+                    "format": field.metadata.get('format', None),
+                },
+                "readOnly": field.metadata.get('readonly', False),
+                "writeOnly": False
+            }
+            if 'pattern' in field.metadata:
+                fields[name]["attrs"]["pattern"] = field.metadata['pattern']
+            if enum_type:
+                fields[name]["items"] = enum_type
+            if ref:
+                fields[name]["$ref"] = ref
+            # check if field need to be represented:
+            if field.repr is False:
+                fields[name]["attrs"]["visible"] = False
+            # if 'default' in field.metadata:
+            fields[name]['default'] = field.default
+            if secret is not None:
+                fields[name]['secret'] = secret
+            if t == 'string':
+                if minimum:
+                    fields[name]['minLength'] = minimum
+                if maximum:
+                    fields[name]['maxLength'] = maximum
+            else:
+                if minimum:
+                    fields[name]['minimum'] = minimum
+                if maximum:
+                    fields[name]['maximum'] = maximum
+            if field.metadata['widget']:
+                fields[name]['widget'] = field.metadata['widget']
+        if cls.Meta.strict is True:
+            adp = True
+        else:
+            adp = False
+        base_schema = {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": f"/schemas/{table}",
+            "additionalProperties": adp,
+            "title": title,
+            "description": description,
+            "type": "object",
+            "table": table,
+            "schema": schema,
+            "properties": fields,
+            "required": required
+        }
+        if defs:
+            base_schema["$defs"] = defs
+        if as_dict is True:
+            return base_schema
+        else:
+            return json_encoder(base_schema)
