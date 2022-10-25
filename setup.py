@@ -35,19 +35,19 @@ with open(version, 'r', encoding='utf-8') as meta:
                             '__description__',
                             '__author__',
                             '__license__', '__author_email__'):
-                        v = node.value
-                        if name.id == '__version__':
-                            __version__ = v.s
-                        if name.id == '__title__':
-                            __title__ = v.s
-                        if name.id == '__description__':
-                            __description__ = v.s
-                        if name.id == '__license__':
-                            __license__ = v.s
-                        if name.id == '__author__':
-                            __author__ = v.s
-                        if name.id == '__author_email__':
-                            __author_email__ = v.s
+                v = node.value
+                if name.id == '__version__':
+                    __version__ = v.s
+                if name.id == '__title__':
+                    __title__ = v.s
+                if name.id == '__description__':
+                    __description__ = v.s
+                if name.id == '__license__':
+                    __license__ = v.s
+                if name.id == '__author__':
+                    __author__ = v.s
+                if name.id == '__author_email__':
+                    __author_email__ = v.s
 
 
 COMPILE_ARGS = ["-O2"]

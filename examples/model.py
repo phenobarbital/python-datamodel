@@ -56,5 +56,7 @@ jesus = User(
 )
 print(jesus)
 b = jesus.json()
+print('JSON ::')
+print(b)
 jlara = User.from_json(b)
 print(jlara)
