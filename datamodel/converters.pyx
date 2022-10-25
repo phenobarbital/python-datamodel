@@ -84,9 +84,9 @@ cpdef object to_integer(object obj):
         try:
             return int(obj)
         except (TypeError, ValueError) as e:
-            return ValueError(
-                f"Invalid conversion to Integer of {obj}: {e}"
-            )
+            raise ValueError(
+                f"Invalid conversion to Integer of literal {obj}"
+            ) from e
 
 cpdef object to_float(object obj):
     """to_float.
@@ -161,7 +161,7 @@ cpdef datetime.timedelta to_timedelta(object obj):
         )
         return tdelta
     except ValueError:
-        return ValueError(
+        raise ValueError(
             f"Invalid timedelta Object: {obj}"
         )
 
@@ -355,10 +355,10 @@ def parse_type(object T, object data, object encoder = None):
                 return conv(data)
             except KeyError:
                 pass
-            except ValueError as e:
+            except (TypeError, ValueError) as e:
                 raise ValueError(
-                    f"DataModel: Error parsing type {T}, {e}"
-                )
+                    f"Error type {T}: {e}"
+                ) from e
             # making last conversion:
             if inspect.isclass(T):
                 try:

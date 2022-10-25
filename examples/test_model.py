@@ -18,7 +18,7 @@ class WidgetTemplate(BaseModel):
     widget_name: str = Column(required=False)
     title: str
     description: str
-    url: str = Column(required=False)
+    url: str = Column(required=False, default='http://example.com')
     active: bool = Column(required=True, default=True)
     params: Optional[dict] = Column(required=False, db_type="jsonb")
     embed: str = Column(required=False)

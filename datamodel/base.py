@@ -60,6 +60,7 @@ def _dc_method_setattr(
             "This DataClass is frozen (read-only class)"
         )
     else:
+        value = None if callable(value) else value
         object.__setattr__(self, name, value)
         if name not in self.__fields__:
             if self.Meta.strict is True:
@@ -111,7 +112,6 @@ class ModelMeta(type):
         if "__annotations__" in attrs:
             annotations = attrs["__annotations__"]
             for field, _type in annotations.items():
-                # print(f"Field: {field}, Type: {_type}")
                 if field in attrs:
                     df = attrs[field]
                     if isinstance(df, Field):
@@ -122,8 +122,9 @@ class ModelMeta(type):
                         df.type = _type
                         setattr(cls, field, df)
                 else:
+                    # print(f"HERE Field: {field}, Type: {_type}")
                     # add a new field, based on type
-                    df = Field(factory=_type, required=False)
+                    df = Field(factory=_type, required=False, default=None)
                     df.name = field
                     df.type = _type
                     setattr(cls, field, df)
@@ -267,8 +268,6 @@ class BaseModel(metaclass=ModelMeta):
             else:
                 encoder = None
             if hasattr(f, 'default') and self.is_callable(value):
-                print('CHECK ::: ', f, ':: VALUE ::',  value, 'DEF::: ', f.default)
-                print('TYPE ', type(value))
                 continue
             ### Factory Value:
             elif isinstance(f.type, types.MethodType):
@@ -292,11 +291,11 @@ class BaseModel(metaclass=ModelMeta):
                         new_val = parse_type(f.type, value, encoder)
                         setattr(self, key, new_val)
                         continue
-                except AttributeError as e:
+                except (ValueError, AttributeError, TypeError) as e:
                     raise TypeError(
-                        f"DataModel: Wrong type for {key}: {f.type}, error: {e}"
+                        f"DataModel: Wrong Type for {key}: {f.type}, error: {e}"
                     ) from e
-                print(f'FIELD {key} = {value}', 'TYPE : ', f.type, type(f.type))
+                # print(f'FIELD {key} = {value}', 'TYPE : ', f.type, type(f.type), ' VALUE: ', value)
                 if isinstance(value, list):
                     try:
                         sub_type = f.type.__args__[0]
@@ -320,10 +319,12 @@ class BaseModel(metaclass=ModelMeta):
                 else:
                     try:
                         # be processed by _parse_type
-                        new_val= parse_type(f.type, value, encoder)
+                        new_val = parse_type(f.type, value, encoder)
                         setattr(self, key, new_val)
-                    except (TypeError, ValueError):
-                        pass
+                    except (TypeError, ValueError) as ex:
+                        raise ValueError(
+                            f"Wrong Type for {key}: {f.type}, error: {ex}"
+                        ) from ex
                     continue
         try:
             self._validation()
