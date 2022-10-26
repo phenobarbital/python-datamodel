@@ -4,6 +4,8 @@
 """
 JSON Encoder, Decoder.
 """
+import uuid
+from asyncpg.pgproto import pgproto
 from dataclasses import _MISSING_TYPE, MISSING
 from typing import Any, Union
 from decimal import Decimal
@@ -26,6 +28,10 @@ cdef class JSONContent:
             return float(obj)
         elif hasattr(obj, "isoformat"):
             return obj.isoformat()
+        elif isinstance(obj, pgproto.UUID):
+            return str(obj)
+        elif isinstance(obj, uuid.UUID):
+            return obj
         elif hasattr(obj, "hex"):
             return obj.hex
         elif hasattr(obj, 'lower'): # asyncPg Range:
