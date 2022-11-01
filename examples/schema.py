@@ -20,7 +20,7 @@ class User(BaseModel):
     """Basic User Model for authentication."""
 
     user_id: int = Column(required=False, primary_key=True, repr=False)
-    first_name: str = Column(required=True, max=254, label="First Name")
+    first_name: str = Column(required=True, max=254, label="First Name", pattern="^\w*$")
     last_name: str = Column(required=True, max=254, label="Last Name")
     email: str = Column(required=False, max=254, label="User's Email")
     password: str = Column(required=False, max=16, secret=True, widget='/properties/password')
