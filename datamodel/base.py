@@ -549,6 +549,7 @@ class BaseModel(metaclass=ModelMeta):
                     }
                 elif isinstance(_type, ModelMeta):
                     t = 'object'
+                    enum_type = None
                     ref = f"/schemas/{_type.__name__}"
                     sch = _type.schema(as_dict = True)
                     defs[name] = sch
