@@ -203,6 +203,9 @@ class BaseModel(metaclass=ModelMeta):
     def get_fields(self):
         return self.__fields__
 
+    def __getitem__(self, item):
+        return getattr(self, item)
+
     def column(self, name):
         return self.__columns__[name]
 
