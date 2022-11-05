@@ -1,29 +1,28 @@
 from __future__ import annotations
 import inspect
-import types
-from typing import (
-    Optional,
-    Union,
-    Any
-)
 import logging
+import types
 from collections.abc import Callable
 # Dataclass
 from dataclasses import (
+    _FIELD,
+    _MISSING_TYPE,
+    asdict,
     dataclass,
     is_dataclass,
-    _FIELD,
-    asdict,
     make_dataclass,
-    _MISSING_TYPE
 )
+from typing import Any, Optional, Union
+from functools import partial
+from enum import EnumMeta
 from orjson import OPT_INDENT_2
+from datamodel.converters import parse_type
 from datamodel.fields import Field
 from datamodel.types import JSON_TYPES
-from datamodel.converters import parse_type
 from datamodel.validation import validator
-from datamodel import exceptions
-from .parsers.encoders import DefaultEncoder
+
+from .exceptions import ValidationError
+from .parsers.encoders import DefaultEncoder, json_encoder
 
 
 class Meta:
@@ -31,6 +30,7 @@ class Meta:
     Metadata information about Model.
     """
     name: str = ""
+    description: str = ""
     schema: str = ""
     app_label: str = ""
     frozen: bool = False
@@ -60,6 +60,7 @@ def _dc_method_setattr(
             "This DataClass is frozen (read-only class)"
         )
     else:
+        value = None if callable(value) else value
         object.__setattr__(self, name, value)
         if name not in self.__fields__:
             if self.Meta.strict is True:
@@ -88,7 +89,7 @@ def create_dataclass(
     create_dataclass.
        Create a Dataclass from a simple Class
     """
-    dc = dataclass(unsafe_hash=True, init=True, frozen=frozen)(new_cls)
+    dc = dataclass(unsafe_hash=True, init=True, order=False, eq=True, frozen=frozen)(new_cls)
     setattr(dc, "__setattr__", _dc_method_setattr)
     # adding a properly internal json encoder:
     dc.__encoder__ = DefaultEncoder()
@@ -111,7 +112,6 @@ class ModelMeta(type):
         if "__annotations__" in attrs:
             annotations = attrs["__annotations__"]
             for field, _type in annotations.items():
-                # print(f"Field: {field}, Type: {_type}")
                 if field in attrs:
                     df = attrs[field]
                     if isinstance(df, Field):
@@ -122,8 +122,9 @@ class ModelMeta(type):
                         df.type = _type
                         setattr(cls, field, df)
                 else:
+                    # print(f"HERE Field: {field}, Type: {_type}")
                     # add a new field, based on type
-                    df = Field(factory=_type, required=False)
+                    df = Field(factory=_type, required=False, default=None)
                     df.name = field
                     df.type = _type
                     setattr(cls, field, df)
@@ -202,6 +203,9 @@ class BaseModel(metaclass=ModelMeta):
     def get_fields(self):
         return self.__fields__
 
+    def __getitem__(self, item):
+        return getattr(self, item)
+
     def column(self, name):
         return self.__columns__[name]
 
@@ -233,11 +237,12 @@ class BaseModel(metaclass=ModelMeta):
             raise TypeError(
                 f'Cannot create a new field {name} on a Strict Model.'
             )
-        f = Field(required=False, default=value)
-        f.name = name
-        f.type = type(value)
-        self.__columns__[name] = f
-        setattr(self, name, value)
+        if name != '__errors__':
+            f = Field(required=False, default=value)
+            f.name = name
+            f.type = type(value)
+            self.__columns__[name] = f
+            setattr(self, name, value)
 
     def set(self, name: str, value: Any) -> None:
         """set.
@@ -247,7 +252,7 @@ class BaseModel(metaclass=ModelMeta):
             value (Any): value to be assigned.
         """
         if name not in self.__columns__:
-            if self.Meta.strict is False: # can be created new Fields
+            if name != '__errors__' and self.Meta.strict is False: # can be created new Fields
                 self.create_field(name, value)
         else:
             setattr(self, name, value)
@@ -265,8 +270,10 @@ class BaseModel(metaclass=ModelMeta):
                 encoder = f.metadata['encoder']
             else:
                 encoder = None
+            if hasattr(f, 'default') and self.is_callable(value):
+                continue
             ### Factory Value:
-            if isinstance(f.type, types.MethodType):
+            elif isinstance(f.type, types.MethodType):
                 raise TypeError(
                     f"DataModel: Wrong type for Column {key}: {f.type}"
                 )
@@ -287,11 +294,11 @@ class BaseModel(metaclass=ModelMeta):
                         new_val = parse_type(f.type, value, encoder)
                         setattr(self, key, new_val)
                         continue
-                except AttributeError as e:
+                except (ValueError, AttributeError, TypeError) as e:
                     raise TypeError(
-                        f"DataModel: Wrong type for {key}: {f.type}, error: {e}"
+                        f"DataModel: Wrong Type for {key}: {f.type}, error: {e}"
                     ) from e
-                # print(f'FIELD {key} = {value}', 'TYPE : ', f.type, type(f.type))
+                # print(f'FIELD {key} = {value}', 'TYPE : ', f.type, type(f.type), ' VALUE: ', value)
                 if isinstance(value, list):
                     try:
                         sub_type = f.type.__args__[0]
@@ -312,10 +319,15 @@ class BaseModel(metaclass=ModelMeta):
                 elif self.is_empty(value):
                     is_missing = isinstance(f.default, _MISSING_TYPE)
                     setattr(self, key, f.default_factory if is_missing else f.default)
-                elif new_val:= parse_type(f.type, value, encoder):
-                    # be processed by _parse_type
-                    setattr(self, key, new_val)
                 else:
+                    try:
+                        # be processed by _parse_type
+                        new_val = parse_type(f.type, value, encoder)
+                        setattr(self, key, new_val)
+                    except (TypeError, ValueError) as ex:
+                        raise ValueError(
+                            f"Wrong Type for {key}: {f.type}, error: {ex}"
+                        ) from ex
                     continue
         try:
             self._validation()
@@ -324,7 +336,8 @@ class BaseModel(metaclass=ModelMeta):
 
     def is_callable(self, value) -> bool:
         is_missing = (value == _MISSING_TYPE)
-        return callable(value) if not is_missing else False
+        is_function = isinstance(value, (types.BuiltinFunctionType, types.FunctionType, partial))
+        return callable(value) if not is_missing and is_function else False
 
     def is_empty(self, value) -> bool:
         if isinstance(value, _MISSING_TYPE):
@@ -371,13 +384,19 @@ class BaseModel(metaclass=ModelMeta):
             if val_type == type or value == annotated_type or self.is_empty(value):
                 try:
                     if f.metadata['primary'] is True:
-                        raise ValueError(
-                            f"::{self.modelName}:: Missing Primary Key *{name}*"
-                        )
+                        if 'db_default' in f.metadata:
+                            pass
+                        else:
+                            raise ValueError(
+                                f"::{self.modelName}:: Missing Primary Key *{name}*"
+                            )
                 except KeyError:
                     pass
                 try:
                     if f.metadata["required"] is True and self.Meta.strict is True:
+                        # if this has db_default:
+                        if 'db_default' in f.metadata:
+                            continue
                         raise ValueError(
                             f"::{self.modelName}:: Missing Required Field *{name}*"
                         )
@@ -397,10 +416,9 @@ class BaseModel(metaclass=ModelMeta):
                     errors[name] = error
         if errors:
             if self.Meta.strict is True:
-                raise exceptions.ValidationError(
-                    message=f"""{self.modelName}: There are errors in your data.
- Hint: please check the "payload" attribute in the exception.""",
-                    payload=errors
+                raise ValidationError(
+                    f"""{self.modelName}: There are errors in your data. Hint: please check the "payload" attribute in the exception.""",
+                    payload = errors
                 )
             self.__errors__ = errors
             object.__setattr__(self, "__valid__", False)
@@ -461,9 +479,9 @@ class BaseModel(metaclass=ModelMeta):
                 if _type.__module__ == 'typing':
                     # TODO: discover real value of typing
                     if _type._name == 'List':
-                        t = 'list'
+                        t = 'array'
                     elif _type._name == 'Dict':
-                        t = 'dict'
+                        t = 'object'
                     else:
                         try:
                             t = _type.__args__[0]
@@ -477,11 +495,140 @@ class BaseModel(metaclass=ModelMeta):
                         t = 'object'
                 cols[key] = {"name": key, "type": t}
             doc = {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": f"/schemas/{table}",
                 "name": clsname,
                 "description": cls.__doc__.strip("\n").strip(),
+                "additionalProperties": False,
                 "table": table,
                 "schema": schema,
-                "fields": cols,
+                "type": "object",
+                "properties": cols,
             }
             result = cls.__encoder__.dumps(doc, option=OPT_INDENT_2)
         return result
+
+    @classmethod
+    def schema(cls, as_dict: bool = False) -> Any:
+        """schema.
+
+        Get JSON Schema of Current Model.
+        Returns: str: string (json) version of model.
+
+        TODO: using Nested Models to create the $ref/schemas/{name}
+        * Using $defs to define sub-schemas based on custom types.
+        * using "definitions" to create "enum" of enum fields.
+        """
+        title = cls.__name__
+        schema = cls.Meta.schema
+        table = cls.Meta.name if cls.Meta.name else title.lower()
+        columns = cls.columns(cls).items()
+        description = cls.__doc__.strip("\n").strip()
+        if not description:
+            description = cls.Meta.description
+        fields = {}
+        required = []
+        defs = {}
+        for name, field in columns:
+            _type = field.type
+            if _type.__module__ == 'typing':
+                # TODO: discover real value of typing
+                if _type._name == 'List':
+                    t = 'array'
+                elif _type._name == 'Dict':
+                    t = 'object'
+                else:
+                    try:
+                        t = _type.__args__[0]
+                        t = t.__name__
+                    except (AttributeError, ValueError):
+                        t = 'string'
+            else:
+                if isinstance(_type, EnumMeta):
+                    t = 'array'
+                    enum_type = {
+                        "type": "string",
+                        "enum": list(map(lambda c: c.value, _type))
+                    }
+                elif isinstance(_type, ModelMeta):
+                    t = 'object'
+                    enum_type = None
+                    ref = f"/schemas/{_type.__name__}"
+                    sch = _type.schema(as_dict = True)
+                    defs[name] = sch
+                else:
+                    ref = None
+                    enum_type = None
+                    try:
+                        t = JSON_TYPES[_type]
+                    except KeyError:
+                        t = 'string'
+            ## check of min and max:
+            minimum = field.metadata.get('min', None)
+            maximum = field.metadata.get('max', None)
+            # secret:
+            secret = field.metadata.get('secret', None)
+            label = field.metadata.get('label', None)
+            try:
+                if field.metadata["required"] is True or field.metadata['primary'] is True:
+                    required.append(name)
+            except KeyError:
+                pass
+            fields[name] = {
+                "type": t,
+                "nullable": field.metadata.get('nullable', False),
+                "label": label,
+                "attrs": {
+                    "placeholder": field.metadata.get('description', None),
+                    "format": field.metadata.get('format', None),
+                },
+                "readOnly": field.metadata.get('readonly', False),
+                "writeOnly": False
+            }
+            if 'pattern' in field.metadata:
+                fields[name]["attrs"]["pattern"] = field.metadata['pattern']
+            if enum_type:
+                fields[name]["items"] = enum_type
+            if ref:
+                fields[name]["$ref"] = ref
+            # check if field need to be represented:
+            if field.repr is False:
+                fields[name]["attrs"]["visible"] = False
+            # if 'default' in field.metadata:
+            fields[name]['default'] = field.default
+            if secret is not None:
+                fields[name]['secret'] = secret
+            if t == 'string':
+                if minimum:
+                    fields[name]['minLength'] = minimum
+                if maximum:
+                    fields[name]['maxLength'] = maximum
+            else:
+                if minimum:
+                    fields[name]['minimum'] = minimum
+                if maximum:
+                    fields[name]['maximum'] = maximum
+            if field.metadata['widget']:
+                fields[name]['widget'] = field.metadata['widget']
+        if cls.Meta.strict is True:
+            adp = True
+        else:
+            adp = False
+        base_schema = {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": f"/schemas/{table}",
+            "additionalProperties": adp,
+            "title": title,
+            "description": description,
+            "type": "object",
+            "table": table,
+            "schema": schema,
+            "properties": fields,
+            "required": required
+        }
+        if defs:
+            base_schema["$defs"] = defs
+        if as_dict is True:
+            return base_schema
+        else:
+            return json_encoder(base_schema)

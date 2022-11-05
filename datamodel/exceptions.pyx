@@ -1,39 +1,40 @@
-# cython: language_level=3, embedsignature=True
+# cython: language_level=3, embedsignature=True, boundscheck=False, wraparound=True, initializedcheck=False
 # Copyright (C) 2018-present Jesus Lara
 #
 cdef class ModelException(Exception):
     """Base class for other Data-Model exceptions"""
-    def __init__(self, str message, *args):
-        if not message:
-            message = f"{args!s}"
-        self.args = (
-            message,
-            *args
-        )
-        self.message = message
+
+    def __init__(self, str message, **kwargs):
         super().__init__(message)
+        self.stacktrace = None
+        if 'stacktrace' in kwargs:
+            self.stacktrace = kwargs['stacktrace']
+        self.message = message
+        self.args = kwargs
 
     def __repr__(self):
-        return f"{__name__}({self.args!r})"
+        return f"{self.message}"
 
     def __str__(self):
-        return f"{__name__}: {self.message}"
+        return f"{self.message!s}"
 
     def get(self):
         return self.message
 
-class ValidationError(Exception):
+cdef class ValidationError(ModelException):
     """Validation Error."""
-
-    def __init__(self, message: str, *args, payload: dict = None) -> None:
-        self.message = message
+    def __init__(self, str message, dict payload = None):
         self.payload = payload
         super().__init__(message)
 
-
-class ParsingError(ModelException):
+cdef class ParsingError(ModelException):
     """Parsing Error."""
+    def __init__(self, str message):
+        message = f'Parsing Error: {message}'
+        super().__init__(message)
 
-    def __init__(self, message: str, *args: list) -> None:
+cdef class ParserError(ModelException):
+    """Parsing Error."""
+    def __init__(self, str message):
         message = f'Parsing Error: {message}'
         super().__init__(message)
