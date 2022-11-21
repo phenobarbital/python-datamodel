@@ -125,7 +125,7 @@ setup(
     include_package_data=True,
     license=__license__,
     setup_requires=[
-        "setuptools==65.4.1",
+        "setuptools==65.6.0",
         "wheel==0.37.1",
         "Cython==0.29.32",
         "asyncio==3.4.3",
