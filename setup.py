@@ -126,7 +126,8 @@ setup(
     license=__license__,
     setup_requires=[
         "setuptools==65.6.3",
-        "Cython==0.29.32"
+        "Cython==0.29.32",
+        "wheel==0.38.4"
     ],
     install_requires=[
         "Cython==0.29.32",
