@@ -137,7 +137,7 @@ setup(
         "objectpath==0.6.1",
         "orjson==3.8.2",
         'typing_extensions==4.4.0',
-        "asyncpg==0.26.0",
+        "asyncpg==0.27.0",
         "python-dateutil==2.8.2"
     ],
     tests_require=[
