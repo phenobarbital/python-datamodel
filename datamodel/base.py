@@ -380,6 +380,14 @@ class BaseModel(metaclass=ModelMeta):
                         f'{self.modelName}: Missing *Column* {f} with name {name}'
                     )
                     setattr(self, name, None)
+            if hasattr(f, 'default') and self.is_callable(f.default) and value is None:
+                # set value based on default, if value is None
+                try:
+                    new_val = f.default()
+                except (AttributeError, RuntimeError):
+                    new_val = None
+                setattr(self, name, new_val)
+                value = new_val
             # first: check primary and required:
             if val_type == type or value == annotated_type or self.is_empty(value):
                 try:

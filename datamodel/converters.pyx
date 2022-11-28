@@ -282,7 +282,8 @@ def parse_type(object T, object data, object encoder = None):
         except AttributeError:
             pass
         if T._name == 'Dict' and isinstance(data, dict):
-            return {k: parse_type(T.__args__[1], v) for k, v in data.items()}
+            if args:
+                return {k: parse_type(T.__args__[1], v) for k, v in data.items()}
         elif T._name == 'List' and isinstance(data, (list, tuple)):
             arg = args[0]
             if arg.__module__ == 'typing': # nested typing
