@@ -7,11 +7,11 @@ venv10:
 	echo 'run `source .venv/bin/activate` to start develop DataModel'
 
 setup:
-	pip install wheel==0.37.1
+	pip install wheel==0.38.4
 	pip install -e .
 
 develop:
-	pip install wheel==0.37.1
+	pip install wheel==0.38.4
 	pip install -e .
 	flit install --symlink
 

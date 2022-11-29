@@ -30,11 +30,11 @@ with open(version, 'r', encoding='utf-8') as meta:
             name = node.targets[0]
             if isinstance(name, ast.Name) and \
                     name.id in (
-                            '__version__',
-                            '__title__',
-                            '__description__',
-                            '__author__',
-                            '__license__', '__author_email__'):
+                        '__version__',
+                        '__title__',
+                        '__description__',
+                        '__author__',
+                        '__license__', '__author_email__'):
                 v = node.value
                 if name.id == '__version__':
                     __version__ = v.s
@@ -125,29 +125,26 @@ setup(
     include_package_data=True,
     license=__license__,
     setup_requires=[
-        "setuptools==65.4.1",
-        "wheel==0.37.1",
+        "setuptools==65.6.3",
         "Cython==0.29.32",
-        "asyncio==3.4.3",
-        "cchardet==2.1.7"
+        "wheel==0.38.4"
     ],
     install_requires=[
-        "wheel==0.37.1",
         "Cython==0.29.32",
         "numpy==1.23.4",
         "uvloop==0.17.0",
         "asyncio==3.4.3",
         "cchardet==2.1.7",
         "objectpath==0.6.1",
-        "orjson==3.8.0",
+        "orjson==3.8.2",
         'typing_extensions==4.4.0',
-        "asyncpg==0.26.0",
+        "asyncpg==0.27.0",
         "python-dateutil==2.8.2"
     ],
     tests_require=[
         'pytest>=6.0.0',
         'pytest-asyncio==0.20.1',
-        'pytest-xdist==2.1.0',
+        'pytest-xdist==3.0.2',
         'pytest-assume==2.4.3'
     ],
     test_suite='tests',
