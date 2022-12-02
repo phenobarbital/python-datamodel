@@ -578,7 +578,7 @@ class BaseModel(metaclass=ModelMeta):
             secret = field.metadata.get('secret', None)
             label = field.metadata.get('label', None)
             try:
-                if field.metadata["required"] is True or field.metadata['primary'] is True:
+                if field.metadata["required"] is True:
                     required.append(name)
             except KeyError:
                 pass
