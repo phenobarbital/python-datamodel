@@ -531,9 +531,9 @@ class BaseModel(metaclass=ModelMeta):
         schema = cls.Meta.schema
         table = cls.Meta.name if cls.Meta.name else title.lower()
         columns = cls.columns(cls).items()
-        description = cls.__doc__.strip("\n").strip()
+        description = cls.Meta.description
         if not description:
-            description = cls.Meta.description
+            description = cls.__doc__.strip("\n").strip()
         fields = {}
         required = []
         defs = {}
@@ -561,8 +561,10 @@ class BaseModel(metaclass=ModelMeta):
                 elif isinstance(_type, ModelMeta):
                     t = 'object'
                     enum_type = None
-                    ref = f"/schemas/{_type.__name__}"
+                    # ref = f"/schemas/{_type.__name__}"
                     sch = _type.schema(as_dict = True)
+                    ref = sch
+                    
                     defs[name] = sch
                 else:
                     ref = None
@@ -634,8 +636,8 @@ class BaseModel(metaclass=ModelMeta):
             "properties": fields,
             "required": required
         }
-        if defs:
-            base_schema["$defs"] = defs
+        # if defs:
+        #     base_schema["$defs"] = defs
         if as_dict is True:
             return base_schema
         else:
