@@ -561,9 +561,8 @@ class BaseModel(metaclass=ModelMeta):
                 elif isinstance(_type, ModelMeta):
                     t = 'object'
                     enum_type = None
-                    # ref = f"/schemas/{_type.__name__}"
                     sch = _type.schema(as_dict = True)
-                    ref = sch
+                    ref = sch['$id']
                     
                     defs[name] = sch
                 else:
@@ -636,8 +635,8 @@ class BaseModel(metaclass=ModelMeta):
             "properties": fields,
             "required": required
         }
-        # if defs:
-        #     base_schema["$defs"] = defs
+        if defs:
+            base_schema["$defs"] = defs
         if as_dict is True:
             return base_schema
         else:
