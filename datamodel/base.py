@@ -569,10 +569,7 @@ class BaseModel(metaclass=ModelMeta):
                     ref = None
                     enum_type = None
                     try:
-                        if _type == dict:
-                            t = 'dict'
-                        else:
-                            t = JSON_TYPES[_type]
+                        t = JSON_TYPES[_type]
                     except KeyError:
                         t = 'string'
             ## check of min and max:
