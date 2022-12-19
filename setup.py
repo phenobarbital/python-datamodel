@@ -130,7 +130,7 @@ setup(
         "wheel==0.38.4"
     ],
     install_requires=[
-        "numpy==1.23.4",
+        "numpy==1.24.0",
         "uvloop==0.17.0",
         "asyncio==3.4.3",
         "cchardet==2.1.7",
