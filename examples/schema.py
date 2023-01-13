@@ -1,3 +1,4 @@
+import orjson
 from typing import Optional
 from datetime import datetime
 from enum import Enum
@@ -57,5 +58,5 @@ class User(BaseModel):
 
 
 ### Getting the JSON-Schema Object for this Model:
-schema = User.schema()
+schema = User.schema(as_dict=False)
 print(schema)
