@@ -559,11 +559,20 @@ class BaseModel(metaclass=ModelMeta):
                         "enum": list(map(lambda c: c.value, _type))
                     }
                 elif isinstance(_type, ModelMeta):
+                    
                     t = 'object'
                     enum_type = None
                     sch = _type.schema(as_dict = True)
-                    ref = sch['$id']
                     
+                    if 'fk' in field.metadata:
+                        ref = {
+                            "api": sch['table'],
+                            "id": name,
+                            "value":field.metadata['fk']
+                        }
+                    else:
+                        ref = sch['$id']
+                        
                     defs[name] = sch
                 else:
                     ref = None
