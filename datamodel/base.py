@@ -565,9 +565,11 @@ class BaseModel(metaclass=ModelMeta):
                     sch = _type.schema(as_dict = True)
                     
                     if 'fk' in field.metadata:
+                        api = field.metadata['api'] if 'api' in field.metadata else sch['table']
+                        pk = next(iter(sch['properties'].keys()))
                         ref = {
-                            "api": sch['table'],
-                            "id": name,
+                            "api": api,
+                            "id": pk,
                             "value":field.metadata['fk']
                         }
                     else:
