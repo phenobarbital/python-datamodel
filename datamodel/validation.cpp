@@ -1330,6 +1330,27 @@ static CYTHON_INLINE void __Pyx__ExceptionSwap(PyThreadState *tstate, PyObject *
 static CYTHON_INLINE void __Pyx_ExceptionSwap(PyObject **type, PyObject **value, PyObject **tb);
 #endif
 
+/* GetAttr.proto */
+static CYTHON_INLINE PyObject *__Pyx_GetAttr(PyObject *, PyObject *);
+
+/* HasAttr.proto */
+static CYTHON_INLINE int __Pyx_HasAttr(PyObject *, PyObject *);
+
+/* PyObjectCallMethO.proto */
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallMethO(PyObject *func, PyObject *arg);
+#endif
+
+/* PyObjectCallNoArg.proto */
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallNoArg(PyObject *func);
+#else
+#define __Pyx_PyObject_CallNoArg(func) __Pyx_PyObject_Call(func, __pyx_empty_tuple, NULL)
+#endif
+
+/* PyObjectCallOneArg.proto */
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObject *arg);
+
 /* Import.proto */
 static PyObject *__Pyx_Import(PyObject *name, PyObject *from_list, int level);
 
@@ -1401,6 +1422,7 @@ static int __Pyx_InitStrings(__Pyx_StringTabEntry *t);
 /* Module declarations from 'datamodel.validation' */
 static bool __pyx_f_9datamodel_10validation_is_callable(PyObject *, int __pyx_skip_dispatch); /*proto*/
 static bool __pyx_f_9datamodel_10validation_is_instanceof(PyObject *, PyTypeObject *, int __pyx_skip_dispatch); /*proto*/
+static bool __pyx_f_9datamodel_10validation_is_function(PyObject *); /*proto*/
 #define __Pyx_MODULE_NAME "datamodel.validation"
 extern int __pyx_module_is_main_datamodel__validation;
 int __pyx_module_is_main_datamodel__validation = 0;
@@ -1419,6 +1441,7 @@ static const char __pyx_k_test[] = "__test__";
 static const char __pyx_k_type[] = "type";
 static const char __pyx_k_error[] = "error";
 static const char __pyx_k_field[] = "field";
+static const char __pyx_k_types[] = "types";
 static const char __pyx_k_value[] = "value";
 static const char __pyx_k_errors[] = "errors";
 static const char __pyx_k_import[] = "__import__";
@@ -1426,27 +1449,35 @@ static const char __pyx_k_module[] = "__module__";
 static const char __pyx_k_name_2[] = "__name__";
 static const char __pyx_k_result[] = "result";
 static const char __pyx_k_typing[] = "typing";
+static const char __pyx_k_partial[] = "partial";
 static const char __pyx_k_instance[] = "instance";
 static const char __pyx_k_metadata[] = "metadata";
+static const char __pyx_k_nullable[] = "nullable";
+static const char __pyx_k_required[] = "required";
 static const char __pyx_k_val_type[] = "val_type";
 static const char __pyx_k_TypeError[] = "TypeError";
 static const char __pyx_k_Validator[] = "Validator ";
 static const char __pyx_k_exception[] = "exception";
+static const char __pyx_k_functools[] = "functools";
 static const char __pyx_k_validator[] = "validator";
 static const char __pyx_k_ValueError[] = "ValueError";
 static const char __pyx_k_annotation[] = "annotation";
 static const char __pyx_k_value_type[] = "value_type";
 static const char __pyx_k_dataclasses[] = "dataclasses";
+static const char __pyx_k_FunctionType[] = "FunctionType";
 static const char __pyx_k_MISSING_TYPE[] = "_MISSING_TYPE";
 static const char __pyx_k_Instance_Type[] = "Instance Type";
 static const char __pyx_k_AttributeError[] = "AttributeError";
 static const char __pyx_k_annotated_type[] = "annotated_type";
 static const char __pyx_k_cline_in_traceback[] = "cline_in_traceback";
+static const char __pyx_k_BuiltinFunctionType[] = "BuiltinFunctionType";
 static const char __pyx_k_datamodel_validation[] = "datamodel.validation";
 static const char __pyx_k_datamodel_validation_pyx[] = "datamodel/validation.pyx";
 static PyObject *__pyx_kp_u_;
 static PyObject *__pyx_n_s_AttributeError;
+static PyObject *__pyx_n_s_BuiltinFunctionType;
 static PyObject *__pyx_n_s_F;
+static PyObject *__pyx_n_s_FunctionType;
 static PyObject *__pyx_kp_u_Instance_Type;
 static PyObject *__pyx_n_s_MISSING_TYPE;
 static PyObject *__pyx_n_s_TypeError;
@@ -1464,6 +1495,7 @@ static PyObject *__pyx_n_s_errors;
 static PyObject *__pyx_n_u_exception;
 static PyObject *__pyx_n_u_field;
 static PyObject *__pyx_n_s_fn;
+static PyObject *__pyx_n_s_functools;
 static PyObject *__pyx_n_s_import;
 static PyObject *__pyx_n_s_instance;
 static PyObject *__pyx_n_s_main;
@@ -1471,9 +1503,14 @@ static PyObject *__pyx_n_s_metadata;
 static PyObject *__pyx_n_s_module;
 static PyObject *__pyx_n_s_name;
 static PyObject *__pyx_n_s_name_2;
+static PyObject *__pyx_n_s_nullable;
+static PyObject *__pyx_n_s_partial;
+static PyObject *__pyx_n_s_required;
+static PyObject *__pyx_n_u_required;
 static PyObject *__pyx_n_s_result;
 static PyObject *__pyx_n_s_test;
 static PyObject *__pyx_n_s_type;
+static PyObject *__pyx_n_s_types;
 static PyObject *__pyx_n_u_typing;
 static PyObject *__pyx_n_s_val_type;
 static PyObject *__pyx_n_s_validator;
@@ -1488,8 +1525,8 @@ static PyObject *__pyx_tuple__2;
 static PyObject *__pyx_codeobj__3;
 /* Late includes */
 
-/* "datamodel/validation.pyx":8
- * 
+/* "datamodel/validation.pyx":9
+ * import types
  * 
  * cpdef bool is_callable(object value):             # <<<<<<<<<<<<<<
  *     if value is None:
@@ -1511,7 +1548,7 @@ static bool __pyx_f_9datamodel_10validation_is_callable(PyObject *__pyx_v_value,
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("is_callable", 0);
 
-  /* "datamodel/validation.pyx":9
+  /* "datamodel/validation.pyx":10
  * 
  * cpdef bool is_callable(object value):
  *     if value is None:             # <<<<<<<<<<<<<<
@@ -1522,7 +1559,7 @@ static bool __pyx_f_9datamodel_10validation_is_callable(PyObject *__pyx_v_value,
   __pyx_t_2 = (__pyx_t_1 != 0);
   if (__pyx_t_2) {
 
-    /* "datamodel/validation.pyx":10
+    /* "datamodel/validation.pyx":11
  * cpdef bool is_callable(object value):
  *     if value is None:
  *         return False             # <<<<<<<<<<<<<<
@@ -1532,7 +1569,7 @@ static bool __pyx_f_9datamodel_10validation_is_callable(PyObject *__pyx_v_value,
     __pyx_r = 0;
     goto __pyx_L0;
 
-    /* "datamodel/validation.pyx":9
+    /* "datamodel/validation.pyx":10
  * 
  * cpdef bool is_callable(object value):
  *     if value is None:             # <<<<<<<<<<<<<<
@@ -1541,30 +1578,30 @@ static bool __pyx_f_9datamodel_10validation_is_callable(PyObject *__pyx_v_value,
  */
   }
 
-  /* "datamodel/validation.pyx":11
+  /* "datamodel/validation.pyx":12
  *     if value is None:
  *         return False
  *     is_missing = (value == _MISSING_TYPE)             # <<<<<<<<<<<<<<
  *     return callable(value) if not is_missing else False
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_MISSING_TYPE); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 11, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_MISSING_TYPE); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 12, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_4 = PyObject_RichCompare(__pyx_v_value, __pyx_t_3, Py_EQ); __Pyx_XGOTREF(__pyx_t_4); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 11, __pyx_L1_error)
+  __pyx_t_4 = PyObject_RichCompare(__pyx_v_value, __pyx_t_3, Py_EQ); __Pyx_XGOTREF(__pyx_t_4); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 12, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_is_missing = __pyx_t_4;
   __pyx_t_4 = 0;
 
-  /* "datamodel/validation.pyx":12
+  /* "datamodel/validation.pyx":13
  *         return False
  *     is_missing = (value == _MISSING_TYPE)
  *     return callable(value) if not is_missing else False             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_is_missing); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 12, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_is_missing); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 13, __pyx_L1_error)
   if (((!__pyx_t_1) != 0)) {
-    __pyx_t_5 = __Pyx_PyCallable_Check(__pyx_v_value); if (unlikely(__pyx_t_5 == ((int)-1))) __PYX_ERR(0, 12, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyCallable_Check(__pyx_v_value); if (unlikely(__pyx_t_5 == ((int)-1))) __PYX_ERR(0, 13, __pyx_L1_error)
     __pyx_t_2 = __pyx_t_5;
   } else {
     __pyx_t_2 = 0;
@@ -1572,8 +1609,8 @@ static bool __pyx_f_9datamodel_10validation_is_callable(PyObject *__pyx_v_value,
   __pyx_r = __pyx_t_2;
   goto __pyx_L0;
 
-  /* "datamodel/validation.pyx":8
- * 
+  /* "datamodel/validation.pyx":9
+ * import types
  * 
  * cpdef bool is_callable(object value):             # <<<<<<<<<<<<<<
  *     if value is None:
@@ -1615,7 +1652,7 @@ static PyObject *__pyx_pf_9datamodel_10validation_is_callable(CYTHON_UNUSED PyOb
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("is_callable", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_f_9datamodel_10validation_is_callable(__pyx_v_value, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 8, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_f_9datamodel_10validation_is_callable(__pyx_v_value, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 9, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -1632,7 +1669,7 @@ static PyObject *__pyx_pf_9datamodel_10validation_is_callable(CYTHON_UNUSED PyOb
   return __pyx_r;
 }
 
-/* "datamodel/validation.pyx":15
+/* "datamodel/validation.pyx":16
  * 
  * 
  * cpdef bool is_instanceof(object value, type annotated_type):             # <<<<<<<<<<<<<<
@@ -1655,20 +1692,20 @@ static bool __pyx_f_9datamodel_10validation_is_instanceof(PyObject *__pyx_v_valu
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("is_instanceof", 0);
 
-  /* "datamodel/validation.pyx":16
+  /* "datamodel/validation.pyx":17
  * 
  * cpdef bool is_instanceof(object value, type annotated_type):
  *     if annotated_type.__module__ == 'typing':             # <<<<<<<<<<<<<<
  *         return True # TODO: validate subscripted generic (typing extensions)
  *     else:
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_annotated_type), __pyx_n_s_module); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 16, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_annotated_type), __pyx_n_s_module); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 17, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = (__Pyx_PyUnicode_Equals(__pyx_t_1, __pyx_n_u_typing, Py_EQ)); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 16, __pyx_L1_error)
+  __pyx_t_2 = (__Pyx_PyUnicode_Equals(__pyx_t_1, __pyx_n_u_typing, Py_EQ)); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 17, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   if (__pyx_t_2) {
 
-    /* "datamodel/validation.pyx":17
+    /* "datamodel/validation.pyx":18
  * cpdef bool is_instanceof(object value, type annotated_type):
  *     if annotated_type.__module__ == 'typing':
  *         return True # TODO: validate subscripted generic (typing extensions)             # <<<<<<<<<<<<<<
@@ -1678,7 +1715,7 @@ static bool __pyx_f_9datamodel_10validation_is_instanceof(PyObject *__pyx_v_valu
     __pyx_r = 1;
     goto __pyx_L0;
 
-    /* "datamodel/validation.pyx":16
+    /* "datamodel/validation.pyx":17
  * 
  * cpdef bool is_instanceof(object value, type annotated_type):
  *     if annotated_type.__module__ == 'typing':             # <<<<<<<<<<<<<<
@@ -1687,7 +1724,7 @@ static bool __pyx_f_9datamodel_10validation_is_instanceof(PyObject *__pyx_v_valu
  */
   }
 
-  /* "datamodel/validation.pyx":19
+  /* "datamodel/validation.pyx":20
  *         return True # TODO: validate subscripted generic (typing extensions)
  *     else:
  *         try:             # <<<<<<<<<<<<<<
@@ -1699,7 +1736,7 @@ static bool __pyx_f_9datamodel_10validation_is_instanceof(PyObject *__pyx_v_valu
       (void)__pyx_t_3; (void)__pyx_t_4; (void)__pyx_t_5; /* mark used */
       /*try:*/ {
 
-        /* "datamodel/validation.pyx":20
+        /* "datamodel/validation.pyx":21
  *     else:
  *         try:
  *             return isinstance(value, annotated_type)             # <<<<<<<<<<<<<<
@@ -1710,7 +1747,7 @@ static bool __pyx_f_9datamodel_10validation_is_instanceof(PyObject *__pyx_v_valu
         __pyx_r = __pyx_t_2;
         goto __pyx_L8_try_return;
 
-        /* "datamodel/validation.pyx":19
+        /* "datamodel/validation.pyx":20
  *         return True # TODO: validate subscripted generic (typing extensions)
  *     else:
  *         try:             # <<<<<<<<<<<<<<
@@ -1723,7 +1760,7 @@ static bool __pyx_f_9datamodel_10validation_is_instanceof(PyObject *__pyx_v_valu
     }
   }
 
-  /* "datamodel/validation.pyx":15
+  /* "datamodel/validation.pyx":16
  * 
  * 
  * cpdef bool is_instanceof(object value, type annotated_type):             # <<<<<<<<<<<<<<
@@ -1777,11 +1814,11 @@ static PyObject *__pyx_pw_9datamodel_10validation_3is_instanceof(PyObject *__pyx
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_annotated_type)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("is_instanceof", 1, 2, 2, 1); __PYX_ERR(0, 15, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("is_instanceof", 1, 2, 2, 1); __PYX_ERR(0, 16, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "is_instanceof") < 0)) __PYX_ERR(0, 15, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "is_instanceof") < 0)) __PYX_ERR(0, 16, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -1794,13 +1831,13 @@ static PyObject *__pyx_pw_9datamodel_10validation_3is_instanceof(PyObject *__pyx
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("is_instanceof", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 15, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("is_instanceof", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 16, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("datamodel.validation.is_instanceof", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_annotated_type), (&PyType_Type), 1, "annotated_type", 1))) __PYX_ERR(0, 15, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_annotated_type), (&PyType_Type), 1, "annotated_type", 1))) __PYX_ERR(0, 16, __pyx_L1_error)
   __pyx_r = __pyx_pf_9datamodel_10validation_2is_instanceof(__pyx_self, __pyx_v_value, __pyx_v_annotated_type);
 
   /* function exit code */
@@ -1821,7 +1858,7 @@ static PyObject *__pyx_pf_9datamodel_10validation_2is_instanceof(CYTHON_UNUSED P
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("is_instanceof", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_f_9datamodel_10validation_is_instanceof(__pyx_v_value, __pyx_v_annotated_type, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 15, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_f_9datamodel_10validation_is_instanceof(__pyx_v_value, __pyx_v_annotated_type, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 16, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -1838,8 +1875,93 @@ static PyObject *__pyx_pf_9datamodel_10validation_2is_instanceof(CYTHON_UNUSED P
   return __pyx_r;
 }
 
-/* "datamodel/validation.pyx":26
+/* "datamodel/validation.pyx":27
  *             )
+ * 
+ * cdef bool is_function(object value):             # <<<<<<<<<<<<<<
+ *     return isinstance(value, (types.BuiltinFunctionType, types.FunctionType, partial))
+ * 
+ */
+
+static bool __pyx_f_9datamodel_10validation_is_function(PyObject *__pyx_v_value) {
+  bool __pyx_r;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  PyObject *__pyx_t_2 = NULL;
+  PyObject *__pyx_t_3 = NULL;
+  int __pyx_t_4;
+  int __pyx_t_5;
+  int __pyx_t_6;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("is_function", 0);
+
+  /* "datamodel/validation.pyx":28
+ * 
+ * cdef bool is_function(object value):
+ *     return isinstance(value, (types.BuiltinFunctionType, types.FunctionType, partial))             # <<<<<<<<<<<<<<
+ * 
+ * def validator(object F, str name, object value, object annotated_type):
+ */
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_types); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 28, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_BuiltinFunctionType); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 28, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_types); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 28, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_FunctionType); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 28, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_3);
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_partial); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 28, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_5 = PyObject_IsInstance(__pyx_v_value, __pyx_t_2); 
+  __pyx_t_6 = (__pyx_t_5 != 0);
+  if (!__pyx_t_6) {
+  } else {
+    __pyx_t_4 = __pyx_t_6;
+    goto __pyx_L3_bool_binop_done;
+  }
+  __pyx_t_6 = PyObject_IsInstance(__pyx_v_value, __pyx_t_3); 
+  __pyx_t_5 = (__pyx_t_6 != 0);
+  if (!__pyx_t_5) {
+  } else {
+    __pyx_t_4 = __pyx_t_5;
+    goto __pyx_L3_bool_binop_done;
+  }
+  __pyx_t_5 = PyObject_IsInstance(__pyx_v_value, __pyx_t_1); 
+  __pyx_t_6 = (__pyx_t_5 != 0);
+  __pyx_t_4 = __pyx_t_6;
+  __pyx_L3_bool_binop_done:;
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __pyx_r = __pyx_t_4;
+  goto __pyx_L0;
+
+  /* "datamodel/validation.pyx":27
+ *             )
+ * 
+ * cdef bool is_function(object value):             # <<<<<<<<<<<<<<
+ *     return isinstance(value, (types.BuiltinFunctionType, types.FunctionType, partial))
+ * 
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_XDECREF(__pyx_t_2);
+  __Pyx_XDECREF(__pyx_t_3);
+  __Pyx_WriteUnraisable("datamodel.validation.is_function", __pyx_clineno, __pyx_lineno, __pyx_filename, 1, 0);
+  __pyx_r = 0;
+  __pyx_L0:;
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "datamodel/validation.pyx":30
+ *     return isinstance(value, (types.BuiltinFunctionType, types.FunctionType, partial))
  * 
  * def validator(object F, str name, object value, object annotated_type):             # <<<<<<<<<<<<<<
  *     val_type = type(value)
@@ -1888,23 +2010,23 @@ static PyObject *__pyx_pw_9datamodel_10validation_5validator(PyObject *__pyx_sel
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_name)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("validator", 1, 4, 4, 1); __PYX_ERR(0, 26, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("validator", 1, 4, 4, 1); __PYX_ERR(0, 30, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_value)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("validator", 1, 4, 4, 2); __PYX_ERR(0, 26, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("validator", 1, 4, 4, 2); __PYX_ERR(0, 30, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  3:
         if (likely((values[3] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_annotated_type)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("validator", 1, 4, 4, 3); __PYX_ERR(0, 26, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("validator", 1, 4, 4, 3); __PYX_ERR(0, 30, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "validator") < 0)) __PYX_ERR(0, 26, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "validator") < 0)) __PYX_ERR(0, 30, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 4) {
       goto __pyx_L5_argtuple_error;
@@ -1921,13 +2043,13 @@ static PyObject *__pyx_pw_9datamodel_10validation_5validator(PyObject *__pyx_sel
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("validator", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 26, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("validator", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 30, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("datamodel.validation.validator", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_name), (&PyUnicode_Type), 1, "name", 1))) __PYX_ERR(0, 26, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_name), (&PyUnicode_Type), 1, "name", 1))) __PYX_ERR(0, 30, __pyx_L1_error)
   __pyx_r = __pyx_pf_9datamodel_10validation_4validator(__pyx_self, __pyx_v_F, __pyx_v_name, __pyx_v_value, __pyx_v_annotated_type);
 
   /* function exit code */
@@ -1971,14 +2093,15 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
   PyObject *__pyx_t_21 = NULL;
   PyObject *__pyx_t_22 = NULL;
   PyObject *__pyx_t_23 = NULL;
-  char const *__pyx_t_24;
+  int __pyx_t_24;
+  char const *__pyx_t_25;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("validator", 0);
   __Pyx_INCREF(__pyx_v_annotated_type);
 
-  /* "datamodel/validation.pyx":27
+  /* "datamodel/validation.pyx":31
  * 
  * def validator(object F, str name, object value, object annotated_type):
  *     val_type = type(value)             # <<<<<<<<<<<<<<
@@ -1988,30 +2111,30 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
   __Pyx_INCREF(((PyObject *)Py_TYPE(__pyx_v_value)));
   __pyx_v_val_type = ((PyTypeObject*)((PyObject *)Py_TYPE(__pyx_v_value)));
 
-  /* "datamodel/validation.pyx":28
+  /* "datamodel/validation.pyx":32
  * def validator(object F, str name, object value, object annotated_type):
  *     val_type = type(value)
  *     if not annotated_type:             # <<<<<<<<<<<<<<
  *         annotated_type = F.type
  *     errors = []
  */
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_annotated_type); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 28, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_annotated_type); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 32, __pyx_L1_error)
   __pyx_t_2 = ((!__pyx_t_1) != 0);
   if (__pyx_t_2) {
 
-    /* "datamodel/validation.pyx":29
+    /* "datamodel/validation.pyx":33
  *     val_type = type(value)
  *     if not annotated_type:
  *         annotated_type = F.type             # <<<<<<<<<<<<<<
  *     errors = []
  *     # first: calling (if exists) custom validator:
  */
-    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_F, __pyx_n_s_type); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 29, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_F, __pyx_n_s_type); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 33, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF_SET(__pyx_v_annotated_type, __pyx_t_3);
     __pyx_t_3 = 0;
 
-    /* "datamodel/validation.pyx":28
+    /* "datamodel/validation.pyx":32
  * def validator(object F, str name, object value, object annotated_type):
  *     val_type = type(value)
  *     if not annotated_type:             # <<<<<<<<<<<<<<
@@ -2020,48 +2143,48 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
  */
   }
 
-  /* "datamodel/validation.pyx":30
+  /* "datamodel/validation.pyx":34
  *     if not annotated_type:
  *         annotated_type = F.type
  *     errors = []             # <<<<<<<<<<<<<<
  *     # first: calling (if exists) custom validator:
  *     if 'validator' in F.metadata:
  */
-  __pyx_t_3 = PyList_New(0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 30, __pyx_L1_error)
+  __pyx_t_3 = PyList_New(0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 34, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_v_errors = ((PyObject*)__pyx_t_3);
   __pyx_t_3 = 0;
 
-  /* "datamodel/validation.pyx":32
+  /* "datamodel/validation.pyx":36
  *     errors = []
  *     # first: calling (if exists) custom validator:
  *     if 'validator' in F.metadata:             # <<<<<<<<<<<<<<
  *         fn = F.metadata['validator']
  *         if is_callable(fn):
  */
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_F, __pyx_n_s_metadata); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 32, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_F, __pyx_n_s_metadata); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 36, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_2 = (__Pyx_PySequence_ContainsTF(__pyx_n_u_validator, __pyx_t_3, Py_EQ)); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 32, __pyx_L1_error)
+  __pyx_t_2 = (__Pyx_PySequence_ContainsTF(__pyx_n_u_validator, __pyx_t_3, Py_EQ)); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 36, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_t_1 = (__pyx_t_2 != 0);
   if (__pyx_t_1) {
 
-    /* "datamodel/validation.pyx":33
+    /* "datamodel/validation.pyx":37
  *     # first: calling (if exists) custom validator:
  *     if 'validator' in F.metadata:
  *         fn = F.metadata['validator']             # <<<<<<<<<<<<<<
  *         if is_callable(fn):
  *             try:
  */
-    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_F, __pyx_n_s_metadata); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 33, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_F, __pyx_n_s_metadata); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 37, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_t_3, __pyx_n_u_validator); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 33, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_Dict_GetItem(__pyx_t_3, __pyx_n_u_validator); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 37, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __pyx_v_fn = __pyx_t_4;
     __pyx_t_4 = 0;
 
-    /* "datamodel/validation.pyx":34
+    /* "datamodel/validation.pyx":38
  *     if 'validator' in F.metadata:
  *         fn = F.metadata['validator']
  *         if is_callable(fn):             # <<<<<<<<<<<<<<
@@ -2071,7 +2194,7 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
     __pyx_t_1 = (__pyx_f_9datamodel_10validation_is_callable(__pyx_v_fn, 0) != 0);
     if (__pyx_t_1) {
 
-      /* "datamodel/validation.pyx":35
+      /* "datamodel/validation.pyx":39
  *         fn = F.metadata['validator']
  *         if is_callable(fn):
  *             try:             # <<<<<<<<<<<<<<
@@ -2087,7 +2210,7 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
         __Pyx_XGOTREF(__pyx_t_7);
         /*try:*/ {
 
-          /* "datamodel/validation.pyx":36
+          /* "datamodel/validation.pyx":40
  *         if is_callable(fn):
  *             try:
  *                 result = fn(F, value)             # <<<<<<<<<<<<<<
@@ -2110,7 +2233,7 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
           #if CYTHON_FAST_PYCALL
           if (PyFunction_Check(__pyx_t_3)) {
             PyObject *__pyx_temp[3] = {__pyx_t_8, __pyx_v_F, __pyx_v_value};
-            __pyx_t_4 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_9, 2+__pyx_t_9); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 36, __pyx_L6_error)
+            __pyx_t_4 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_9, 2+__pyx_t_9); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 40, __pyx_L6_error)
             __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
             __Pyx_GOTREF(__pyx_t_4);
           } else
@@ -2118,13 +2241,13 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
           #if CYTHON_FAST_PYCCALL
           if (__Pyx_PyFastCFunction_Check(__pyx_t_3)) {
             PyObject *__pyx_temp[3] = {__pyx_t_8, __pyx_v_F, __pyx_v_value};
-            __pyx_t_4 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_9, 2+__pyx_t_9); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 36, __pyx_L6_error)
+            __pyx_t_4 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_9, 2+__pyx_t_9); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 40, __pyx_L6_error)
             __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
             __Pyx_GOTREF(__pyx_t_4);
           } else
           #endif
           {
-            __pyx_t_10 = PyTuple_New(2+__pyx_t_9); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 36, __pyx_L6_error)
+            __pyx_t_10 = PyTuple_New(2+__pyx_t_9); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 40, __pyx_L6_error)
             __Pyx_GOTREF(__pyx_t_10);
             if (__pyx_t_8) {
               __Pyx_GIVEREF(__pyx_t_8); PyTuple_SET_ITEM(__pyx_t_10, 0, __pyx_t_8); __pyx_t_8 = NULL;
@@ -2135,7 +2258,7 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
             __Pyx_INCREF(__pyx_v_value);
             __Pyx_GIVEREF(__pyx_v_value);
             PyTuple_SET_ITEM(__pyx_t_10, 1+__pyx_t_9, __pyx_v_value);
-            __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_10, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 36, __pyx_L6_error)
+            __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_10, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 40, __pyx_L6_error)
             __Pyx_GOTREF(__pyx_t_4);
             __Pyx_DECREF(__pyx_t_10); __pyx_t_10 = 0;
           }
@@ -2143,45 +2266,45 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
           __pyx_v_result = __pyx_t_4;
           __pyx_t_4 = 0;
 
-          /* "datamodel/validation.pyx":37
+          /* "datamodel/validation.pyx":41
  *             try:
  *                 result = fn(F, value)
  *                 if not result:             # <<<<<<<<<<<<<<
  *                     errors.append({
  *                         "field": name,
  */
-          __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_result); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 37, __pyx_L6_error)
+          __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_result); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 41, __pyx_L6_error)
           __pyx_t_2 = ((!__pyx_t_1) != 0);
           if (__pyx_t_2) {
 
-            /* "datamodel/validation.pyx":39
+            /* "datamodel/validation.pyx":43
  *                 if not result:
  *                     errors.append({
  *                         "field": name,             # <<<<<<<<<<<<<<
  *                         "value": value,
  *                         "error": f"Validator {fn!r}: {result}",
  */
-            __pyx_t_4 = __Pyx_PyDict_NewPresized(6); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 39, __pyx_L6_error)
+            __pyx_t_4 = __Pyx_PyDict_NewPresized(6); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 43, __pyx_L6_error)
             __Pyx_GOTREF(__pyx_t_4);
-            if (PyDict_SetItem(__pyx_t_4, __pyx_n_u_field, __pyx_v_name) < 0) __PYX_ERR(0, 39, __pyx_L6_error)
+            if (PyDict_SetItem(__pyx_t_4, __pyx_n_u_field, __pyx_v_name) < 0) __PYX_ERR(0, 43, __pyx_L6_error)
 
-            /* "datamodel/validation.pyx":40
+            /* "datamodel/validation.pyx":44
  *                     errors.append({
  *                         "field": name,
  *                         "value": value,             # <<<<<<<<<<<<<<
  *                         "error": f"Validator {fn!r}: {result}",
  *                         "value_type": val_type,
  */
-            if (PyDict_SetItem(__pyx_t_4, __pyx_n_u_value, __pyx_v_value) < 0) __PYX_ERR(0, 39, __pyx_L6_error)
+            if (PyDict_SetItem(__pyx_t_4, __pyx_n_u_value, __pyx_v_value) < 0) __PYX_ERR(0, 43, __pyx_L6_error)
 
-            /* "datamodel/validation.pyx":41
+            /* "datamodel/validation.pyx":45
  *                         "field": name,
  *                         "value": value,
  *                         "error": f"Validator {fn!r}: {result}",             # <<<<<<<<<<<<<<
  *                         "value_type": val_type,
  *                         "annotation": annotated_type,
  */
-            __pyx_t_3 = PyTuple_New(4); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 41, __pyx_L6_error)
+            __pyx_t_3 = PyTuple_New(4); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 45, __pyx_L6_error)
             __Pyx_GOTREF(__pyx_t_3);
             __pyx_t_11 = 0;
             __pyx_t_12 = 127;
@@ -2189,7 +2312,7 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
             __pyx_t_11 += 10;
             __Pyx_GIVEREF(__pyx_kp_u_Validator);
             PyTuple_SET_ITEM(__pyx_t_3, 0, __pyx_kp_u_Validator);
-            __pyx_t_10 = __Pyx_PyObject_FormatSimpleAndDecref(PyObject_Repr(__pyx_v_fn), __pyx_empty_unicode); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 41, __pyx_L6_error)
+            __pyx_t_10 = __Pyx_PyObject_FormatSimpleAndDecref(PyObject_Repr(__pyx_v_fn), __pyx_empty_unicode); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 45, __pyx_L6_error)
             __Pyx_GOTREF(__pyx_t_10);
             __pyx_t_12 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_10) > __pyx_t_12) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_10) : __pyx_t_12;
             __pyx_t_11 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_10);
@@ -2200,57 +2323,57 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
             __pyx_t_11 += 2;
             __Pyx_GIVEREF(__pyx_kp_u_);
             PyTuple_SET_ITEM(__pyx_t_3, 2, __pyx_kp_u_);
-            __pyx_t_10 = __Pyx_PyObject_FormatSimple(__pyx_v_result, __pyx_empty_unicode); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 41, __pyx_L6_error)
+            __pyx_t_10 = __Pyx_PyObject_FormatSimple(__pyx_v_result, __pyx_empty_unicode); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 45, __pyx_L6_error)
             __Pyx_GOTREF(__pyx_t_10);
             __pyx_t_12 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_10) > __pyx_t_12) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_10) : __pyx_t_12;
             __pyx_t_11 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_10);
             __Pyx_GIVEREF(__pyx_t_10);
             PyTuple_SET_ITEM(__pyx_t_3, 3, __pyx_t_10);
             __pyx_t_10 = 0;
-            __pyx_t_10 = __Pyx_PyUnicode_Join(__pyx_t_3, 4, __pyx_t_11, __pyx_t_12); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 41, __pyx_L6_error)
+            __pyx_t_10 = __Pyx_PyUnicode_Join(__pyx_t_3, 4, __pyx_t_11, __pyx_t_12); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 45, __pyx_L6_error)
             __Pyx_GOTREF(__pyx_t_10);
             __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-            if (PyDict_SetItem(__pyx_t_4, __pyx_n_u_error, __pyx_t_10) < 0) __PYX_ERR(0, 39, __pyx_L6_error)
+            if (PyDict_SetItem(__pyx_t_4, __pyx_n_u_error, __pyx_t_10) < 0) __PYX_ERR(0, 43, __pyx_L6_error)
             __Pyx_DECREF(__pyx_t_10); __pyx_t_10 = 0;
 
-            /* "datamodel/validation.pyx":42
+            /* "datamodel/validation.pyx":46
  *                         "value": value,
  *                         "error": f"Validator {fn!r}: {result}",
  *                         "value_type": val_type,             # <<<<<<<<<<<<<<
  *                         "annotation": annotated_type,
  *                         "exception": None
  */
-            if (PyDict_SetItem(__pyx_t_4, __pyx_n_u_value_type, ((PyObject *)__pyx_v_val_type)) < 0) __PYX_ERR(0, 39, __pyx_L6_error)
+            if (PyDict_SetItem(__pyx_t_4, __pyx_n_u_value_type, ((PyObject *)__pyx_v_val_type)) < 0) __PYX_ERR(0, 43, __pyx_L6_error)
 
-            /* "datamodel/validation.pyx":43
+            /* "datamodel/validation.pyx":47
  *                         "error": f"Validator {fn!r}: {result}",
  *                         "value_type": val_type,
  *                         "annotation": annotated_type,             # <<<<<<<<<<<<<<
  *                         "exception": None
  *                     })
  */
-            if (PyDict_SetItem(__pyx_t_4, __pyx_n_u_annotation, __pyx_v_annotated_type) < 0) __PYX_ERR(0, 39, __pyx_L6_error)
+            if (PyDict_SetItem(__pyx_t_4, __pyx_n_u_annotation, __pyx_v_annotated_type) < 0) __PYX_ERR(0, 43, __pyx_L6_error)
 
-            /* "datamodel/validation.pyx":44
+            /* "datamodel/validation.pyx":48
  *                         "value_type": val_type,
  *                         "annotation": annotated_type,
  *                         "exception": None             # <<<<<<<<<<<<<<
  *                     })
  *             except (ValueError, AttributeError, TypeError) as e:
  */
-            if (PyDict_SetItem(__pyx_t_4, __pyx_n_u_exception, Py_None) < 0) __PYX_ERR(0, 39, __pyx_L6_error)
+            if (PyDict_SetItem(__pyx_t_4, __pyx_n_u_exception, Py_None) < 0) __PYX_ERR(0, 43, __pyx_L6_error)
 
-            /* "datamodel/validation.pyx":38
+            /* "datamodel/validation.pyx":42
  *                 result = fn(F, value)
  *                 if not result:
  *                     errors.append({             # <<<<<<<<<<<<<<
  *                         "field": name,
  *                         "value": value,
  */
-            __pyx_t_13 = __Pyx_PyList_Append(__pyx_v_errors, __pyx_t_4); if (unlikely(__pyx_t_13 == ((int)-1))) __PYX_ERR(0, 38, __pyx_L6_error)
+            __pyx_t_13 = __Pyx_PyList_Append(__pyx_v_errors, __pyx_t_4); if (unlikely(__pyx_t_13 == ((int)-1))) __PYX_ERR(0, 42, __pyx_L6_error)
             __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-            /* "datamodel/validation.pyx":37
+            /* "datamodel/validation.pyx":41
  *             try:
  *                 result = fn(F, value)
  *                 if not result:             # <<<<<<<<<<<<<<
@@ -2259,7 +2382,7 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
  */
           }
 
-          /* "datamodel/validation.pyx":35
+          /* "datamodel/validation.pyx":39
  *         fn = F.metadata['validator']
  *         if is_callable(fn):
  *             try:             # <<<<<<<<<<<<<<
@@ -2277,7 +2400,7 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
         __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
         __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-        /* "datamodel/validation.pyx":46
+        /* "datamodel/validation.pyx":50
  *                         "exception": None
  *                     })
  *             except (ValueError, AttributeError, TypeError) as e:             # <<<<<<<<<<<<<<
@@ -2287,7 +2410,7 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
         __pyx_t_9 = __Pyx_PyErr_ExceptionMatches(__pyx_builtin_ValueError) || __Pyx_PyErr_ExceptionMatches(__pyx_builtin_AttributeError) || __Pyx_PyErr_ExceptionMatches(__pyx_builtin_TypeError);
         if (__pyx_t_9) {
           __Pyx_AddTraceback("datamodel.validation.validator", __pyx_clineno, __pyx_lineno, __pyx_filename);
-          if (__Pyx_GetException(&__pyx_t_4, &__pyx_t_10, &__pyx_t_3) < 0) __PYX_ERR(0, 46, __pyx_L8_except_error)
+          if (__Pyx_GetException(&__pyx_t_4, &__pyx_t_10, &__pyx_t_3) < 0) __PYX_ERR(0, 50, __pyx_L8_except_error)
           __Pyx_GOTREF(__pyx_t_4);
           __Pyx_GOTREF(__pyx_t_10);
           __Pyx_GOTREF(__pyx_t_3);
@@ -2295,80 +2418,80 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
           __pyx_v_e = __pyx_t_10;
           /*try:*/ {
 
-            /* "datamodel/validation.pyx":48
+            /* "datamodel/validation.pyx":52
  *             except (ValueError, AttributeError, TypeError) as e:
  *                 errors.append({
  *                     "field": name,             # <<<<<<<<<<<<<<
  *                     "value": value,
  *                     "error": f"Validator {fn!r}",
  */
-            __pyx_t_8 = __Pyx_PyDict_NewPresized(6); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 48, __pyx_L18_error)
+            __pyx_t_8 = __Pyx_PyDict_NewPresized(6); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 52, __pyx_L18_error)
             __Pyx_GOTREF(__pyx_t_8);
-            if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_field, __pyx_v_name) < 0) __PYX_ERR(0, 48, __pyx_L18_error)
+            if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_field, __pyx_v_name) < 0) __PYX_ERR(0, 52, __pyx_L18_error)
 
-            /* "datamodel/validation.pyx":49
+            /* "datamodel/validation.pyx":53
  *                 errors.append({
  *                     "field": name,
  *                     "value": value,             # <<<<<<<<<<<<<<
  *                     "error": f"Validator {fn!r}",
  *                     "value_type": val_type,
  */
-            if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_value, __pyx_v_value) < 0) __PYX_ERR(0, 48, __pyx_L18_error)
+            if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_value, __pyx_v_value) < 0) __PYX_ERR(0, 52, __pyx_L18_error)
 
-            /* "datamodel/validation.pyx":50
+            /* "datamodel/validation.pyx":54
  *                     "field": name,
  *                     "value": value,
  *                     "error": f"Validator {fn!r}",             # <<<<<<<<<<<<<<
  *                     "value_type": val_type,
  *                     "annotation": annotated_type,
  */
-            __pyx_t_14 = __Pyx_PyObject_FormatSimpleAndDecref(PyObject_Repr(__pyx_v_fn), __pyx_empty_unicode); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 50, __pyx_L18_error)
+            __pyx_t_14 = __Pyx_PyObject_FormatSimpleAndDecref(PyObject_Repr(__pyx_v_fn), __pyx_empty_unicode); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 54, __pyx_L18_error)
             __Pyx_GOTREF(__pyx_t_14);
-            __pyx_t_15 = __Pyx_PyUnicode_Concat(__pyx_kp_u_Validator, __pyx_t_14); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 50, __pyx_L18_error)
+            __pyx_t_15 = __Pyx_PyUnicode_Concat(__pyx_kp_u_Validator, __pyx_t_14); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 54, __pyx_L18_error)
             __Pyx_GOTREF(__pyx_t_15);
             __Pyx_DECREF(__pyx_t_14); __pyx_t_14 = 0;
-            if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_error, __pyx_t_15) < 0) __PYX_ERR(0, 48, __pyx_L18_error)
+            if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_error, __pyx_t_15) < 0) __PYX_ERR(0, 52, __pyx_L18_error)
             __Pyx_DECREF(__pyx_t_15); __pyx_t_15 = 0;
 
-            /* "datamodel/validation.pyx":51
+            /* "datamodel/validation.pyx":55
  *                     "value": value,
  *                     "error": f"Validator {fn!r}",
  *                     "value_type": val_type,             # <<<<<<<<<<<<<<
  *                     "annotation": annotated_type,
  *                     "exception": e
  */
-            if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_value_type, ((PyObject *)__pyx_v_val_type)) < 0) __PYX_ERR(0, 48, __pyx_L18_error)
+            if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_value_type, ((PyObject *)__pyx_v_val_type)) < 0) __PYX_ERR(0, 52, __pyx_L18_error)
 
-            /* "datamodel/validation.pyx":52
+            /* "datamodel/validation.pyx":56
  *                     "error": f"Validator {fn!r}",
  *                     "value_type": val_type,
  *                     "annotation": annotated_type,             # <<<<<<<<<<<<<<
  *                     "exception": e
  *                 })
  */
-            if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_annotation, __pyx_v_annotated_type) < 0) __PYX_ERR(0, 48, __pyx_L18_error)
+            if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_annotation, __pyx_v_annotated_type) < 0) __PYX_ERR(0, 52, __pyx_L18_error)
 
-            /* "datamodel/validation.pyx":53
+            /* "datamodel/validation.pyx":57
  *                     "value_type": val_type,
  *                     "annotation": annotated_type,
  *                     "exception": e             # <<<<<<<<<<<<<<
  *                 })
  *     # check: data type hint
  */
-            if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_exception, __pyx_v_e) < 0) __PYX_ERR(0, 48, __pyx_L18_error)
+            if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_exception, __pyx_v_e) < 0) __PYX_ERR(0, 52, __pyx_L18_error)
 
-            /* "datamodel/validation.pyx":47
+            /* "datamodel/validation.pyx":51
  *                     })
  *             except (ValueError, AttributeError, TypeError) as e:
  *                 errors.append({             # <<<<<<<<<<<<<<
  *                     "field": name,
  *                     "value": value,
  */
-            __pyx_t_13 = __Pyx_PyList_Append(__pyx_v_errors, __pyx_t_8); if (unlikely(__pyx_t_13 == ((int)-1))) __PYX_ERR(0, 47, __pyx_L18_error)
+            __pyx_t_13 = __Pyx_PyList_Append(__pyx_v_errors, __pyx_t_8); if (unlikely(__pyx_t_13 == ((int)-1))) __PYX_ERR(0, 51, __pyx_L18_error)
             __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
           }
 
-          /* "datamodel/validation.pyx":46
+          /* "datamodel/validation.pyx":50
  *                         "exception": None
  *                     })
  *             except (ValueError, AttributeError, TypeError) as e:             # <<<<<<<<<<<<<<
@@ -2426,7 +2549,7 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
         goto __pyx_L8_except_error;
         __pyx_L8_except_error:;
 
-        /* "datamodel/validation.pyx":35
+        /* "datamodel/validation.pyx":39
  *         fn = F.metadata['validator']
  *         if is_callable(fn):
  *             try:             # <<<<<<<<<<<<<<
@@ -2446,7 +2569,7 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
         __pyx_L11_try_end:;
       }
 
-      /* "datamodel/validation.pyx":34
+      /* "datamodel/validation.pyx":38
  *     if 'validator' in F.metadata:
  *         fn = F.metadata['validator']
  *         if is_callable(fn):             # <<<<<<<<<<<<<<
@@ -2455,7 +2578,7 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
  */
     }
 
-    /* "datamodel/validation.pyx":32
+    /* "datamodel/validation.pyx":36
  *     errors = []
  *     # first: calling (if exists) custom validator:
  *     if 'validator' in F.metadata:             # <<<<<<<<<<<<<<
@@ -2464,7 +2587,7 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
  */
   }
 
-  /* "datamodel/validation.pyx":56
+  /* "datamodel/validation.pyx":60
  *                 })
  *     # check: data type hint
  *     try:             # <<<<<<<<<<<<<<
@@ -2480,44 +2603,154 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
     __Pyx_XGOTREF(__pyx_t_5);
     /*try:*/ {
 
-      /* "datamodel/validation.pyx":57
+      /* "datamodel/validation.pyx":61
  *     # check: data type hint
  *     try:
  *         if annotated_type.__module__ == 'typing':             # <<<<<<<<<<<<<<
  *             # TODO: validation of annotated types
  *             pass
  */
-      __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_annotated_type, __pyx_n_s_module); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 57, __pyx_L24_error)
+      __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_annotated_type, __pyx_n_s_module); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 61, __pyx_L24_error)
       __Pyx_GOTREF(__pyx_t_3);
-      __pyx_t_2 = (__Pyx_PyUnicode_Equals(__pyx_t_3, __pyx_n_u_typing, Py_EQ)); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 57, __pyx_L24_error)
+      __pyx_t_2 = (__Pyx_PyUnicode_Equals(__pyx_t_3, __pyx_n_u_typing, Py_EQ)); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 61, __pyx_L24_error)
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
       if (__pyx_t_2) {
         goto __pyx_L30;
       }
 
-      /* "datamodel/validation.pyx":60
+      /* "datamodel/validation.pyx":64
  *             # TODO: validation of annotated types
  *             pass
+ *         elif hasattr(F, 'required'):             # <<<<<<<<<<<<<<
+ *             if F.required() is False or F.nullable() is True:
+ *                 if value is None:
+ */
+      __pyx_t_2 = __Pyx_HasAttr(__pyx_v_F, __pyx_n_u_required); if (unlikely(__pyx_t_2 == ((int)-1))) __PYX_ERR(0, 64, __pyx_L24_error)
+      __pyx_t_1 = (__pyx_t_2 != 0);
+      if (__pyx_t_1) {
+
+        /* "datamodel/validation.pyx":65
+ *             pass
+ *         elif hasattr(F, 'required'):
+ *             if F.required() is False or F.nullable() is True:             # <<<<<<<<<<<<<<
+ *                 if value is None:
+ *                     pass
+ */
+        __pyx_t_10 = __Pyx_PyObject_GetAttrStr(__pyx_v_F, __pyx_n_s_required); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 65, __pyx_L24_error)
+        __Pyx_GOTREF(__pyx_t_10);
+        __pyx_t_4 = NULL;
+        if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_10))) {
+          __pyx_t_4 = PyMethod_GET_SELF(__pyx_t_10);
+          if (likely(__pyx_t_4)) {
+            PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_10);
+            __Pyx_INCREF(__pyx_t_4);
+            __Pyx_INCREF(function);
+            __Pyx_DECREF_SET(__pyx_t_10, function);
+          }
+        }
+        __pyx_t_3 = (__pyx_t_4) ? __Pyx_PyObject_CallOneArg(__pyx_t_10, __pyx_t_4) : __Pyx_PyObject_CallNoArg(__pyx_t_10);
+        __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
+        if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 65, __pyx_L24_error)
+        __Pyx_GOTREF(__pyx_t_3);
+        __Pyx_DECREF(__pyx_t_10); __pyx_t_10 = 0;
+        __pyx_t_2 = (__pyx_t_3 == Py_False);
+        __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+        __pyx_t_24 = (__pyx_t_2 != 0);
+        if (!__pyx_t_24) {
+        } else {
+          __pyx_t_1 = __pyx_t_24;
+          goto __pyx_L32_bool_binop_done;
+        }
+        __pyx_t_10 = __Pyx_PyObject_GetAttrStr(__pyx_v_F, __pyx_n_s_nullable); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 65, __pyx_L24_error)
+        __Pyx_GOTREF(__pyx_t_10);
+        __pyx_t_4 = NULL;
+        if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_10))) {
+          __pyx_t_4 = PyMethod_GET_SELF(__pyx_t_10);
+          if (likely(__pyx_t_4)) {
+            PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_10);
+            __Pyx_INCREF(__pyx_t_4);
+            __Pyx_INCREF(function);
+            __Pyx_DECREF_SET(__pyx_t_10, function);
+          }
+        }
+        __pyx_t_3 = (__pyx_t_4) ? __Pyx_PyObject_CallOneArg(__pyx_t_10, __pyx_t_4) : __Pyx_PyObject_CallNoArg(__pyx_t_10);
+        __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
+        if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 65, __pyx_L24_error)
+        __Pyx_GOTREF(__pyx_t_3);
+        __Pyx_DECREF(__pyx_t_10); __pyx_t_10 = 0;
+        __pyx_t_24 = (__pyx_t_3 == Py_True);
+        __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+        __pyx_t_2 = (__pyx_t_24 != 0);
+        __pyx_t_1 = __pyx_t_2;
+        __pyx_L32_bool_binop_done:;
+        if (__pyx_t_1) {
+
+          /* "datamodel/validation.pyx":66
+ *         elif hasattr(F, 'required'):
+ *             if F.required() is False or F.nullable() is True:
+ *                 if value is None:             # <<<<<<<<<<<<<<
+ *                     pass
+ *         elif is_function(val_type):
+ */
+          __pyx_t_1 = (__pyx_v_value == Py_None);
+          __pyx_t_2 = (__pyx_t_1 != 0);
+          if (__pyx_t_2) {
+          }
+
+          /* "datamodel/validation.pyx":65
+ *             pass
+ *         elif hasattr(F, 'required'):
+ *             if F.required() is False or F.nullable() is True:             # <<<<<<<<<<<<<<
+ *                 if value is None:
+ *                     pass
+ */
+        }
+
+        /* "datamodel/validation.pyx":64
+ *             # TODO: validation of annotated types
+ *             pass
+ *         elif hasattr(F, 'required'):             # <<<<<<<<<<<<<<
+ *             if F.required() is False or F.nullable() is True:
+ *                 if value is None:
+ */
+        goto __pyx_L30;
+      }
+
+      /* "datamodel/validation.pyx":68
+ *                 if value is None:
+ *                     pass
+ *         elif is_function(val_type):             # <<<<<<<<<<<<<<
+ *             pass # value will be calculated.
+ *         elif val_type <> annotated_type:
+ */
+      __pyx_t_2 = (__pyx_f_9datamodel_10validation_is_function(((PyObject *)__pyx_v_val_type)) != 0);
+      if (__pyx_t_2) {
+        goto __pyx_L30;
+      }
+
+      /* "datamodel/validation.pyx":70
+ *         elif is_function(val_type):
+ *             pass # value will be calculated.
  *         elif val_type <> annotated_type:             # <<<<<<<<<<<<<<
  *             instance = is_instanceof(value, annotated_type)
  *             if not instance:
  */
-      __pyx_t_3 = PyObject_RichCompare(((PyObject *)__pyx_v_val_type), __pyx_v_annotated_type, Py_NE); __Pyx_XGOTREF(__pyx_t_3); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 60, __pyx_L24_error)
-      __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 60, __pyx_L24_error)
+      __pyx_t_3 = PyObject_RichCompare(((PyObject *)__pyx_v_val_type), __pyx_v_annotated_type, Py_NE); __Pyx_XGOTREF(__pyx_t_3); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 70, __pyx_L24_error)
+      __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 70, __pyx_L24_error)
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
       if (__pyx_t_2) {
 
-        /* "datamodel/validation.pyx":61
- *             pass
+        /* "datamodel/validation.pyx":71
+ *             pass # value will be calculated.
  *         elif val_type <> annotated_type:
  *             instance = is_instanceof(value, annotated_type)             # <<<<<<<<<<<<<<
  *             if not instance:
  *                 errors.append({
  */
-        if (!(likely(PyType_CheckExact(__pyx_v_annotated_type))||((__pyx_v_annotated_type) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "type", Py_TYPE(__pyx_v_annotated_type)->tp_name), 0))) __PYX_ERR(0, 61, __pyx_L24_error)
+        if (!(likely(PyType_CheckExact(__pyx_v_annotated_type))||((__pyx_v_annotated_type) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "type", Py_TYPE(__pyx_v_annotated_type)->tp_name), 0))) __PYX_ERR(0, 71, __pyx_L24_error)
         __pyx_v_instance = __pyx_f_9datamodel_10validation_is_instanceof(__pyx_v_value, ((PyTypeObject*)__pyx_v_annotated_type), 0);
 
-        /* "datamodel/validation.pyx":62
+        /* "datamodel/validation.pyx":72
  *         elif val_type <> annotated_type:
  *             instance = is_instanceof(value, annotated_type)
  *             if not instance:             # <<<<<<<<<<<<<<
@@ -2527,65 +2760,65 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
         __pyx_t_2 = ((!(__pyx_v_instance != 0)) != 0);
         if (__pyx_t_2) {
 
-          /* "datamodel/validation.pyx":64
+          /* "datamodel/validation.pyx":74
  *             if not instance:
  *                 errors.append({
  *                     "field": name,             # <<<<<<<<<<<<<<
  *                     "value": value,
  *                     "error": "Instance Type",
  */
-          __pyx_t_3 = __Pyx_PyDict_NewPresized(6); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 64, __pyx_L24_error)
+          __pyx_t_3 = __Pyx_PyDict_NewPresized(6); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 74, __pyx_L24_error)
           __Pyx_GOTREF(__pyx_t_3);
-          if (PyDict_SetItem(__pyx_t_3, __pyx_n_u_field, __pyx_v_name) < 0) __PYX_ERR(0, 64, __pyx_L24_error)
+          if (PyDict_SetItem(__pyx_t_3, __pyx_n_u_field, __pyx_v_name) < 0) __PYX_ERR(0, 74, __pyx_L24_error)
 
-          /* "datamodel/validation.pyx":65
+          /* "datamodel/validation.pyx":75
  *                 errors.append({
  *                     "field": name,
  *                     "value": value,             # <<<<<<<<<<<<<<
  *                     "error": "Instance Type",
  *                     "value_type": val_type,
  */
-          if (PyDict_SetItem(__pyx_t_3, __pyx_n_u_value, __pyx_v_value) < 0) __PYX_ERR(0, 64, __pyx_L24_error)
-          if (PyDict_SetItem(__pyx_t_3, __pyx_n_u_error, __pyx_kp_u_Instance_Type) < 0) __PYX_ERR(0, 64, __pyx_L24_error)
+          if (PyDict_SetItem(__pyx_t_3, __pyx_n_u_value, __pyx_v_value) < 0) __PYX_ERR(0, 74, __pyx_L24_error)
+          if (PyDict_SetItem(__pyx_t_3, __pyx_n_u_error, __pyx_kp_u_Instance_Type) < 0) __PYX_ERR(0, 74, __pyx_L24_error)
 
-          /* "datamodel/validation.pyx":67
+          /* "datamodel/validation.pyx":77
  *                     "value": value,
  *                     "error": "Instance Type",
  *                     "value_type": val_type,             # <<<<<<<<<<<<<<
  *                     "annotation": annotated_type,
  *                     "exception": None
  */
-          if (PyDict_SetItem(__pyx_t_3, __pyx_n_u_value_type, ((PyObject *)__pyx_v_val_type)) < 0) __PYX_ERR(0, 64, __pyx_L24_error)
+          if (PyDict_SetItem(__pyx_t_3, __pyx_n_u_value_type, ((PyObject *)__pyx_v_val_type)) < 0) __PYX_ERR(0, 74, __pyx_L24_error)
 
-          /* "datamodel/validation.pyx":68
+          /* "datamodel/validation.pyx":78
  *                     "error": "Instance Type",
  *                     "value_type": val_type,
  *                     "annotation": annotated_type,             # <<<<<<<<<<<<<<
  *                     "exception": None
  *                 })
  */
-          if (PyDict_SetItem(__pyx_t_3, __pyx_n_u_annotation, __pyx_v_annotated_type) < 0) __PYX_ERR(0, 64, __pyx_L24_error)
+          if (PyDict_SetItem(__pyx_t_3, __pyx_n_u_annotation, __pyx_v_annotated_type) < 0) __PYX_ERR(0, 74, __pyx_L24_error)
 
-          /* "datamodel/validation.pyx":69
+          /* "datamodel/validation.pyx":79
  *                     "value_type": val_type,
  *                     "annotation": annotated_type,
  *                     "exception": None             # <<<<<<<<<<<<<<
  *                 })
  *         else:
  */
-          if (PyDict_SetItem(__pyx_t_3, __pyx_n_u_exception, Py_None) < 0) __PYX_ERR(0, 64, __pyx_L24_error)
+          if (PyDict_SetItem(__pyx_t_3, __pyx_n_u_exception, Py_None) < 0) __PYX_ERR(0, 74, __pyx_L24_error)
 
-          /* "datamodel/validation.pyx":63
+          /* "datamodel/validation.pyx":73
  *             instance = is_instanceof(value, annotated_type)
  *             if not instance:
  *                 errors.append({             # <<<<<<<<<<<<<<
  *                     "field": name,
  *                     "value": value,
  */
-          __pyx_t_13 = __Pyx_PyList_Append(__pyx_v_errors, __pyx_t_3); if (unlikely(__pyx_t_13 == ((int)-1))) __PYX_ERR(0, 63, __pyx_L24_error)
+          __pyx_t_13 = __Pyx_PyList_Append(__pyx_v_errors, __pyx_t_3); if (unlikely(__pyx_t_13 == ((int)-1))) __PYX_ERR(0, 73, __pyx_L24_error)
           __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-          /* "datamodel/validation.pyx":62
+          /* "datamodel/validation.pyx":72
  *         elif val_type <> annotated_type:
  *             instance = is_instanceof(value, annotated_type)
  *             if not instance:             # <<<<<<<<<<<<<<
@@ -2594,9 +2827,9 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
  */
         }
 
-        /* "datamodel/validation.pyx":60
- *             # TODO: validation of annotated types
- *             pass
+        /* "datamodel/validation.pyx":70
+ *         elif is_function(val_type):
+ *             pass # value will be calculated.
  *         elif val_type <> annotated_type:             # <<<<<<<<<<<<<<
  *             instance = is_instanceof(value, annotated_type)
  *             if not instance:
@@ -2604,7 +2837,7 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
         goto __pyx_L30;
       }
 
-      /* "datamodel/validation.pyx":72
+      /* "datamodel/validation.pyx":82
  *                 })
  *         else:
  *             return errors             # <<<<<<<<<<<<<<
@@ -2619,7 +2852,7 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
       }
       __pyx_L30:;
 
-      /* "datamodel/validation.pyx":56
+      /* "datamodel/validation.pyx":60
  *                 })
  *     # check: data type hint
  *     try:             # <<<<<<<<<<<<<<
@@ -2639,7 +2872,7 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-    /* "datamodel/validation.pyx":73
+    /* "datamodel/validation.pyx":83
  *         else:
  *             return errors
  *     except (TypeError, ValueError) as e:             # <<<<<<<<<<<<<<
@@ -2649,7 +2882,7 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
     __pyx_t_16 = __Pyx_PyErr_ExceptionMatches(__pyx_builtin_TypeError) || __Pyx_PyErr_ExceptionMatches(__pyx_builtin_ValueError);
     if (__pyx_t_16) {
       __Pyx_AddTraceback("datamodel.validation.validator", __pyx_clineno, __pyx_lineno, __pyx_filename);
-      if (__Pyx_GetException(&__pyx_t_3, &__pyx_t_10, &__pyx_t_4) < 0) __PYX_ERR(0, 73, __pyx_L26_except_error)
+      if (__Pyx_GetException(&__pyx_t_3, &__pyx_t_10, &__pyx_t_4) < 0) __PYX_ERR(0, 83, __pyx_L26_except_error)
       __Pyx_GOTREF(__pyx_t_3);
       __Pyx_GOTREF(__pyx_t_10);
       __Pyx_GOTREF(__pyx_t_4);
@@ -2657,66 +2890,66 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
       __pyx_v_e = __pyx_t_10;
       /*try:*/ {
 
-        /* "datamodel/validation.pyx":75
+        /* "datamodel/validation.pyx":85
  *     except (TypeError, ValueError) as e:
  *         errors.append({
  *             "field": name,             # <<<<<<<<<<<<<<
  *             "value": value,
  *             "error": "Instance Type",
  */
-        __pyx_t_8 = __Pyx_PyDict_NewPresized(6); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 75, __pyx_L37_error)
+        __pyx_t_8 = __Pyx_PyDict_NewPresized(6); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 85, __pyx_L41_error)
         __Pyx_GOTREF(__pyx_t_8);
-        if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_field, __pyx_v_name) < 0) __PYX_ERR(0, 75, __pyx_L37_error)
+        if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_field, __pyx_v_name) < 0) __PYX_ERR(0, 85, __pyx_L41_error)
 
-        /* "datamodel/validation.pyx":76
+        /* "datamodel/validation.pyx":86
  *         errors.append({
  *             "field": name,
  *             "value": value,             # <<<<<<<<<<<<<<
  *             "error": "Instance Type",
  *             "value_type": val_type,
  */
-        if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_value, __pyx_v_value) < 0) __PYX_ERR(0, 75, __pyx_L37_error)
-        if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_error, __pyx_kp_u_Instance_Type) < 0) __PYX_ERR(0, 75, __pyx_L37_error)
+        if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_value, __pyx_v_value) < 0) __PYX_ERR(0, 85, __pyx_L41_error)
+        if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_error, __pyx_kp_u_Instance_Type) < 0) __PYX_ERR(0, 85, __pyx_L41_error)
 
-        /* "datamodel/validation.pyx":78
+        /* "datamodel/validation.pyx":88
  *             "value": value,
  *             "error": "Instance Type",
  *             "value_type": val_type,             # <<<<<<<<<<<<<<
  *             "annotation": annotated_type,
  *             "exception": e
  */
-        if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_value_type, ((PyObject *)__pyx_v_val_type)) < 0) __PYX_ERR(0, 75, __pyx_L37_error)
+        if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_value_type, ((PyObject *)__pyx_v_val_type)) < 0) __PYX_ERR(0, 85, __pyx_L41_error)
 
-        /* "datamodel/validation.pyx":79
+        /* "datamodel/validation.pyx":89
  *             "error": "Instance Type",
  *             "value_type": val_type,
  *             "annotation": annotated_type,             # <<<<<<<<<<<<<<
  *             "exception": e
  *         })
  */
-        if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_annotation, __pyx_v_annotated_type) < 0) __PYX_ERR(0, 75, __pyx_L37_error)
+        if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_annotation, __pyx_v_annotated_type) < 0) __PYX_ERR(0, 85, __pyx_L41_error)
 
-        /* "datamodel/validation.pyx":80
+        /* "datamodel/validation.pyx":90
  *             "value_type": val_type,
  *             "annotation": annotated_type,
  *             "exception": e             # <<<<<<<<<<<<<<
  *         })
  *     return errors
  */
-        if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_exception, __pyx_v_e) < 0) __PYX_ERR(0, 75, __pyx_L37_error)
+        if (PyDict_SetItem(__pyx_t_8, __pyx_n_u_exception, __pyx_v_e) < 0) __PYX_ERR(0, 85, __pyx_L41_error)
 
-        /* "datamodel/validation.pyx":74
+        /* "datamodel/validation.pyx":84
  *             return errors
  *     except (TypeError, ValueError) as e:
  *         errors.append({             # <<<<<<<<<<<<<<
  *             "field": name,
  *             "value": value,
  */
-        __pyx_t_13 = __Pyx_PyList_Append(__pyx_v_errors, __pyx_t_8); if (unlikely(__pyx_t_13 == ((int)-1))) __PYX_ERR(0, 74, __pyx_L37_error)
+        __pyx_t_13 = __Pyx_PyList_Append(__pyx_v_errors, __pyx_t_8); if (unlikely(__pyx_t_13 == ((int)-1))) __PYX_ERR(0, 84, __pyx_L41_error)
         __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
       }
 
-      /* "datamodel/validation.pyx":73
+      /* "datamodel/validation.pyx":83
  *         else:
  *             return errors
  *     except (TypeError, ValueError) as e:             # <<<<<<<<<<<<<<
@@ -2727,9 +2960,9 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
         /*normal exit:*/{
           __Pyx_DECREF(__pyx_v_e);
           __pyx_v_e = NULL;
-          goto __pyx_L38;
+          goto __pyx_L42;
         }
-        __pyx_L37_error:;
+        __pyx_L41_error:;
         /*exception exit:*/{
           __Pyx_PyThreadState_declare
           __Pyx_PyThreadState_assign
@@ -2745,7 +2978,7 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
           __Pyx_XGOTREF(__pyx_t_20);
           __Pyx_XGOTREF(__pyx_t_19);
           __Pyx_XGOTREF(__pyx_t_18);
-          __pyx_t_16 = __pyx_lineno; __pyx_t_9 = __pyx_clineno; __pyx_t_24 = __pyx_filename;
+          __pyx_t_16 = __pyx_lineno; __pyx_t_9 = __pyx_clineno; __pyx_t_25 = __pyx_filename;
           {
             __Pyx_DECREF(__pyx_v_e);
             __pyx_v_e = NULL;
@@ -2761,10 +2994,10 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
           __Pyx_XGIVEREF(__pyx_t_21);
           __Pyx_ErrRestore(__pyx_t_23, __pyx_t_22, __pyx_t_21);
           __pyx_t_23 = 0; __pyx_t_22 = 0; __pyx_t_21 = 0; __pyx_t_20 = 0; __pyx_t_19 = 0; __pyx_t_18 = 0;
-          __pyx_lineno = __pyx_t_16; __pyx_clineno = __pyx_t_9; __pyx_filename = __pyx_t_24;
+          __pyx_lineno = __pyx_t_16; __pyx_clineno = __pyx_t_9; __pyx_filename = __pyx_t_25;
           goto __pyx_L26_except_error;
         }
-        __pyx_L38:;
+        __pyx_L42:;
       }
       __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
       __Pyx_XDECREF(__pyx_t_10); __pyx_t_10 = 0;
@@ -2774,7 +3007,7 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
     goto __pyx_L26_except_error;
     __pyx_L26_except_error:;
 
-    /* "datamodel/validation.pyx":56
+    /* "datamodel/validation.pyx":60
  *                 })
  *     # check: data type hint
  *     try:             # <<<<<<<<<<<<<<
@@ -2800,7 +3033,7 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
     __pyx_L29_try_end:;
   }
 
-  /* "datamodel/validation.pyx":82
+  /* "datamodel/validation.pyx":92
  *             "exception": e
  *         })
  *     return errors             # <<<<<<<<<<<<<<
@@ -2810,8 +3043,8 @@ static PyObject *__pyx_pf_9datamodel_10validation_4validator(CYTHON_UNUSED PyObj
   __pyx_r = __pyx_v_errors;
   goto __pyx_L0;
 
-  /* "datamodel/validation.pyx":26
- *             )
+  /* "datamodel/validation.pyx":30
+ *     return isinstance(value, (types.BuiltinFunctionType, types.FunctionType, partial))
  * 
  * def validator(object F, str name, object value, object annotated_type):             # <<<<<<<<<<<<<<
  *     val_type = type(value)
@@ -2890,7 +3123,9 @@ static struct PyModuleDef __pyx_moduledef = {
 static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_kp_u_, __pyx_k_, sizeof(__pyx_k_), 0, 1, 0, 0},
   {&__pyx_n_s_AttributeError, __pyx_k_AttributeError, sizeof(__pyx_k_AttributeError), 0, 0, 1, 1},
+  {&__pyx_n_s_BuiltinFunctionType, __pyx_k_BuiltinFunctionType, sizeof(__pyx_k_BuiltinFunctionType), 0, 0, 1, 1},
   {&__pyx_n_s_F, __pyx_k_F, sizeof(__pyx_k_F), 0, 0, 1, 1},
+  {&__pyx_n_s_FunctionType, __pyx_k_FunctionType, sizeof(__pyx_k_FunctionType), 0, 0, 1, 1},
   {&__pyx_kp_u_Instance_Type, __pyx_k_Instance_Type, sizeof(__pyx_k_Instance_Type), 0, 1, 0, 0},
   {&__pyx_n_s_MISSING_TYPE, __pyx_k_MISSING_TYPE, sizeof(__pyx_k_MISSING_TYPE), 0, 0, 1, 1},
   {&__pyx_n_s_TypeError, __pyx_k_TypeError, sizeof(__pyx_k_TypeError), 0, 0, 1, 1},
@@ -2908,6 +3143,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_u_exception, __pyx_k_exception, sizeof(__pyx_k_exception), 0, 1, 0, 1},
   {&__pyx_n_u_field, __pyx_k_field, sizeof(__pyx_k_field), 0, 1, 0, 1},
   {&__pyx_n_s_fn, __pyx_k_fn, sizeof(__pyx_k_fn), 0, 0, 1, 1},
+  {&__pyx_n_s_functools, __pyx_k_functools, sizeof(__pyx_k_functools), 0, 0, 1, 1},
   {&__pyx_n_s_import, __pyx_k_import, sizeof(__pyx_k_import), 0, 0, 1, 1},
   {&__pyx_n_s_instance, __pyx_k_instance, sizeof(__pyx_k_instance), 0, 0, 1, 1},
   {&__pyx_n_s_main, __pyx_k_main, sizeof(__pyx_k_main), 0, 0, 1, 1},
@@ -2915,9 +3151,14 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_module, __pyx_k_module, sizeof(__pyx_k_module), 0, 0, 1, 1},
   {&__pyx_n_s_name, __pyx_k_name, sizeof(__pyx_k_name), 0, 0, 1, 1},
   {&__pyx_n_s_name_2, __pyx_k_name_2, sizeof(__pyx_k_name_2), 0, 0, 1, 1},
+  {&__pyx_n_s_nullable, __pyx_k_nullable, sizeof(__pyx_k_nullable), 0, 0, 1, 1},
+  {&__pyx_n_s_partial, __pyx_k_partial, sizeof(__pyx_k_partial), 0, 0, 1, 1},
+  {&__pyx_n_s_required, __pyx_k_required, sizeof(__pyx_k_required), 0, 0, 1, 1},
+  {&__pyx_n_u_required, __pyx_k_required, sizeof(__pyx_k_required), 0, 1, 0, 1},
   {&__pyx_n_s_result, __pyx_k_result, sizeof(__pyx_k_result), 0, 0, 1, 1},
   {&__pyx_n_s_test, __pyx_k_test, sizeof(__pyx_k_test), 0, 0, 1, 1},
   {&__pyx_n_s_type, __pyx_k_type, sizeof(__pyx_k_type), 0, 0, 1, 1},
+  {&__pyx_n_s_types, __pyx_k_types, sizeof(__pyx_k_types), 0, 0, 1, 1},
   {&__pyx_n_u_typing, __pyx_k_typing, sizeof(__pyx_k_typing), 0, 1, 0, 1},
   {&__pyx_n_s_val_type, __pyx_k_val_type, sizeof(__pyx_k_val_type), 0, 0, 1, 1},
   {&__pyx_n_s_validator, __pyx_k_validator, sizeof(__pyx_k_validator), 0, 0, 1, 1},
@@ -2928,9 +3169,9 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {0, 0, 0, 0, 0, 0, 0}
 };
 static CYTHON_SMALL_CODE int __Pyx_InitCachedBuiltins(void) {
-  __pyx_builtin_AttributeError = __Pyx_GetBuiltinName(__pyx_n_s_AttributeError); if (!__pyx_builtin_AttributeError) __PYX_ERR(0, 21, __pyx_L1_error)
-  __pyx_builtin_TypeError = __Pyx_GetBuiltinName(__pyx_n_s_TypeError); if (!__pyx_builtin_TypeError) __PYX_ERR(0, 21, __pyx_L1_error)
-  __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) __PYX_ERR(0, 21, __pyx_L1_error)
+  __pyx_builtin_AttributeError = __Pyx_GetBuiltinName(__pyx_n_s_AttributeError); if (!__pyx_builtin_AttributeError) __PYX_ERR(0, 22, __pyx_L1_error)
+  __pyx_builtin_TypeError = __Pyx_GetBuiltinName(__pyx_n_s_TypeError); if (!__pyx_builtin_TypeError) __PYX_ERR(0, 22, __pyx_L1_error)
+  __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) __PYX_ERR(0, 22, __pyx_L1_error)
   return 0;
   __pyx_L1_error:;
   return -1;
@@ -2940,17 +3181,17 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__Pyx_InitCachedConstants", 0);
 
-  /* "datamodel/validation.pyx":26
- *             )
+  /* "datamodel/validation.pyx":30
+ *     return isinstance(value, (types.BuiltinFunctionType, types.FunctionType, partial))
  * 
  * def validator(object F, str name, object value, object annotated_type):             # <<<<<<<<<<<<<<
  *     val_type = type(value)
  *     if not annotated_type:
  */
-  __pyx_tuple__2 = PyTuple_Pack(10, __pyx_n_s_F, __pyx_n_s_name, __pyx_n_s_value, __pyx_n_s_annotated_type, __pyx_n_s_val_type, __pyx_n_s_errors, __pyx_n_s_fn, __pyx_n_s_result, __pyx_n_s_e, __pyx_n_s_instance); if (unlikely(!__pyx_tuple__2)) __PYX_ERR(0, 26, __pyx_L1_error)
+  __pyx_tuple__2 = PyTuple_Pack(10, __pyx_n_s_F, __pyx_n_s_name, __pyx_n_s_value, __pyx_n_s_annotated_type, __pyx_n_s_val_type, __pyx_n_s_errors, __pyx_n_s_fn, __pyx_n_s_result, __pyx_n_s_e, __pyx_n_s_instance); if (unlikely(!__pyx_tuple__2)) __PYX_ERR(0, 30, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__2);
   __Pyx_GIVEREF(__pyx_tuple__2);
-  __pyx_codeobj__3 = (PyObject*)__Pyx_PyCode_New(4, 0, 10, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__2, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_datamodel_validation_pyx, __pyx_n_s_validator, 26, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__3)) __PYX_ERR(0, 26, __pyx_L1_error)
+  __pyx_codeobj__3 = (PyObject*)__Pyx_PyCode_New(4, 0, 10, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__2, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_datamodel_validation_pyx, __pyx_n_s_validator, 30, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__3)) __PYX_ERR(0, 30, __pyx_L1_error)
   __Pyx_RefNannyFinishContext();
   return 0;
   __pyx_L1_error:;
@@ -3234,8 +3475,8 @@ if (!__Pyx_RefNanny) {
  * #
  * from libcpp cimport bool
  * from dataclasses import _MISSING_TYPE             # <<<<<<<<<<<<<<
- * 
- * 
+ * from functools import partial
+ * import types
  */
   __pyx_t_1 = PyList_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 5, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
@@ -3251,27 +3492,60 @@ if (!__Pyx_RefNanny) {
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "datamodel/validation.pyx":26
- *             )
+  /* "datamodel/validation.pyx":6
+ * from libcpp cimport bool
+ * from dataclasses import _MISSING_TYPE
+ * from functools import partial             # <<<<<<<<<<<<<<
+ * import types
+ * 
+ */
+  __pyx_t_2 = PyList_New(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 6, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  __Pyx_INCREF(__pyx_n_s_partial);
+  __Pyx_GIVEREF(__pyx_n_s_partial);
+  PyList_SET_ITEM(__pyx_t_2, 0, __pyx_n_s_partial);
+  __pyx_t_1 = __Pyx_Import(__pyx_n_s_functools, __pyx_t_2, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 6, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __pyx_t_2 = __Pyx_ImportFrom(__pyx_t_1, __pyx_n_s_partial); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 6, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_partial, __pyx_t_2) < 0) __PYX_ERR(0, 6, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "datamodel/validation.pyx":7
+ * from dataclasses import _MISSING_TYPE
+ * from functools import partial
+ * import types             # <<<<<<<<<<<<<<
+ * 
+ * cpdef bool is_callable(object value):
+ */
+  __pyx_t_1 = __Pyx_Import(__pyx_n_s_types, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 7, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_types, __pyx_t_1) < 0) __PYX_ERR(0, 7, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "datamodel/validation.pyx":30
+ *     return isinstance(value, (types.BuiltinFunctionType, types.FunctionType, partial))
  * 
  * def validator(object F, str name, object value, object annotated_type):             # <<<<<<<<<<<<<<
  *     val_type = type(value)
  *     if not annotated_type:
  */
-  __pyx_t_2 = PyCFunction_NewEx(&__pyx_mdef_9datamodel_10validation_5validator, NULL, __pyx_n_s_datamodel_validation); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 26, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_2);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_validator, __pyx_t_2) < 0) __PYX_ERR(0, 26, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_9datamodel_10validation_5validator, NULL, __pyx_n_s_datamodel_validation); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 30, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_validator, __pyx_t_1) < 0) __PYX_ERR(0, 30, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "datamodel/validation.pyx":1
  * # cython: language_level=3, embedsignature=True, boundscheck=False, wraparound=True, initializedcheck=False             # <<<<<<<<<<<<<<
  * # Copyright (C) 2018-present Jesus Lara
  * #
  */
-  __pyx_t_2 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 1, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_2);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_test, __pyx_t_2) < 0) __PYX_ERR(0, 1, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __pyx_t_1 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_test, __pyx_t_1) < 0) __PYX_ERR(0, 1, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /*--- Wrapped vars code ---*/
 
@@ -4237,6 +4511,119 @@ static CYTHON_INLINE void __Pyx_ExceptionSwap(PyObject **type, PyObject **value,
     *type = tmp_type;
     *value = tmp_value;
     *tb = tmp_tb;
+}
+#endif
+
+/* GetAttr */
+static CYTHON_INLINE PyObject *__Pyx_GetAttr(PyObject *o, PyObject *n) {
+#if CYTHON_USE_TYPE_SLOTS
+#if PY_MAJOR_VERSION >= 3
+    if (likely(PyUnicode_Check(n)))
+#else
+    if (likely(PyString_Check(n)))
+#endif
+        return __Pyx_PyObject_GetAttrStr(o, n);
+#endif
+    return PyObject_GetAttr(o, n);
+}
+
+/* HasAttr */
+static CYTHON_INLINE int __Pyx_HasAttr(PyObject *o, PyObject *n) {
+    PyObject *r;
+    if (unlikely(!__Pyx_PyBaseString_Check(n))) {
+        PyErr_SetString(PyExc_TypeError,
+                        "hasattr(): attribute name must be string");
+        return -1;
+    }
+    r = __Pyx_GetAttr(o, n);
+    if (unlikely(!r)) {
+        PyErr_Clear();
+        return 0;
+    } else {
+        Py_DECREF(r);
+        return 1;
+    }
+}
+
+/* PyObjectCallMethO */
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallMethO(PyObject *func, PyObject *arg) {
+    PyObject *self, *result;
+    PyCFunction cfunc;
+    cfunc = PyCFunction_GET_FUNCTION(func);
+    self = PyCFunction_GET_SELF(func);
+    if (unlikely(Py_EnterRecursiveCall((char*)" while calling a Python object")))
+        return NULL;
+    result = cfunc(self, arg);
+    Py_LeaveRecursiveCall();
+    if (unlikely(!result) && unlikely(!PyErr_Occurred())) {
+        PyErr_SetString(
+            PyExc_SystemError,
+            "NULL result without error in PyObject_Call");
+    }
+    return result;
+}
+#endif
+
+/* PyObjectCallNoArg */
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallNoArg(PyObject *func) {
+#if CYTHON_FAST_PYCALL
+    if (PyFunction_Check(func)) {
+        return __Pyx_PyFunction_FastCall(func, NULL, 0);
+    }
+#endif
+#ifdef __Pyx_CyFunction_USED
+    if (likely(PyCFunction_Check(func) || __Pyx_CyFunction_Check(func)))
+#else
+    if (likely(PyCFunction_Check(func)))
+#endif
+    {
+        if (likely(PyCFunction_GET_FLAGS(func) & METH_NOARGS)) {
+            return __Pyx_PyObject_CallMethO(func, NULL);
+        }
+    }
+    return __Pyx_PyObject_Call(func, __pyx_empty_tuple, NULL);
+}
+#endif
+
+/* PyObjectCallOneArg */
+#if CYTHON_COMPILING_IN_CPYTHON
+static PyObject* __Pyx__PyObject_CallOneArg(PyObject *func, PyObject *arg) {
+    PyObject *result;
+    PyObject *args = PyTuple_New(1);
+    if (unlikely(!args)) return NULL;
+    Py_INCREF(arg);
+    PyTuple_SET_ITEM(args, 0, arg);
+    result = __Pyx_PyObject_Call(func, args, NULL);
+    Py_DECREF(args);
+    return result;
+}
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObject *arg) {
+#if CYTHON_FAST_PYCALL
+    if (PyFunction_Check(func)) {
+        return __Pyx_PyFunction_FastCall(func, &arg, 1);
+    }
+#endif
+    if (likely(PyCFunction_Check(func))) {
+        if (likely(PyCFunction_GET_FLAGS(func) & METH_O)) {
+            return __Pyx_PyObject_CallMethO(func, arg);
+#if CYTHON_FAST_PYCCALL
+        } else if (__Pyx_PyFastCFunction_Check(func)) {
+            return __Pyx_PyCFunction_FastCall(func, &arg, 1);
+#endif
+        }
+    }
+    return __Pyx__PyObject_CallOneArg(func, arg);
+}
+#else
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObject *arg) {
+    PyObject *result;
+    PyObject *args = PyTuple_Pack(1, arg);
+    if (unlikely(!args)) return NULL;
+    result = __Pyx_PyObject_Call(func, args, NULL);
+    Py_DECREF(args);
+    return result;
 }
 #endif
 
