@@ -135,7 +135,7 @@ setup(
         "asyncio==3.4.3",
         "cchardet==2.1.7",
         "objectpath==0.6.1",
-        "orjson==3.8.5",
+        "orjson==3.8.6",
         'typing_extensions==4.4.0',
         "asyncpg==0.27.0",
         "python-dateutil==2.8.2"
