@@ -11,10 +11,12 @@ from dataclasses import (
     dataclass,
     is_dataclass,
     make_dataclass,
+    fields
 )
 from typing import Any, Optional, Union
 from functools import partial
 from enum import EnumMeta
+from operator import attrgetter
 from orjson import OPT_INDENT_2
 from datamodel.converters import parse_type
 from datamodel.fields import Field
@@ -40,6 +42,7 @@ class Meta:
     dsn: Optional[str] = None
     datasource: Optional[str] = None
     connection: Optional[Callable] = None
+    remove_nulls: bool = False
 
 def set_connection(cls, conn: Callable):
     cls.connection = conn
@@ -89,7 +92,7 @@ def create_dataclass(
     create_dataclass.
        Create a Dataclass from a simple Class
     """
-    dc = dataclass(unsafe_hash=True, init=True, order=False, eq=True, frozen=frozen)(new_cls)
+    dc = dataclass(unsafe_hash=True, repr=False, init=True, order=False, eq=True, frozen=frozen)(new_cls)
     setattr(dc, "__setattr__", _dc_method_setattr)
     # adding a properly internal json encoder:
     dc.__encoder__ = DefaultEncoder()
@@ -209,11 +212,31 @@ class BaseModel(metaclass=ModelMeta):
     def column(self, name):
         return self.__columns__[name]
 
+    def __repr__(self):
+        nodef_f_vals = (
+            (f.name, attrgetter(f.name)(self))
+            for f in fields(self)
+            if attrgetter(f.name)(self) != f.default
+        )
+        nodef_f_repr = ", ".join(f"{name}={value}" for name, value in nodef_f_vals)
+        return f"{self.__class__.__name__}({nodef_f_repr})"
+
+    def remove_nulls(self, obj: Any) -> dict[str, Any]:
+        """Recursively removes any fields with None values from the given object."""
+        if isinstance(obj, list):
+            return [self.remove_nulls(item) for item in obj]
+        elif isinstance(obj, dict):
+            return {key: self.remove_nulls(value) for key, value in obj.items() if value is not None}
+        else:
+            return obj
+
     def dict(self):
+        if self.Meta.remove_nulls is True:
+            return self.remove_nulls(asdict(self, dict_factory=dict))
         return asdict(self)
 
     def to_dict(self):
-        return asdict(self)
+        return self.dict()
 
     def json(self, **kwargs):
         encoder = self.__encoder__
@@ -333,6 +356,15 @@ class BaseModel(metaclass=ModelMeta):
             self._validation()
         except RuntimeError as err:
             logging.exception(err)
+        ### Post Init
+        ## check if remove nulls:
+        # print('META >>> ', self.Meta.nulls)
+        # if self.Meta.remove_nulls is True:
+        #     null_fields = [field_name for field_name, value in self.__dict__.items() if value is None]
+        #     print('NULL FIELDS >> ', null_fields)
+        #     for field_name in null_fields:
+        #         delattr(self, field_name)
+
 
     def is_callable(self, value) -> bool:
         is_missing = (value == _MISSING_TYPE)
@@ -559,11 +591,11 @@ class BaseModel(metaclass=ModelMeta):
                         "enum": list(map(lambda c: c.value, _type))
                     }
                 elif isinstance(_type, ModelMeta):
-                    
+
                     t = 'object'
                     enum_type = None
                     sch = _type.schema(as_dict = True)
-                    
+
                     if 'fk' in field.metadata:
                         api = field.metadata['api'] if 'api' in field.metadata else sch['table']
                         fk = field.metadata['fk'].split("|")
@@ -574,7 +606,7 @@ class BaseModel(metaclass=ModelMeta):
                         }
                     else:
                         ref = sch['$id']
-                        
+
                     defs[name] = sch
                 else:
                     ref = None
