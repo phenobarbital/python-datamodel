@@ -18,6 +18,25 @@ from datamodel.types import (
     DB_TYPES
 )
 
+def fields(obj: Any):
+    """Return a tuple describing the fields of this dataclass.
+
+    Accepts a dataclass or an instance of one. Tuple elements are of
+    type Field.
+    """
+
+    # Might it be worth caching this, per class?
+    try:
+        _fields = getattr(obj, '__dataclass_fields__')
+    except AttributeError as exc:
+        raise TypeError(
+            'must be called with a dataclass type or instance'
+        ) from exc
+
+    # Exclude pseudo-fields.  Note that fields is sorted by insertion
+    # order, so the order of the tuple is as the fields were defined.
+    return tuple(f for f in _fields.values() if f._field_type is _FIELD)
+
 
 class Field(ff):
     """

@@ -1,6 +1,6 @@
 from typing import Optional
 from datetime import datetime
-from datamodel import Field, BaseModel
+from datamodel import Field, BaseModel, fields
 
 class QueryModel(BaseModel):
     query_slug: str = Field(required=True, primary_key=True)
@@ -48,12 +48,13 @@ class QueryModel(BaseModel):
         name = 'queries'
         schema = 'troc'
         app_label = 'troc'
-        strict = True
+        strict = False
         frozen = False
         remove_nulls = True # Auto-remove nullable (with null value) fields
 
-
 query = QueryModel(query_slug='walmart_stores')
-print(query)
+query.create_field("tester", 'Prueba')
+# print('TEST >> ', query.tester)
+# print(fields(query))
 print('EXPORT')
 print(query.dict())
