@@ -10,8 +10,7 @@ from dataclasses import (
     asdict,
     dataclass,
     is_dataclass,
-    make_dataclass,
-    fields
+    make_dataclass
 )
 from typing import Any, Optional, Union
 from functools import partial
@@ -19,7 +18,7 @@ from enum import EnumMeta
 from operator import attrgetter
 from orjson import OPT_INDENT_2
 from datamodel.converters import parse_type
-from datamodel.fields import Field
+from datamodel.fields import Field, fields
 from datamodel.types import JSON_TYPES
 from datamodel.validation import validator
 
@@ -86,13 +85,14 @@ def _dc_method_setattr(
 
 def create_dataclass(
     new_cls: Union[object, Any],
+    strict: bool = False,
     frozen: bool = False
 ) -> Callable:
     """
     create_dataclass.
        Create a Dataclass from a simple Class
     """
-    dc = dataclass(unsafe_hash=True, repr=False, init=True, order=False, eq=True, frozen=frozen)(new_cls)
+    dc = dataclass(unsafe_hash=strict, repr=False, init=True, order=False, eq=True, frozen=frozen)(new_cls)
     setattr(dc, "__setattr__", _dc_method_setattr)
     # adding a properly internal json encoder:
     dc.__encoder__ = DefaultEncoder()
@@ -113,9 +113,15 @@ class ModelMeta(type):
         """__new__ is a classmethod, even without @classmethod decorator"""
         cols = []
         if "__annotations__" in attrs:
-            annotations = attrs["__annotations__"]
+            annotations = attrs.get('__annotations__', {})
+            try:
+                strict = attrs['Meta'].strict
+            except (TypeError, AttributeError, KeyError):
+                strict = True
             for field, _type in annotations.items():
-                if field in attrs:
+                if strict is False and field not in attrs:
+                    attrs[field] = Field(factory=_type, required=False, default=None)
+                elif field in attrs:
                     df = attrs[field]
                     if isinstance(df, Field):
                         setattr(cls, field, df)
@@ -125,7 +131,6 @@ class ModelMeta(type):
                         df.type = _type
                         setattr(cls, field, df)
                 else:
-                    # print(f"HERE Field: {field}, Type: {_type}")
                     # add a new field, based on type
                     df = Field(factory=_type, required=False, default=None)
                     df.name = field
@@ -137,6 +142,7 @@ class ModelMeta(type):
         attr_meta = attrs.pop("Meta", None)
         new_cls = super().__new__(cls, name, bases, attrs, **kwargs)
         new_cls.Meta = attr_meta or getattr(new_cls, "Meta", Meta)
+        new_cls.__dataclass_fields__ = cols
         if not new_cls.Meta:
             new_cls.Meta = Meta
         new_cls.Meta.set_connection = types.MethodType(
@@ -166,6 +172,7 @@ class ModelMeta(type):
             pass
         dc = create_dataclass(
             new_cls,
+            strict=new_cls.Meta.strict,
             frozen=frozen
         )
         cols = {
@@ -186,7 +193,7 @@ class ModelMeta(type):
         # Initialized Data Model = True
         cls.__initialised__ = True
         cls.__errors__ = None
-        super(ModelMeta, cls).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 class BaseModel(metaclass=ModelMeta):
@@ -247,6 +254,20 @@ class BaseModel(metaclass=ModelMeta):
     def is_valid(self):
         return bool(self.__valid__)
 
+    @classmethod
+    def add_field(cls, name: str, value: Any = None) -> None:
+        if cls.Meta.strict is True:
+            raise TypeError(
+                f'Cannot create a new field {name} on a Strict Model.'
+            )
+        if name != '__errors__':
+            f = Field(required=False, default=value)
+            f.name = name
+            f.type = type(value)
+            f._field_type = _FIELD
+            cls.__columns__[name] = f
+            cls.__dataclass_fields__[name] = f
+
     def create_field(self, name: str, value: Any) -> None:
         """create_field.
         create a new Field on Model (when strict is False).
@@ -264,7 +285,9 @@ class BaseModel(metaclass=ModelMeta):
             f = Field(required=False, default=value)
             f.name = name
             f.type = type(value)
+            f._field_type = _FIELD
             self.__columns__[name] = f
+            self.__dataclass_fields__[name] = f
             setattr(self, name, value)
 
     def set(self, name: str, value: Any) -> None:
@@ -356,14 +379,6 @@ class BaseModel(metaclass=ModelMeta):
             self._validation()
         except RuntimeError as err:
             logging.exception(err)
-        ### Post Init
-        ## check if remove nulls:
-        # print('META >>> ', self.Meta.nulls)
-        # if self.Meta.remove_nulls is True:
-        #     null_fields = [field_name for field_name, value in self.__dict__.items() if value is None]
-        #     print('NULL FIELDS >> ', null_fields)
-        #     for field_name in null_fields:
-        #         delattr(self, field_name)
 
 
     def is_callable(self, value) -> bool:
