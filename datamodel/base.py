@@ -10,14 +10,15 @@ from dataclasses import (
     asdict,
     dataclass,
     is_dataclass,
-    make_dataclass,
+    make_dataclass
 )
 from typing import Any, Optional, Union
 from functools import partial
 from enum import EnumMeta
+from operator import attrgetter
 from orjson import OPT_INDENT_2
 from datamodel.converters import parse_type
-from datamodel.fields import Field
+from datamodel.fields import Field, fields
 from datamodel.types import JSON_TYPES
 from datamodel.validation import validator
 
@@ -40,6 +41,7 @@ class Meta:
     dsn: Optional[str] = None
     datasource: Optional[str] = None
     connection: Optional[Callable] = None
+    remove_nulls: bool = False
 
 def set_connection(cls, conn: Callable):
     cls.connection = conn
@@ -83,13 +85,14 @@ def _dc_method_setattr(
 
 def create_dataclass(
     new_cls: Union[object, Any],
+    strict: bool = False,
     frozen: bool = False
 ) -> Callable:
     """
     create_dataclass.
        Create a Dataclass from a simple Class
     """
-    dc = dataclass(unsafe_hash=True, init=True, order=False, eq=True, frozen=frozen)(new_cls)
+    dc = dataclass(unsafe_hash=strict, repr=False, init=True, order=False, eq=True, frozen=frozen)(new_cls)
     setattr(dc, "__setattr__", _dc_method_setattr)
     # adding a properly internal json encoder:
     dc.__encoder__ = DefaultEncoder()
@@ -110,9 +113,15 @@ class ModelMeta(type):
         """__new__ is a classmethod, even without @classmethod decorator"""
         cols = []
         if "__annotations__" in attrs:
-            annotations = attrs["__annotations__"]
+            annotations = attrs.get('__annotations__', {})
+            try:
+                strict = attrs['Meta'].strict
+            except (TypeError, AttributeError, KeyError):
+                strict = True
             for field, _type in annotations.items():
-                if field in attrs:
+                if strict is False and field not in attrs:
+                    attrs[field] = Field(factory=_type, required=False, default=None)
+                elif field in attrs:
                     df = attrs[field]
                     if isinstance(df, Field):
                         setattr(cls, field, df)
@@ -122,7 +131,6 @@ class ModelMeta(type):
                         df.type = _type
                         setattr(cls, field, df)
                 else:
-                    # print(f"HERE Field: {field}, Type: {_type}")
                     # add a new field, based on type
                     df = Field(factory=_type, required=False, default=None)
                     df.name = field
@@ -134,6 +142,7 @@ class ModelMeta(type):
         attr_meta = attrs.pop("Meta", None)
         new_cls = super().__new__(cls, name, bases, attrs, **kwargs)
         new_cls.Meta = attr_meta or getattr(new_cls, "Meta", Meta)
+        new_cls.__dataclass_fields__ = cols
         if not new_cls.Meta:
             new_cls.Meta = Meta
         new_cls.Meta.set_connection = types.MethodType(
@@ -163,6 +172,7 @@ class ModelMeta(type):
             pass
         dc = create_dataclass(
             new_cls,
+            strict=new_cls.Meta.strict,
             frozen=frozen
         )
         cols = {
@@ -183,7 +193,7 @@ class ModelMeta(type):
         # Initialized Data Model = True
         cls.__initialised__ = True
         cls.__errors__ = None
-        super(ModelMeta, cls).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 class BaseModel(metaclass=ModelMeta):
@@ -209,11 +219,31 @@ class BaseModel(metaclass=ModelMeta):
     def column(self, name):
         return self.__columns__[name]
 
+    def __repr__(self):
+        nodef_f_vals = (
+            (f.name, attrgetter(f.name)(self))
+            for f in fields(self)
+            if attrgetter(f.name)(self) != f.default
+        )
+        nodef_f_repr = ", ".join(f"{name}={value}" for name, value in nodef_f_vals)
+        return f"{self.__class__.__name__}({nodef_f_repr})"
+
+    def remove_nulls(self, obj: Any) -> dict[str, Any]:
+        """Recursively removes any fields with None values from the given object."""
+        if isinstance(obj, list):
+            return [self.remove_nulls(item) for item in obj]
+        elif isinstance(obj, dict):
+            return {key: self.remove_nulls(value) for key, value in obj.items() if value is not None}
+        else:
+            return obj
+
     def dict(self):
+        if self.Meta.remove_nulls is True:
+            return self.remove_nulls(asdict(self, dict_factory=dict))
         return asdict(self)
 
     def to_dict(self):
-        return asdict(self)
+        return self.dict()
 
     def json(self, **kwargs):
         encoder = self.__encoder__
@@ -223,6 +253,20 @@ class BaseModel(metaclass=ModelMeta):
 
     def is_valid(self):
         return bool(self.__valid__)
+
+    @classmethod
+    def add_field(cls, name: str, value: Any = None) -> None:
+        if cls.Meta.strict is True:
+            raise TypeError(
+                f'Cannot create a new field {name} on a Strict Model.'
+            )
+        if name != '__errors__':
+            f = Field(required=False, default=value)
+            f.name = name
+            f.type = type(value)
+            f._field_type = _FIELD
+            cls.__columns__[name] = f
+            cls.__dataclass_fields__[name] = f
 
     def create_field(self, name: str, value: Any) -> None:
         """create_field.
@@ -241,7 +285,9 @@ class BaseModel(metaclass=ModelMeta):
             f = Field(required=False, default=value)
             f.name = name
             f.type = type(value)
+            f._field_type = _FIELD
             self.__columns__[name] = f
+            self.__dataclass_fields__[name] = f
             setattr(self, name, value)
 
     def set(self, name: str, value: Any) -> None:
@@ -333,6 +379,7 @@ class BaseModel(metaclass=ModelMeta):
             self._validation()
         except RuntimeError as err:
             logging.exception(err)
+
 
     def is_callable(self, value) -> bool:
         is_missing = (value == _MISSING_TYPE)
@@ -559,11 +606,11 @@ class BaseModel(metaclass=ModelMeta):
                         "enum": list(map(lambda c: c.value, _type))
                     }
                 elif isinstance(_type, ModelMeta):
-                    
+
                     t = 'object'
                     enum_type = None
                     sch = _type.schema(as_dict = True)
-                    
+
                     if 'fk' in field.metadata:
                         api = field.metadata['api'] if 'api' in field.metadata else sch['table']
                         fk = field.metadata['fk'].split("|")
@@ -574,7 +621,7 @@ class BaseModel(metaclass=ModelMeta):
                         }
                     else:
                         ref = sch['$id']
-                        
+
                     defs[name] = sch
                 else:
                     ref = None
