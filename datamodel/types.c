@@ -1205,7 +1205,7 @@ static const char __pyx_k_byte[] = "byte";
 static const char __pyx_k_date[] = "date";
 static const char __pyx_k_inet[] = "inet";
 static const char __pyx_k_json[] = "json";
-static const char __pyx_k_list[] = "list";
+static const char __pyx_k_long[] = "long";
 static const char __pyx_k_main[] = "__main__";
 static const char __pyx_k_name[] = "__name__";
 static const char __pyx_k_test[] = "__test__";
@@ -1213,12 +1213,17 @@ static const char __pyx_k_text[] = "text";
 static const char __pyx_k_time[] = "time";
 static const char __pyx_k_uuid[] = "uuid";
 static const char __pyx_k_Array[] = "Array";
+static const char __pyx_k_array[] = "array";
 static const char __pyx_k_bytea[] = "bytea";
 static const char __pyx_k_float[] = "float";
+static const char __pyx_k_int64[] = "int64";
 static const char __pyx_k_jsonb[] = "jsonb";
+static const char __pyx_k_numpy[] = "numpy";
 static const char __pyx_k_bigint[] = "bigint";
 static const char __pyx_k_hstore[] = "hstore";
 static const char __pyx_k_import[] = "__import__";
+static const char __pyx_k_number[] = "number";
+static const char __pyx_k_object[] = "object";
 static const char __pyx_k_serial[] = "serial";
 static const char __pyx_k_string[] = "string";
 static const char __pyx_k_Decimal[] = "Decimal";
@@ -1244,6 +1249,7 @@ static PyObject *__pyx_n_s_Decimal;
 static PyObject *__pyx_n_s_JSON_TYPES;
 static PyObject *__pyx_n_s_MODEL_TYPES;
 static PyObject *__pyx_n_s_UUID;
+static PyObject *__pyx_n_u_array;
 static PyObject *__pyx_n_u_bigint;
 static PyObject *__pyx_n_u_bigserial;
 static PyObject *__pyx_n_u_boolean;
@@ -1257,18 +1263,21 @@ static PyObject *__pyx_n_u_date;
 static PyObject *__pyx_n_s_datetime;
 static PyObject *__pyx_n_u_datetime;
 static PyObject *__pyx_n_s_decimal;
-static PyObject *__pyx_n_u_decimal;
 static PyObject *__pyx_n_u_float;
 static PyObject *__pyx_n_u_hstore;
 static PyObject *__pyx_n_s_import;
 static PyObject *__pyx_n_u_inet;
+static PyObject *__pyx_n_s_int64;
 static PyObject *__pyx_n_u_integer;
 static PyObject *__pyx_n_u_json;
 static PyObject *__pyx_n_u_jsonb;
-static PyObject *__pyx_n_u_list;
+static PyObject *__pyx_n_u_long;
 static PyObject *__pyx_n_s_main;
 static PyObject *__pyx_n_s_name;
+static PyObject *__pyx_n_u_number;
 static PyObject *__pyx_n_u_numeric;
+static PyObject *__pyx_n_s_numpy;
+static PyObject *__pyx_n_u_object;
 static PyObject *__pyx_n_u_serial;
 static PyObject *__pyx_n_u_string;
 static PyObject *__pyx_n_s_test;
@@ -1336,6 +1345,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_JSON_TYPES, __pyx_k_JSON_TYPES, sizeof(__pyx_k_JSON_TYPES), 0, 0, 1, 1},
   {&__pyx_n_s_MODEL_TYPES, __pyx_k_MODEL_TYPES, sizeof(__pyx_k_MODEL_TYPES), 0, 0, 1, 1},
   {&__pyx_n_s_UUID, __pyx_k_UUID, sizeof(__pyx_k_UUID), 0, 0, 1, 1},
+  {&__pyx_n_u_array, __pyx_k_array, sizeof(__pyx_k_array), 0, 1, 0, 1},
   {&__pyx_n_u_bigint, __pyx_k_bigint, sizeof(__pyx_k_bigint), 0, 1, 0, 1},
   {&__pyx_n_u_bigserial, __pyx_k_bigserial, sizeof(__pyx_k_bigserial), 0, 1, 0, 1},
   {&__pyx_n_u_boolean, __pyx_k_boolean, sizeof(__pyx_k_boolean), 0, 1, 0, 1},
@@ -1349,18 +1359,21 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_datetime, __pyx_k_datetime, sizeof(__pyx_k_datetime), 0, 0, 1, 1},
   {&__pyx_n_u_datetime, __pyx_k_datetime, sizeof(__pyx_k_datetime), 0, 1, 0, 1},
   {&__pyx_n_s_decimal, __pyx_k_decimal, sizeof(__pyx_k_decimal), 0, 0, 1, 1},
-  {&__pyx_n_u_decimal, __pyx_k_decimal, sizeof(__pyx_k_decimal), 0, 1, 0, 1},
   {&__pyx_n_u_float, __pyx_k_float, sizeof(__pyx_k_float), 0, 1, 0, 1},
   {&__pyx_n_u_hstore, __pyx_k_hstore, sizeof(__pyx_k_hstore), 0, 1, 0, 1},
   {&__pyx_n_s_import, __pyx_k_import, sizeof(__pyx_k_import), 0, 0, 1, 1},
   {&__pyx_n_u_inet, __pyx_k_inet, sizeof(__pyx_k_inet), 0, 1, 0, 1},
+  {&__pyx_n_s_int64, __pyx_k_int64, sizeof(__pyx_k_int64), 0, 0, 1, 1},
   {&__pyx_n_u_integer, __pyx_k_integer, sizeof(__pyx_k_integer), 0, 1, 0, 1},
   {&__pyx_n_u_json, __pyx_k_json, sizeof(__pyx_k_json), 0, 1, 0, 1},
   {&__pyx_n_u_jsonb, __pyx_k_jsonb, sizeof(__pyx_k_jsonb), 0, 1, 0, 1},
-  {&__pyx_n_u_list, __pyx_k_list, sizeof(__pyx_k_list), 0, 1, 0, 1},
+  {&__pyx_n_u_long, __pyx_k_long, sizeof(__pyx_k_long), 0, 1, 0, 1},
   {&__pyx_n_s_main, __pyx_k_main, sizeof(__pyx_k_main), 0, 0, 1, 1},
   {&__pyx_n_s_name, __pyx_k_name, sizeof(__pyx_k_name), 0, 0, 1, 1},
+  {&__pyx_n_u_number, __pyx_k_number, sizeof(__pyx_k_number), 0, 1, 0, 1},
   {&__pyx_n_u_numeric, __pyx_k_numeric, sizeof(__pyx_k_numeric), 0, 1, 0, 1},
+  {&__pyx_n_s_numpy, __pyx_k_numpy, sizeof(__pyx_k_numpy), 0, 0, 1, 1},
+  {&__pyx_n_u_object, __pyx_k_object, sizeof(__pyx_k_object), 0, 1, 0, 1},
   {&__pyx_n_u_serial, __pyx_k_serial, sizeof(__pyx_k_serial), 0, 1, 0, 1},
   {&__pyx_n_u_string, __pyx_k_string, sizeof(__pyx_k_string), 0, 1, 0, 1},
   {&__pyx_n_s_test, __pyx_k_test, sizeof(__pyx_k_test), 0, 0, 1, 1},
@@ -1714,7 +1727,7 @@ if (!__Pyx_RefNanny) {
  * )
  * from uuid import UUID             # <<<<<<<<<<<<<<
  * from decimal import Decimal
- * 
+ * from numpy import int64
  */
   __pyx_t_2 = PyList_New(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 10, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
@@ -1734,7 +1747,7 @@ if (!__Pyx_RefNanny) {
  * )
  * from uuid import UUID
  * from decimal import Decimal             # <<<<<<<<<<<<<<
- * 
+ * from numpy import int64
  * 
  */
   __pyx_t_1 = PyList_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 11, __pyx_L1_error)
@@ -1751,539 +1764,596 @@ if (!__Pyx_RefNanny) {
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
+  /* "datamodel/types.pyx":12
+ * from uuid import UUID
+ * from decimal import Decimal
+ * from numpy import int64             # <<<<<<<<<<<<<<
+ * 
+ * DB_TYPES: dict = {
+ */
+  __pyx_t_2 = PyList_New(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 12, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  __Pyx_INCREF(__pyx_n_s_int64);
+  __Pyx_GIVEREF(__pyx_n_s_int64);
+  PyList_SET_ITEM(__pyx_t_2, 0, __pyx_n_s_int64);
+  __pyx_t_1 = __Pyx_Import(__pyx_n_s_numpy, __pyx_t_2, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 12, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __pyx_t_2 = __Pyx_ImportFrom(__pyx_t_1, __pyx_n_s_int64); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 12, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_int64, __pyx_t_2) < 0) __PYX_ERR(0, 12, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
   /* "datamodel/types.pyx":15
  * 
  * DB_TYPES: dict = {
  *     bool: "boolean",             # <<<<<<<<<<<<<<
  *     int: "integer",
- *     float: "float",
+ *     int64: "bigint",
  */
-  __pyx_t_2 = __Pyx_PyDict_NewPresized(15); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 15, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_2);
-  if (PyDict_SetItem(__pyx_t_2, ((PyObject*)&PyBool_Type), __pyx_n_u_boolean) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyDict_NewPresized(16); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 15, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_t_1, ((PyObject*)&PyBool_Type), __pyx_n_u_boolean) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
 
   /* "datamodel/types.pyx":16
  * DB_TYPES: dict = {
  *     bool: "boolean",
  *     int: "integer",             # <<<<<<<<<<<<<<
+ *     int64: "bigint",
  *     float: "float",
- *     str: "character varying",
  */
-  if (PyDict_SetItem(__pyx_t_2, ((PyObject *)(&PyInt_Type)), __pyx_n_u_integer) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, ((PyObject *)(&PyInt_Type)), __pyx_n_u_integer) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
 
   /* "datamodel/types.pyx":17
  *     bool: "boolean",
  *     int: "integer",
+ *     int64: "bigint",             # <<<<<<<<<<<<<<
+ *     float: "float",
+ *     str: "character varying",
+ */
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_int64); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 17, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_t_1, __pyx_t_2, __pyx_n_u_bigint) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+
+  /* "datamodel/types.pyx":18
+ *     int: "integer",
+ *     int64: "bigint",
  *     float: "float",             # <<<<<<<<<<<<<<
  *     str: "character varying",
  *     bytes: "byte",
  */
-  if (PyDict_SetItem(__pyx_t_2, ((PyObject *)(&PyFloat_Type)), __pyx_n_u_float) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, ((PyObject *)(&PyFloat_Type)), __pyx_n_u_float) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":18
- *     int: "integer",
+  /* "datamodel/types.pyx":19
+ *     int64: "bigint",
  *     float: "float",
  *     str: "character varying",             # <<<<<<<<<<<<<<
  *     bytes: "byte",
  *     list: "Array",
  */
-  if (PyDict_SetItem(__pyx_t_2, ((PyObject *)(&PyUnicode_Type)), __pyx_kp_u_character_varying) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, ((PyObject *)(&PyUnicode_Type)), __pyx_kp_u_character_varying) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":19
+  /* "datamodel/types.pyx":20
  *     float: "float",
  *     str: "character varying",
  *     bytes: "byte",             # <<<<<<<<<<<<<<
  *     list: "Array",
  *     tuple: "Array",
  */
-  if (PyDict_SetItem(__pyx_t_2, ((PyObject *)(&PyBytes_Type)), __pyx_n_u_byte) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, ((PyObject *)(&PyBytes_Type)), __pyx_n_u_byte) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":20
+  /* "datamodel/types.pyx":21
  *     str: "character varying",
  *     bytes: "byte",
  *     list: "Array",             # <<<<<<<<<<<<<<
  *     tuple: "Array",
  *     Decimal: "numeric",
  */
-  if (PyDict_SetItem(__pyx_t_2, ((PyObject *)(&PyList_Type)), __pyx_n_u_Array) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, ((PyObject *)(&PyList_Type)), __pyx_n_u_Array) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":21
+  /* "datamodel/types.pyx":22
  *     bytes: "byte",
  *     list: "Array",
  *     tuple: "Array",             # <<<<<<<<<<<<<<
  *     Decimal: "numeric",
  *     date: "date",
  */
-  if (PyDict_SetItem(__pyx_t_2, ((PyObject *)(&PyTuple_Type)), __pyx_n_u_Array) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, ((PyObject *)(&PyTuple_Type)), __pyx_n_u_Array) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":22
+  /* "datamodel/types.pyx":23
  *     list: "Array",
  *     tuple: "Array",
  *     Decimal: "numeric",             # <<<<<<<<<<<<<<
  *     date: "date",
  *     datetime: "timestamp without time zone",
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_Decimal); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 22, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_2, __pyx_t_1, __pyx_n_u_numeric) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_Decimal); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 23, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_t_1, __pyx_t_2, __pyx_n_u_numeric) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "datamodel/types.pyx":23
+  /* "datamodel/types.pyx":24
  *     tuple: "Array",
  *     Decimal: "numeric",
  *     date: "date",             # <<<<<<<<<<<<<<
  *     datetime: "timestamp without time zone",
  *     time: "time",
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_date); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 23, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_2, __pyx_t_1, __pyx_n_u_date) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_date); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 24, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_t_1, __pyx_t_2, __pyx_n_u_date) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "datamodel/types.pyx":24
+  /* "datamodel/types.pyx":25
  *     Decimal: "numeric",
  *     date: "date",
  *     datetime: "timestamp without time zone",             # <<<<<<<<<<<<<<
  *     time: "time",
  *     timedelta: "timestamp without time zone",
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_datetime); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 24, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_2, __pyx_t_1, __pyx_kp_u_timestamp_without_time_zone) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_datetime); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 25, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_t_1, __pyx_t_2, __pyx_kp_u_timestamp_without_time_zone) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "datamodel/types.pyx":25
+  /* "datamodel/types.pyx":26
  *     date: "date",
  *     datetime: "timestamp without time zone",
  *     time: "time",             # <<<<<<<<<<<<<<
  *     timedelta: "timestamp without time zone",
  *     UUID: "uuid",
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_time); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 25, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_2, __pyx_t_1, __pyx_n_u_time) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_time); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 26, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_t_1, __pyx_t_2, __pyx_n_u_time) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "datamodel/types.pyx":26
+  /* "datamodel/types.pyx":27
  *     datetime: "timestamp without time zone",
  *     time: "time",
  *     timedelta: "timestamp without time zone",             # <<<<<<<<<<<<<<
  *     UUID: "uuid",
  *     dict: "jsonb",
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_timedelta); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 26, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_2, __pyx_t_1, __pyx_kp_u_timestamp_without_time_zone) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_timedelta); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 27, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_t_1, __pyx_t_2, __pyx_kp_u_timestamp_without_time_zone) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "datamodel/types.pyx":27
+  /* "datamodel/types.pyx":28
  *     time: "time",
  *     timedelta: "timestamp without time zone",
  *     UUID: "uuid",             # <<<<<<<<<<<<<<
  *     dict: "jsonb",
  *     type(None): None
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_UUID); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 27, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_2, __pyx_t_1, __pyx_n_u_uuid) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_UUID); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 28, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_t_1, __pyx_t_2, __pyx_n_u_uuid) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "datamodel/types.pyx":28
+  /* "datamodel/types.pyx":29
  *     timedelta: "timestamp without time zone",
  *     UUID: "uuid",
  *     dict: "jsonb",             # <<<<<<<<<<<<<<
  *     type(None): None
  * }
  */
-  if (PyDict_SetItem(__pyx_t_2, ((PyObject *)(&PyDict_Type)), __pyx_n_u_jsonb) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, ((PyObject *)(&PyDict_Type)), __pyx_n_u_jsonb) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":29
+  /* "datamodel/types.pyx":30
  *     UUID: "uuid",
  *     dict: "jsonb",
  *     type(None): None             # <<<<<<<<<<<<<<
  * }
  * 
  */
-  if (PyDict_SetItem(__pyx_t_2, ((PyObject *)Py_TYPE(Py_None)), Py_None) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_DB_TYPES, __pyx_t_2) < 0) __PYX_ERR(0, 14, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  if (PyDict_SetItem(__pyx_t_1, ((PyObject *)Py_TYPE(Py_None)), Py_None) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_DB_TYPES, __pyx_t_1) < 0) __PYX_ERR(0, 14, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "datamodel/types.pyx":34
+  /* "datamodel/types.pyx":35
  * 
  * MODEL_TYPES: dict = {
  *     "boolean": bool,             # <<<<<<<<<<<<<<
  *     "integer": int,
- *     "bigint": int,
+ *     "bigint": int64,
  */
-  __pyx_t_2 = __Pyx_PyDict_NewPresized(24); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 34, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_2);
-  if (PyDict_SetItem(__pyx_t_2, __pyx_n_u_boolean, ((PyObject*)&PyBool_Type)) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyDict_NewPresized(24); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 35, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_boolean, ((PyObject*)&PyBool_Type)) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":35
+  /* "datamodel/types.pyx":36
  * MODEL_TYPES: dict = {
  *     "boolean": bool,
  *     "integer": int,             # <<<<<<<<<<<<<<
- *     "bigint": int,
+ *     "bigint": int64,
  *     "float": float,
  */
-  if (PyDict_SetItem(__pyx_t_2, __pyx_n_u_integer, ((PyObject *)(&PyInt_Type))) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_integer, ((PyObject *)(&PyInt_Type))) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":36
+  /* "datamodel/types.pyx":37
  *     "boolean": bool,
  *     "integer": int,
- *     "bigint": int,             # <<<<<<<<<<<<<<
+ *     "bigint": int64,             # <<<<<<<<<<<<<<
  *     "float": float,
  *     "character varying": str,
  */
-  if (PyDict_SetItem(__pyx_t_2, __pyx_n_u_bigint, ((PyObject *)(&PyInt_Type))) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_int64); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 37, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_bigint, __pyx_t_2) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "datamodel/types.pyx":37
+  /* "datamodel/types.pyx":38
  *     "integer": int,
- *     "bigint": int,
+ *     "bigint": int64,
  *     "float": float,             # <<<<<<<<<<<<<<
  *     "character varying": str,
  *     "string": str,
  */
-  if (PyDict_SetItem(__pyx_t_2, __pyx_n_u_float, ((PyObject *)(&PyFloat_Type))) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_float, ((PyObject *)(&PyFloat_Type))) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":38
- *     "bigint": int,
+  /* "datamodel/types.pyx":39
+ *     "bigint": int64,
  *     "float": float,
  *     "character varying": str,             # <<<<<<<<<<<<<<
  *     "string": str,
  *     "varchar": str,
  */
-  if (PyDict_SetItem(__pyx_t_2, __pyx_kp_u_character_varying, ((PyObject *)(&PyUnicode_Type))) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_kp_u_character_varying, ((PyObject *)(&PyUnicode_Type))) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":39
+  /* "datamodel/types.pyx":40
  *     "float": float,
  *     "character varying": str,
  *     "string": str,             # <<<<<<<<<<<<<<
  *     "varchar": str,
  *     "byte": bytes,
  */
-  if (PyDict_SetItem(__pyx_t_2, __pyx_n_u_string, ((PyObject *)(&PyUnicode_Type))) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_string, ((PyObject *)(&PyUnicode_Type))) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":40
+  /* "datamodel/types.pyx":41
  *     "character varying": str,
  *     "string": str,
  *     "varchar": str,             # <<<<<<<<<<<<<<
  *     "byte": bytes,
  *     "bytea": bytes,
  */
-  if (PyDict_SetItem(__pyx_t_2, __pyx_n_u_varchar, ((PyObject *)(&PyUnicode_Type))) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_varchar, ((PyObject *)(&PyUnicode_Type))) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":41
+  /* "datamodel/types.pyx":42
  *     "string": str,
  *     "varchar": str,
  *     "byte": bytes,             # <<<<<<<<<<<<<<
  *     "bytea": bytes,
  *     "Array": list,
  */
-  if (PyDict_SetItem(__pyx_t_2, __pyx_n_u_byte, ((PyObject *)(&PyBytes_Type))) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_byte, ((PyObject *)(&PyBytes_Type))) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":42
+  /* "datamodel/types.pyx":43
  *     "varchar": str,
  *     "byte": bytes,
  *     "bytea": bytes,             # <<<<<<<<<<<<<<
  *     "Array": list,
  *     "hstore": dict,
  */
-  if (PyDict_SetItem(__pyx_t_2, __pyx_n_u_bytea, ((PyObject *)(&PyBytes_Type))) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_bytea, ((PyObject *)(&PyBytes_Type))) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":43
+  /* "datamodel/types.pyx":44
  *     "byte": bytes,
  *     "bytea": bytes,
  *     "Array": list,             # <<<<<<<<<<<<<<
  *     "hstore": dict,
  *     "character varying[]": list,
  */
-  if (PyDict_SetItem(__pyx_t_2, __pyx_n_u_Array, ((PyObject *)(&PyList_Type))) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_Array, ((PyObject *)(&PyList_Type))) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":44
+  /* "datamodel/types.pyx":45
  *     "bytea": bytes,
  *     "Array": list,
  *     "hstore": dict,             # <<<<<<<<<<<<<<
  *     "character varying[]": list,
  *     "numeric": Decimal,
  */
-  if (PyDict_SetItem(__pyx_t_2, __pyx_n_u_hstore, ((PyObject *)(&PyDict_Type))) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_hstore, ((PyObject *)(&PyDict_Type))) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":45
+  /* "datamodel/types.pyx":46
  *     "Array": list,
  *     "hstore": dict,
  *     "character varying[]": list,             # <<<<<<<<<<<<<<
  *     "numeric": Decimal,
  *     "date": date,
  */
-  if (PyDict_SetItem(__pyx_t_2, __pyx_kp_u_character_varying_2, ((PyObject *)(&PyList_Type))) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_kp_u_character_varying_2, ((PyObject *)(&PyList_Type))) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":46
+  /* "datamodel/types.pyx":47
  *     "hstore": dict,
  *     "character varying[]": list,
  *     "numeric": Decimal,             # <<<<<<<<<<<<<<
  *     "date": date,
  *     "timestamp with time zone": datetime,
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_Decimal); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 46, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_2, __pyx_n_u_numeric, __pyx_t_1) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_Decimal); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 47, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_numeric, __pyx_t_2) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "datamodel/types.pyx":47
+  /* "datamodel/types.pyx":48
  *     "character varying[]": list,
  *     "numeric": Decimal,
  *     "date": date,             # <<<<<<<<<<<<<<
  *     "timestamp with time zone": datetime,
  *     "time": time,
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_date); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 47, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_2, __pyx_n_u_date, __pyx_t_1) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_date); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 48, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_date, __pyx_t_2) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "datamodel/types.pyx":48
+  /* "datamodel/types.pyx":49
  *     "numeric": Decimal,
  *     "date": date,
  *     "timestamp with time zone": datetime,             # <<<<<<<<<<<<<<
  *     "time": time,
  *     "timestamp without time zone": datetime,
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_datetime); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 48, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_2, __pyx_kp_u_timestamp_with_time_zone, __pyx_t_1) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_datetime); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 49, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_t_1, __pyx_kp_u_timestamp_with_time_zone, __pyx_t_2) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "datamodel/types.pyx":49
+  /* "datamodel/types.pyx":50
  *     "date": date,
  *     "timestamp with time zone": datetime,
  *     "time": time,             # <<<<<<<<<<<<<<
  *     "timestamp without time zone": datetime,
  *     "uuid": UUID,
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_time); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 49, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_2, __pyx_n_u_time, __pyx_t_1) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_time); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 50, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_time, __pyx_t_2) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "datamodel/types.pyx":50
+  /* "datamodel/types.pyx":51
  *     "timestamp with time zone": datetime,
  *     "time": time,
  *     "timestamp without time zone": datetime,             # <<<<<<<<<<<<<<
  *     "uuid": UUID,
  *     "json": dict,
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_datetime); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 50, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_2, __pyx_kp_u_timestamp_without_time_zone, __pyx_t_1) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_datetime); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_t_1, __pyx_kp_u_timestamp_without_time_zone, __pyx_t_2) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "datamodel/types.pyx":51
+  /* "datamodel/types.pyx":52
  *     "time": time,
  *     "timestamp without time zone": datetime,
  *     "uuid": UUID,             # <<<<<<<<<<<<<<
  *     "json": dict,
  *     "jsonb": dict,
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_UUID); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 51, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_2, __pyx_n_u_uuid, __pyx_t_1) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_UUID); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 52, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_uuid, __pyx_t_2) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "datamodel/types.pyx":52
+  /* "datamodel/types.pyx":53
  *     "timestamp without time zone": datetime,
  *     "uuid": UUID,
  *     "json": dict,             # <<<<<<<<<<<<<<
  *     "jsonb": dict,
  *     "text": str,
  */
-  if (PyDict_SetItem(__pyx_t_2, __pyx_n_u_json, ((PyObject *)(&PyDict_Type))) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_json, ((PyObject *)(&PyDict_Type))) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":53
+  /* "datamodel/types.pyx":54
  *     "uuid": UUID,
  *     "json": dict,
  *     "jsonb": dict,             # <<<<<<<<<<<<<<
  *     "text": str,
  *     "serial": int,
  */
-  if (PyDict_SetItem(__pyx_t_2, __pyx_n_u_jsonb, ((PyObject *)(&PyDict_Type))) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_jsonb, ((PyObject *)(&PyDict_Type))) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":54
+  /* "datamodel/types.pyx":55
  *     "json": dict,
  *     "jsonb": dict,
  *     "text": str,             # <<<<<<<<<<<<<<
  *     "serial": int,
  *     "bigserial": int,
  */
-  if (PyDict_SetItem(__pyx_t_2, __pyx_n_u_text, ((PyObject *)(&PyUnicode_Type))) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_text, ((PyObject *)(&PyUnicode_Type))) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":55
+  /* "datamodel/types.pyx":56
  *     "jsonb": dict,
  *     "text": str,
  *     "serial": int,             # <<<<<<<<<<<<<<
  *     "bigserial": int,
  *     "inet": str
  */
-  if (PyDict_SetItem(__pyx_t_2, __pyx_n_u_serial, ((PyObject *)(&PyInt_Type))) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_serial, ((PyObject *)(&PyInt_Type))) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":56
+  /* "datamodel/types.pyx":57
  *     "text": str,
  *     "serial": int,
  *     "bigserial": int,             # <<<<<<<<<<<<<<
  *     "inet": str
  * }
  */
-  if (PyDict_SetItem(__pyx_t_2, __pyx_n_u_bigserial, ((PyObject *)(&PyInt_Type))) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_bigserial, ((PyObject *)(&PyInt_Type))) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":57
+  /* "datamodel/types.pyx":58
  *     "serial": int,
  *     "bigserial": int,
  *     "inet": str             # <<<<<<<<<<<<<<
  * }
  * 
  */
-  if (PyDict_SetItem(__pyx_t_2, __pyx_n_u_inet, ((PyObject *)(&PyUnicode_Type))) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_MODEL_TYPES, __pyx_t_2) < 0) __PYX_ERR(0, 33, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_inet, ((PyObject *)(&PyUnicode_Type))) < 0) __PYX_ERR(0, 35, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_MODEL_TYPES, __pyx_t_1) < 0) __PYX_ERR(0, 34, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "datamodel/types.pyx":62
+  /* "datamodel/types.pyx":63
  * 
  * JSON_TYPES: dict = {
  *     bool: "boolean",             # <<<<<<<<<<<<<<
  *     int: "integer",
- *     float: "float",
+ *     int64: "long",
  */
-  __pyx_t_2 = __Pyx_PyDict_NewPresized(12); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 62, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_2);
-  if (PyDict_SetItem(__pyx_t_2, ((PyObject*)&PyBool_Type), __pyx_n_u_boolean) < 0) __PYX_ERR(0, 62, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyDict_NewPresized(14); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 63, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_t_1, ((PyObject*)&PyBool_Type), __pyx_n_u_boolean) < 0) __PYX_ERR(0, 63, __pyx_L1_error)
 
-  /* "datamodel/types.pyx":63
+  /* "datamodel/types.pyx":64
  * JSON_TYPES: dict = {
  *     bool: "boolean",
  *     int: "integer",             # <<<<<<<<<<<<<<
- *     float: "float",
- *     str: "string",
+ *     int64: "long",
+ *     float: "number",
  */
-  if (PyDict_SetItem(__pyx_t_2, ((PyObject *)(&PyInt_Type)), __pyx_n_u_integer) < 0) __PYX_ERR(0, 62, __pyx_L1_error)
-
-  /* "datamodel/types.pyx":64
- *     bool: "boolean",
- *     int: "integer",
- *     float: "float",             # <<<<<<<<<<<<<<
- *     str: "string",
- *     bytes: "byte",
- */
-  if (PyDict_SetItem(__pyx_t_2, ((PyObject *)(&PyFloat_Type)), __pyx_n_u_float) < 0) __PYX_ERR(0, 62, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, ((PyObject *)(&PyInt_Type)), __pyx_n_u_integer) < 0) __PYX_ERR(0, 63, __pyx_L1_error)
 
   /* "datamodel/types.pyx":65
+ *     bool: "boolean",
  *     int: "integer",
- *     float: "float",
- *     str: "string",             # <<<<<<<<<<<<<<
- *     bytes: "byte",
- *     list: "list",
+ *     int64: "long",             # <<<<<<<<<<<<<<
+ *     float: "number",
+ *     str: "string",
  */
-  if (PyDict_SetItem(__pyx_t_2, ((PyObject *)(&PyUnicode_Type)), __pyx_n_u_string) < 0) __PYX_ERR(0, 62, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_int64); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 65, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_t_1, __pyx_t_2, __pyx_n_u_long) < 0) __PYX_ERR(0, 63, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
   /* "datamodel/types.pyx":66
- *     float: "float",
+ *     int: "integer",
+ *     int64: "long",
+ *     float: "number",             # <<<<<<<<<<<<<<
  *     str: "string",
- *     bytes: "byte",             # <<<<<<<<<<<<<<
- *     list: "list",
- *     Decimal: "decimal",
+ *     bytes: "byte",
  */
-  if (PyDict_SetItem(__pyx_t_2, ((PyObject *)(&PyBytes_Type)), __pyx_n_u_byte) < 0) __PYX_ERR(0, 62, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, ((PyObject *)(&PyFloat_Type)), __pyx_n_u_number) < 0) __PYX_ERR(0, 63, __pyx_L1_error)
 
   /* "datamodel/types.pyx":67
- *     str: "string",
+ *     int64: "long",
+ *     float: "number",
+ *     str: "string",             # <<<<<<<<<<<<<<
  *     bytes: "byte",
- *     list: "list",             # <<<<<<<<<<<<<<
- *     Decimal: "decimal",
- *     date: "date",
+ *     list: "array",
  */
-  if (PyDict_SetItem(__pyx_t_2, ((PyObject *)(&PyList_Type)), __pyx_n_u_list) < 0) __PYX_ERR(0, 62, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, ((PyObject *)(&PyUnicode_Type)), __pyx_n_u_string) < 0) __PYX_ERR(0, 63, __pyx_L1_error)
 
   /* "datamodel/types.pyx":68
+ *     float: "number",
+ *     str: "string",
+ *     bytes: "byte",             # <<<<<<<<<<<<<<
+ *     list: "array",
+ *     dict: "object",
+ */
+  if (PyDict_SetItem(__pyx_t_1, ((PyObject *)(&PyBytes_Type)), __pyx_n_u_byte) < 0) __PYX_ERR(0, 63, __pyx_L1_error)
+
+  /* "datamodel/types.pyx":69
+ *     str: "string",
  *     bytes: "byte",
- *     list: "list",
- *     Decimal: "decimal",             # <<<<<<<<<<<<<<
+ *     list: "array",             # <<<<<<<<<<<<<<
+ *     dict: "object",
+ *     Decimal: "number",
+ */
+  if (PyDict_SetItem(__pyx_t_1, ((PyObject *)(&PyList_Type)), __pyx_n_u_array) < 0) __PYX_ERR(0, 63, __pyx_L1_error)
+
+  /* "datamodel/types.pyx":70
+ *     bytes: "byte",
+ *     list: "array",
+ *     dict: "object",             # <<<<<<<<<<<<<<
+ *     Decimal: "number",
+ *     date: "date",
+ */
+  if (PyDict_SetItem(__pyx_t_1, ((PyObject *)(&PyDict_Type)), __pyx_n_u_object) < 0) __PYX_ERR(0, 63, __pyx_L1_error)
+
+  /* "datamodel/types.pyx":71
+ *     list: "array",
+ *     dict: "object",
+ *     Decimal: "number",             # <<<<<<<<<<<<<<
  *     date: "date",
  *     datetime: "datetime",
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_Decimal); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 68, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_2, __pyx_t_1, __pyx_n_u_decimal) < 0) __PYX_ERR(0, 62, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_Decimal); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 71, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_t_1, __pyx_t_2, __pyx_n_u_number) < 0) __PYX_ERR(0, 63, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "datamodel/types.pyx":69
- *     list: "list",
- *     Decimal: "decimal",
+  /* "datamodel/types.pyx":72
+ *     dict: "object",
+ *     Decimal: "number",
  *     date: "date",             # <<<<<<<<<<<<<<
  *     datetime: "datetime",
  *     time: "time",
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_date); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 69, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_2, __pyx_t_1, __pyx_n_u_date) < 0) __PYX_ERR(0, 62, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_date); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 72, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_t_1, __pyx_t_2, __pyx_n_u_date) < 0) __PYX_ERR(0, 63, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "datamodel/types.pyx":70
- *     Decimal: "decimal",
+  /* "datamodel/types.pyx":73
+ *     Decimal: "number",
  *     date: "date",
  *     datetime: "datetime",             # <<<<<<<<<<<<<<
  *     time: "time",
  *     timedelta: "timedelta",
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_datetime); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 70, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_2, __pyx_t_1, __pyx_n_u_datetime) < 0) __PYX_ERR(0, 62, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_datetime); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 73, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_t_1, __pyx_t_2, __pyx_n_u_datetime) < 0) __PYX_ERR(0, 63, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "datamodel/types.pyx":71
+  /* "datamodel/types.pyx":74
  *     date: "date",
  *     datetime: "datetime",
  *     time: "time",             # <<<<<<<<<<<<<<
  *     timedelta: "timedelta",
  *     UUID: "uuid"
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_time); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 71, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_2, __pyx_t_1, __pyx_n_u_time) < 0) __PYX_ERR(0, 62, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_time); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 74, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_t_1, __pyx_t_2, __pyx_n_u_time) < 0) __PYX_ERR(0, 63, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "datamodel/types.pyx":72
+  /* "datamodel/types.pyx":75
  *     datetime: "datetime",
  *     time: "time",
  *     timedelta: "timedelta",             # <<<<<<<<<<<<<<
  *     UUID: "uuid"
  * }
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_timedelta); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 72, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_2, __pyx_t_1, __pyx_n_u_timedelta) < 0) __PYX_ERR(0, 62, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_timedelta); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 75, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_t_1, __pyx_t_2, __pyx_n_u_timedelta) < 0) __PYX_ERR(0, 63, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "datamodel/types.pyx":73
+  /* "datamodel/types.pyx":76
  *     time: "time",
  *     timedelta: "timedelta",
  *     UUID: "uuid"             # <<<<<<<<<<<<<<
  * }
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_UUID); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 73, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_2, __pyx_t_1, __pyx_n_u_uuid) < 0) __PYX_ERR(0, 62, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_JSON_TYPES, __pyx_t_2) < 0) __PYX_ERR(0, 61, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_UUID); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 76, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_t_1, __pyx_t_2, __pyx_n_u_uuid) < 0) __PYX_ERR(0, 63, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_JSON_TYPES, __pyx_t_1) < 0) __PYX_ERR(0, 62, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "datamodel/types.pyx":1
  * # cython: language_level=3, embedsignature=True, boundscheck=False, wraparound=False, initializedcheck=False             # <<<<<<<<<<<<<<
  * # Copyright (C) 2018-present Jesus Lara
  * #
  */
-  __pyx_t_2 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 1, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_2);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_test, __pyx_t_2) < 0) __PYX_ERR(0, 1, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __pyx_t_1 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_test, __pyx_t_1) < 0) __PYX_ERR(0, 1, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /*--- Wrapped vars code ---*/
 
