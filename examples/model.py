@@ -6,7 +6,7 @@ from datetime import (
 import uuid
 from decimal import Decimal
 from datamodel import BaseModel, Column
-
+import numpy as np
 
 def auto_now_add(*args, **kwargs):
     return uuid.uuid4()
@@ -30,6 +30,7 @@ class User(BaseModel):
     id: uuid.UUID = Column(primary_key=True, required=True, default=auto_now_add(), db_default='uuid_generate_v4()')
     firstname: str
     lastname: str
+    bignumber: np.int64
     name: str = Column(required=True, default='John Doe')
     age: int = Column(default=18, required=True)
     salary: Decimal = Column(default=10.0)
