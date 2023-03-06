@@ -18,9 +18,9 @@ classifiers=[
   "Intended Audience :: Information Technology",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python",
   "Typing :: Typed",
   "Environment :: Web Environment",
@@ -32,7 +32,7 @@ classifiers=[
 ]
 dynamic = ['version', 'description']
 description-file = "README.md"
-requires-python = ">=3.8.1"
+requires-python = ">=3.9.16"
 
 [tool.pytest.ini_options]
 addopts = [
@@ -50,7 +50,7 @@ filterwarnings = [
 
 [tool.black]
 line-length = 120
-target-version = ['py38', 'py39', 'py310', 'py311']
+target-version = [ 'py39', 'py310', 'py311']
 include = '\.pyi?$'
 exclude = '''
 /(
