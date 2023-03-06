@@ -94,7 +94,7 @@ extensions = [
 setup(
     name="python-datamodel",
     version=__version__,
-    python_requires=">=3.8.1",
+    python_requires=">=3.9.16",
     url="https://github.com/phenobarbital/python-datamodel",
     description=__description__,
     keywords=['asyncio', 'dataclass', 'dataclasses', 'data models'],
@@ -109,9 +109,9 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Framework :: AsyncIO",
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
@@ -125,25 +125,25 @@ setup(
     include_package_data=True,
     license=__license__,
     setup_requires=[
-        "setuptools==65.6.3",
-        "Cython==0.29.32",
+        "setuptools==67.5.0",
+        "Cython==0.29.33",
         "wheel==0.38.4"
     ],
     install_requires=[
-        "numpy==1.23.4",
+        "numpy==1.24.2",
         "uvloop==0.17.0",
         "asyncio==3.4.3",
-        "cchardet==2.1.7",
+        "faust-cchardet==2.1.18",
         "objectpath==0.6.1",
-        "orjson==3.8.5",
-        'typing_extensions==4.4.0',
+        "orjson==3.8.7",
+        'typing_extensions==4.5.0',
         "asyncpg==0.27.0",
         "python-dateutil==2.8.2"
     ],
     tests_require=[
-        'pytest>=6.0.0',
+        'pytest>=7.2.2',
         'pytest-asyncio==0.20.3',
-        'pytest-xdist==3.1.0',
+        'pytest-xdist==3.2.0',
         'pytest-assume==2.4.3'
     ],
     test_suite='tests',
