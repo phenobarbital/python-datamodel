@@ -125,15 +125,15 @@ setup(
     include_package_data=True,
     license=__license__,
     setup_requires=[
-        "setuptools==65.6.3",
-        "Cython==0.29.32",
+        "setuptools==67.5.0",
+        "Cython==0.29.33",
         "wheel==0.38.4"
     ],
     install_requires=[
         "numpy==1.23.4",
         "uvloop==0.17.0",
         "asyncio==3.4.3",
-        "cchardet==2.1.7",
+        "faust-cchardet==2.1.18",
         "objectpath==0.6.1",
         "orjson==3.8.5",
         'typing_extensions==4.4.0',
