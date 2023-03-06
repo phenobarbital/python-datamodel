@@ -130,20 +130,20 @@ setup(
         "wheel==0.38.4"
     ],
     install_requires=[
-        "numpy==1.23.4",
+        "numpy==1.24.2",
         "uvloop==0.17.0",
         "asyncio==3.4.3",
         "faust-cchardet==2.1.18",
         "objectpath==0.6.1",
-        "orjson==3.8.5",
-        'typing_extensions==4.4.0',
+        "orjson==3.8.7",
+        'typing_extensions==4.5.0',
         "asyncpg==0.27.0",
         "python-dateutil==2.8.2"
     ],
     tests_require=[
-        'pytest>=6.0.0',
+        'pytest>=7.2.2',
         'pytest-asyncio==0.20.3',
-        'pytest-xdist==3.1.0',
+        'pytest-xdist==3.2.0',
         'pytest-assume==2.4.3'
     ],
     test_suite='tests',
