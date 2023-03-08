@@ -13,7 +13,6 @@ setup:
 develop:
 	pip install wheel==0.38.4
 	pip install -e .
-	flit install --symlink
 
 release:
 	lint test clean
