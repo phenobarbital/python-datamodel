@@ -637,7 +637,12 @@ class BaseModel(metaclass=ModelMeta):
                     except (AttributeError, ValueError):
                         t = 'string'
             elif hasattr(_type, '__supertype__'):
-                t = _type.__supertype__
+                if isinstance(_type.__supertype__, str):
+                    t = 'string'
+                elif isinstance(_type.__supertype__, int):
+                    t = 'integer'
+                else:
+                    t = 'object'
             else:
                 if isinstance(_type, EnumMeta):
                     t = 'array'
