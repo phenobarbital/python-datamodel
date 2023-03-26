@@ -32,7 +32,7 @@ classifiers=[
 ]
 dynamic = ['version', 'description']
 description-file = "README.md"
-requires-python = ">=3.9.16"
+requires-python = ">=3.9.14"
 
 [tool.pytest.ini_options]
 addopts = [
