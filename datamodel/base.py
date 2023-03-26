@@ -1,4 +1,5 @@
 from __future__ import annotations
+import sys
 import inspect
 import logging
 import types
@@ -617,8 +618,15 @@ class BaseModel(metaclass=ModelMeta):
         for name, field in columns:
             _type = field.type
             if _type.__module__ == 'typing':
+                if inspect.isfunction(_type):
+                    if hasattr(_type, '__supertype__'):
+                        t = _type.__supertype__
+                    else:
+                        raise ValueError(
+                            f"You're using a bare Function to type hinting on {name} for Model: {title}"
+                        )
                 # TODO: discover real value of typing
-                if _type._name == 'List':
+                elif _type._name == 'List':
                     t = 'array'
                 elif _type._name == 'Dict':
                     t = 'object'
@@ -628,6 +636,8 @@ class BaseModel(metaclass=ModelMeta):
                         t = t.__name__
                     except (AttributeError, ValueError):
                         t = 'string'
+            elif hasattr(_type, '__supertype__'):
+                t = _type.__supertype__
             else:
                 if isinstance(_type, EnumMeta):
                     t = 'array'

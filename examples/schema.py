@@ -1,9 +1,10 @@
-from typing import Optional
+from typing import Optional, NewType
 from datetime import datetime
 import pprint
 from enum import Enum
 from datamodel import BaseModel, Column
 
+Text = NewType('Text', str)
 
 pp = pprint.PrettyPrinter(width=41, compact=True)
 
@@ -23,7 +24,7 @@ class User(BaseModel):
     """Basic User Model for authentication."""
 
     user_id: int = Column(required=False, primary_key=True, repr=False)
-    first_name: str = Column(required=True, max=254, label="First Name", pattern="^\w*$")
+    first_name: Text = Column(required=True, max=254, label="First Name", pattern="^\w*$")
     last_name: str = Column(required=True, max=254, label="Last Name")
     email: str = Column(required=False, max=254, label="User's Email")
     password: str = Column(required=False, max=16, secret=True, widget='/properties/password')
@@ -37,7 +38,7 @@ class User(BaseModel):
     title: str = Column(equired=False, max=90)
     registration_key: str = Column(equired=False, max=512, repr=False, readonly=True)
     reset_pwd_key: str = Column(equired=False, max=512, repr=False, readonly=True)
-    avatar: str = Column(max=512, repr=False)
+    avatar: Text = Column(max=512, repr=False)
     associate_id: str = Column(required=False, repr=False)
     group_id: list[int] = Column(required=False)
     groups: list = Column(required=False)
