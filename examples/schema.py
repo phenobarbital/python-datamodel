@@ -1,9 +1,11 @@
-import orjson
 from typing import Optional
 from datetime import datetime
+import pprint
 from enum import Enum
 from datamodel import BaseModel, Column
 
+
+pp = pprint.PrettyPrinter(width=41, compact=True)
 
 class Address(BaseModel):
     street_address: str
@@ -59,4 +61,6 @@ class User(BaseModel):
 
 ### Getting the JSON-Schema Object for this Model:
 schema = User.schema(as_dict=False)
-print(schema)
+pp.pprint(schema)
+### also, a sample
+pp.pprint(User.sample())

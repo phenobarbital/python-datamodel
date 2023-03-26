@@ -210,6 +210,10 @@ class BaseModel(metaclass=ModelMeta):
     def columns(self):
         return self.__columns__
 
+    @classmethod
+    def get_columns(cls):
+        return cls.__columns__
+
     def get_fields(self):
         return self.__fields__
 
@@ -564,6 +568,32 @@ class BaseModel(metaclass=ModelMeta):
         return result
 
     @classmethod
+    def sample(cls) -> dict:
+        """sample.
+
+        Get a dict (JSON) sample of this datamodel, based on default values.
+
+        Returns:
+            dict: _description_
+        """
+        columns = cls.get_columns().items()
+        _fields = {}
+        required = []
+        for name, f in columns:
+            if f.repr is False:
+                continue
+            _fields[name] = f.default
+            try:
+                if f.metadata["required"] is True:
+                    required.append(name)
+            except KeyError:
+                pass
+        return {
+            "properties": _fields,
+            "required": required
+        }
+
+    @classmethod
     def schema(cls, as_dict: bool = False) -> Any:
         """schema.
 
@@ -577,7 +607,7 @@ class BaseModel(metaclass=ModelMeta):
         title = cls.__name__
         schema = cls.Meta.schema
         table = cls.Meta.name if cls.Meta.name else title.lower()
-        columns = cls.columns(cls).items()
+        columns = cls.get_columns().items()
         description = cls.Meta.description
         if not description:
             description = cls.__doc__.strip("\n").strip()
