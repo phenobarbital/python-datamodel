@@ -1,10 +1,9 @@
-from typing import Optional, NewType
+from typing import Optional
 from datetime import datetime
 import pprint
 from enum import Enum
 from datamodel import BaseModel, Column
-
-Text = NewType('Text', str)
+from datamodel.types import Text
 
 pp = pprint.PrettyPrinter(width=41, compact=True)
 

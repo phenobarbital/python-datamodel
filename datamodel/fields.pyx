@@ -5,9 +5,7 @@ from sys import version_info
 from typing import (
     Optional,
     Union,
-    Any,
-    NewType,
-    TypeVar
+    Any
 )
 from collections.abc import Callable
 from dataclasses import Field as ff
@@ -253,6 +251,3 @@ def Column(
         kw_only=kw_only,
         **kwargs,
     )
-
-### Declaration of New Types:
-Text = NewType('Text', str)
