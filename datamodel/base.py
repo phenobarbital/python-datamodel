@@ -18,7 +18,7 @@ from functools import partial
 from enum import EnumMeta
 from operator import attrgetter
 from orjson import OPT_INDENT_2
-from datamodel.converters import parse_type
+from datamodel.converters import parse_type, slugify_camelcase
 from datamodel.fields import Field, fields
 from datamodel.types import JSON_TYPES
 from datamodel.validation import validator
@@ -605,7 +605,13 @@ class BaseModel(metaclass=ModelMeta):
         * Using $defs to define sub-schemas based on custom types.
         * using "definitions" to create "enum" of enum fields.
         """
-        title = cls.__name__
+        if hasattr(cls.Meta, 'title'):
+            title = cls.Meta.title
+        t = cls.__name__
+        try:
+            title = slugify_camelcase(t)
+        except Exception:
+            title = t
         schema = cls.Meta.schema
         table = cls.Meta.name if cls.Meta.name else title.lower()
         columns = cls.get_columns().items()
