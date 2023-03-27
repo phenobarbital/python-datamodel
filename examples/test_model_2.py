@@ -1,5 +1,6 @@
 from typing import Optional
 from datetime import datetime
+from uuid import UUID
 import pprint
 from enum import Enum
 from datamodel import BaseModel, Column
@@ -56,6 +57,7 @@ class User(BaseModel):
 
 
 class UserIdentity(BaseModel):
+    identity_id: UUID = IdentityField()
     user_id: User = Column(required=True)
     auth_provider: str = Column(required=True, default="BasicAuth")
     uid: str = Column(required=True, comment="User Id on Auth Backend")
@@ -75,7 +77,7 @@ class Company(BaseModel):
     company_id: int = IdentityField()
     company_name: str = Column(required=True)
     identity_id: UserIdentity = Column(
-        required=True, fk="identity_id|display_name", api="user_identity", label="user identities"
+        required=False, fk="identity_id|display_name", api="user_identity", label="user identities"
     )
     description: Text = Column(required=False)
     is_prospect: bool = Column(required=False, default=True,)
@@ -98,7 +100,10 @@ class Company(BaseModel):
 
 ### Nested Models: schema
 ### Getting the JSON-Schema Object for this Model:
-schema = Company.schema(as_dict=False)
-print(schema)
+#schema = Company.schema(as_dict=False)
+# print(schema)
 ### also, a sample
 # pp.pprint(Company.sample())
+a = Company(company_name='Hello World', identity_id=35)
+print(a.to_dict())
+print(a.json())
