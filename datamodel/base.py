@@ -1,5 +1,4 @@
 from __future__ import annotations
-import sys
 import inspect
 import logging
 import types
@@ -16,6 +15,7 @@ from dataclasses import (
 from typing import Any, Optional, Union
 from functools import partial
 from enum import EnumMeta
+from uuid import UUID
 from operator import attrgetter
 from orjson import OPT_INDENT_2
 from datamodel.converters import parse_type, slugify_camelcase
@@ -339,7 +339,7 @@ class BaseModel(metaclass=ModelMeta):
                     new_val = f.type(*value)
                 else:
                     ## if value is scalar
-                    if isinstance(value, (int, str)):
+                    if isinstance(value, (int, str, UUID)):
                         new_val = value
                     else:
                         try:
