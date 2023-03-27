@@ -20,7 +20,7 @@ from operator import attrgetter
 from orjson import OPT_INDENT_2
 from datamodel.converters import parse_type, slugify_camelcase
 from datamodel.fields import Field, fields
-from datamodel.types import JSON_TYPES
+from datamodel.types import JSON_TYPES, Text
 from datamodel.validation import validator
 
 from .exceptions import ValidationError
@@ -623,6 +623,7 @@ class BaseModel(metaclass=ModelMeta):
         defs = {}
         for name, field in columns:
             _type = field.type
+            ref = None
             if _type.__module__ == 'typing':
                 if inspect.isfunction(_type):
                     if hasattr(_type, '__supertype__'):
@@ -657,11 +658,10 @@ class BaseModel(metaclass=ModelMeta):
                         "enum": list(map(lambda c: c.value, _type))
                     }
                 elif isinstance(_type, ModelMeta):
-
+                    print('HERE >> ', name, _type)
                     t = 'object'
                     enum_type = None
                     sch = _type.schema(as_dict = True)
-
                     if 'fk' in field.metadata:
                         api = field.metadata['api'] if 'api' in field.metadata else sch['table']
                         fk = field.metadata['fk'].split("|")
