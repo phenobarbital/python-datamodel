@@ -644,7 +644,9 @@ class BaseModel(metaclass=ModelMeta):
                     except (AttributeError, ValueError):
                         t = 'string'
             elif hasattr(_type, '__supertype__'):
-                if isinstance(_type.__supertype__, str):
+                if type(_type) == type(Text):  # it's a text object  pylint: disable=C0123
+                    t = 'text'
+                elif isinstance(_type.__supertype__, str):
                     t = 'string'
                 elif isinstance(_type.__supertype__, int):
                     t = 'integer'
@@ -658,7 +660,6 @@ class BaseModel(metaclass=ModelMeta):
                         "enum": list(map(lambda c: c.value, _type))
                     }
                 elif isinstance(_type, ModelMeta):
-                    print('HERE >> ', name, _type)
                     t = 'object'
                     enum_type = None
                     sch = _type.schema(as_dict = True)
