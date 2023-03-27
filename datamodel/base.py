@@ -329,15 +329,24 @@ class BaseModel(metaclass=ModelMeta):
                     f"DataModel: Wrong type for Column {key}: {f.type}"
                 )
             elif is_dataclass(f.type): # is already a dataclass
-                if isinstance(value, dict):
+                if hasattr(self.Meta, 'no_nesting'):
+                    new_val = value
+                elif value is None:
+                    new_val = None
+                elif isinstance(value, dict):
                     new_val = f.type(**value)
                 elif isinstance(value, list):
                     new_val = f.type(*value)
                 else:
-                    try:
-                        new_val = f.type(value)
-                    except (ValueError, AttributeError, TypeError):
+                    ## if value is scalar
+                    if isinstance(value, (int, str)):
                         new_val = value
+                    else:
+                        try:
+                            new_val = f.type(value)
+                        except (ValueError, AttributeError, TypeError) as ex:
+                            print(ex)
+                            new_val = value
                 setattr(self, key, new_val)
             else:
                 try:
