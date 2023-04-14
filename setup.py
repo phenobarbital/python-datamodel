@@ -127,7 +127,7 @@ setup(
     setup_requires=[
         "setuptools==67.6.1",
         "Cython==0.29.33",
-        "wheel==0.38.4"
+        "wheel==0.40.0"
     ],
     install_requires=[
         "numpy==1.24.2",
