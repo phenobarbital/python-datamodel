@@ -38,7 +38,7 @@ _end = datetime.now()
 print(f'Pydantic End at: {_end - _started}')
 
 _started = datetime.now()
-from datamodel import BaseModel
+from datamodel import BaseModel, Field
 from dataclasses import dataclass
 
 _end = datetime.now()

@@ -5,6 +5,7 @@ from libcpp cimport bool
 from dataclasses import _MISSING_TYPE
 from functools import partial
 import types
+from .types import uint64_min, uint64_max
 
 cpdef bool is_callable(object value):
     if value is None:
@@ -90,3 +91,10 @@ def validator(object F, str name, object value, object annotated_type):
             "exception": e
         })
     return errors
+
+# Define a validator function for uint64
+def validate_uint64(value: int) -> None:
+    """Validate uint64 values.
+    """
+    if value < uint64_min or value > uint64_max:
+        raise ValueError(f"{value} is not a valid uint64")

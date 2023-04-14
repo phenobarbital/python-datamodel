@@ -1,4 +1,4 @@
-from __future__ import annotations
+# from __future__ import annotations
 import inspect
 import logging
 import types
@@ -127,15 +127,17 @@ class ModelMeta(type):
                     if isinstance(df, Field):
                         setattr(cls, field, df)
                     else:
-                        df = Field(factory=_type, required=False, default=df)
+                        df = Field(required=False, default=df)
                         df.name = field
                         df.type = _type
                         setattr(cls, field, df)
                 else:
+                    print('NAME >> ', field)
                     # add a new field, based on type
-                    df = Field(factory=_type, required=False, default=None)
+                    df = Field(required=False, default=None)
                     df.name = field
                     df.type = _type
+                    print('TYPE >> ', df)
                     setattr(cls, field, df)
                 cols.append(field)
             # set the slots of this class
