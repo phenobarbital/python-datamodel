@@ -129,5 +129,5 @@ dmypy.json
 .pyre/
 
 ## C-objects
-.c
-.cpp
+*.c
+*.cpp
