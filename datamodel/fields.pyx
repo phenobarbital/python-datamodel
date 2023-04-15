@@ -182,7 +182,7 @@ class Field(ff):
         # Calling Parent init
         if version_info.minor > 9:
             args["kw_only"] = kw_only
-        super(Field, self).__init__(
+        super().__init__(
             default=self._default,
             default_factory=self._default_factory,
             **args

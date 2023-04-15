@@ -43,7 +43,7 @@ cdef class JSONContent:
             return obj.tolist()
         elif isinstance(obj, _MISSING_TYPE):
             return None
-        elif obj == MISSING:
+        elif obj is MISSING:
             return None
         raise TypeError(f"{obj!r} is not JSON serializable")
 
