@@ -57,7 +57,7 @@ extensions = [
         name='datamodel.fields',
         sources=['datamodel/fields.pyx'],
         extra_compile_args=COMPILE_ARGS,
-        language="c"
+        language="c++"
     ),
     Extension(
         name='datamodel.converters',

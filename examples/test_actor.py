@@ -39,3 +39,4 @@ class Actor(BaseModel):
 
 recipient = Actor(**DEFAULT_RECIPIENT)
 print(recipient)
+print(recipient.account)

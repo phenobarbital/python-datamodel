@@ -18,13 +18,13 @@ from datamodel.types import (
     DB_TYPES
 )
 
+
 def fields(obj: Any):
     """Return a tuple describing the fields of this dataclass.
 
     Accepts a dataclass or an instance of one. Tuple elements are of
     type Field.
     """
-
     # Might it be worth caching this, per class?
     try:
         _fields = getattr(obj, '__dataclass_fields__')
@@ -32,7 +32,6 @@ def fields(obj: Any):
         raise TypeError(
             'must be called with a dataclass type or instance'
         ) from exc
-
     # Exclude pseudo-fields.  Note that fields is sorted by insertion
     # order, so the order of the tuple is as the fields were defined.
     return tuple(f for f in _fields.values() if f._field_type is _FIELD)
@@ -69,7 +68,8 @@ class Field(ff):
         default: Optional[Callable] = None,
         nullable: bool = True,
         required: bool = False,
-        factory: Optional[Callable] = None,
+        factory: Optional[Callable] = MISSING,
+        default_factory: Optional[Callable] = MISSING,
         min: Union[int, float] = None,
         max: Union[int, float] = None,
         validator: Optional[Callable] = None,
@@ -98,63 +98,52 @@ class Field(ff):
         self._dbtype = None
         self._required = required
         self._nullable = nullable
-        if 'description' in kwargs:
-            self.description = kwargs['description']
-        else:
-            self.description = None
-        try:
-            self._primary = kwargs["primary_key"]
-            meta['primary'] = self._primary
-            del kwargs["primary_key"]
-        except KeyError:
-            self._primary = False
-        try:
-            self._dbtype = kwargs["db_type"]
+        self.description = kwargs.get('description', None)
+        self._primary = kwargs.get('primary_key', False)
+        self._default = default
+        meta['primary'] = self._primary
+        if self._primary:
+            del kwargs['primary_key']
+        self._dbtype = kwargs.get("db_type", None)
+        if self._dbtype:
             del kwargs["db_type"]
-        except KeyError:
-            self._dbtype = None
         _range = {}
         if min is not None:
             _range["min"] = min
         if max is not None:
             _range["max"] = max
+        # representation:
+        args["repr"] = kwargs.get("repr", True)
         try:
-            args["repr"] = kwargs["repr"]
             del kwargs["repr"]
         except KeyError:
-            args["repr"] = True
+            pass
+        args["init"] = kwargs.get("init", True)
         try:
-            args["init"] = kwargs["init"]
             del kwargs["init"]
         except KeyError:
-            args["init"] = True
+            pass
         if required is True:
             args["init"] = True
         if args["init"] is False:
             args["repr"] = False
         if validator is not None:
             meta["validator"] = validator
-        try:
-            meta = {**meta, **kwargs["metadata"]}
+        metadata = kwargs.get("metadata", {})
+        meta = {**meta, **metadata}
+        if metadata:
             del kwargs["metadata"]
-        except (KeyError, TypeError):
-            pass
         ## Encoder, decoder and widget:
-        try:
-            meta["widget"] = kwargs['widget']
+        meta["widget"] = kwargs.get('widget', {})
+        if meta["widget"]:
             del kwargs['widget']
-        except KeyError:
-            meta["widget"] = {}
-        try:
-            meta["encoder"] = kwargs['encoder']
+        # Encoder and Decoder:
+        meta["encoder"] = kwargs.get('encoder', None)
+        if meta["encoder"]:
             del kwargs['encoder']
-        except KeyError:
-            meta["encoder"] = None
-        try:
-            meta["decoder"] = kwargs['decoder']
+        meta["decoder"] = kwargs.get('decoder', None)
+        if meta["decoder"]:
             del kwargs['decoder']
-        except KeyError:
-            meta["decoder"] = None
         ## field is read-only
         try:
             meta["readonly"] = bool(kwargs['readonly'])
@@ -163,20 +152,37 @@ class Field(ff):
             meta["readonly"] = False
         self._meta = {**meta, **_range, **kwargs}
         args["metadata"] = self._meta
-        self._default_factory = MISSING
-        if default is not None:
+        ## Default Factory:
+        if factory is not MISSING and default_factory is not MISSING:
+            if factory is not None and default_factory is not None:
+                raise ValueError(
+                    "Cannot specify both factory and default_factory"
+                )
+        if factory is not MISSING:
+            # if default is not None:
+            #     default_factory = MISSING
+            if factory is not None:
+                default_factory = factory
+        if default_factory is not MISSING:
+            self._default_factory = default_factory
+            if default is not None:
+                self._default = default
+            else:
+                self._default = MISSING
+        elif default is not MISSING:
             self._default = default
+            self._default_factory = MISSING
         else:
             self._default = None
+            self._default_factory = default_factory
             if nullable is True: # Can be null
-                if not factory:
-                    # factory = _MISSING_TYPE
-                    factory = MISSING
+                if factory is None:
+                    factory = self._default_factory
                 self._default_factory = factory
         # Calling Parent init
         if version_info.minor > 9:
             args["kw_only"] = kw_only
-        super(Field, self).__init__(
+        super().__init__(
             default=self._default,
             default_factory=self._default_factory,
             **args
@@ -187,10 +193,13 @@ class Field(ff):
     def __repr__(self):
         return (
             "Field("
-            f"column={self.name!r},"
-            f"type={self.type!r},"
+            f"column={self.name!r}, "
+            f"type={self.type!r}, "
             f"default={self.default!r})"
         )
+
+    def get_metadata(self) -> dict:
+        return self._meta
 
     def required(self) -> bool:
         return self._required
@@ -234,12 +243,6 @@ def Column(
       Column.
       DataModel Function that returns a Field() object
     """
-    if factory is None:
-        factory = MISSING
-    if default is not None and factory is not MISSING:
-        raise ValueError(
-            f"Cannot specify both default: {default} and factory: {factory}"
-        )
     return Field(
         default=default,
         nullable=nullable,

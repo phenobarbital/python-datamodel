@@ -10,12 +10,18 @@ from datetime import (
 )
 from uuid import UUID
 from decimal import Decimal
-from numpy import int64
+
+
+uint64 = NewType('uint64', int)  # uint64
+uint64_min = 0
+uint64_max = (1 << 64) - 1
+
 
 DB_TYPES: dict = {
     bool: "boolean",
     int: "integer",
-    int64: "bigint",
+    # int64: "bigint",
+    uint64: "bigint",
     float: "float",
     str: "character varying",
     bytes: "byte",
@@ -35,7 +41,7 @@ DB_TYPES: dict = {
 MODEL_TYPES: dict = {
     "boolean": bool,
     "integer": int,
-    "bigint": int64,
+    "bigint": uint64,
     "float": float,
     "character varying": str,
     "string": str,
@@ -63,7 +69,7 @@ MODEL_TYPES: dict = {
 JSON_TYPES: dict = {
     bool: "boolean",
     int: "integer",
-    int64: "long",
+    uint64: "long",
     float: "number",
     str: "string",
     bytes: "byte",
@@ -80,3 +86,15 @@ JSON_TYPES: dict = {
 
 ### Declaration of New Types:
 Text: str = NewType('Text', str)
+
+
+def default_dict():
+    """Return a default empty string usable into Dataclasses.
+    """
+    return {}
+
+
+def default_string():
+    """Return a default string.
+    """
+    return ''
