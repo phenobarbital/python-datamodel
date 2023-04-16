@@ -88,6 +88,12 @@ extensions = [
         sources=['datamodel/parsers/json.pyx'],
         extra_compile_args=COMPILE_ARGS,
         language="c++"
+    ),
+    Extension(
+        name='datamodel.libs.mapping',
+        sources=['datamodel/libs/mapping.pyx'],
+        extra_compile_args=COMPILE_ARGS,
+        language="c++"
     )
 ]
 
@@ -121,7 +127,7 @@ setup(
     ],
     author=__author__,
     author_email=__author_email__,
-    packages=find_packages(exclude=["contrib", "docs", "tests"]),
+    packages=find_packages(exclude=["contrib", "docs", "tests", "examples"]),
     include_package_data=True,
     license=__license__,
     setup_requires=[

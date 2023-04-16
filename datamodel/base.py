@@ -7,7 +7,6 @@ import types
 from dataclasses import (
     _FIELD,
     _MISSING_TYPE,
-    asdict,
     dataclass,
     is_dataclass,
     make_dataclass
@@ -15,77 +14,15 @@ from dataclasses import (
 from functools import partial
 from enum import EnumMeta
 from uuid import UUID
-from operator import attrgetter
 from orjson import OPT_INDENT_2
 from datamodel.converters import parse_type, slugify_camelcase
-from datamodel.fields import Field, fields
+from datamodel.fields import Field
 from datamodel.types import JSON_TYPES, Text
 from datamodel.validation import validator
 from .exceptions import ValidationError
 from .parsers.encoders import json_encoder
 from .abstract import ModelMeta, Meta
-
-
-class ModelMixin:
-    """Interface for shared methods on Model classes.
-    """
-    def __unicode__(self):
-        return str(__class__)
-
-    def columns(self):
-        return self.__columns__
-
-    @classmethod
-    def get_columns(cls):
-        return cls.__columns__
-
-    def get_fields(self):
-        return self.__fields__
-
-    def __getitem__(self, item):
-        return getattr(self, item)
-
-    def column(self, name):
-        return self.__columns__[name]
-
-    def __repr__(self):
-        nodef_f_vals = (
-            (f.name, attrgetter(f.name)(self))
-            for f in fields(self)
-            if attrgetter(f.name)(self) != f.default
-        )
-        nodef_f_repr = ", ".join(f"{name}={value}" for name, value in nodef_f_vals)
-        return f"{self.__class__.__name__}({nodef_f_repr})"
-
-    def remove_nulls(self, obj: Any) -> dict[str, Any]:
-        """Recursively removes any fields with None values from the given object."""
-        if isinstance(obj, list):
-            return [self.remove_nulls(item) for item in obj]
-        elif isinstance(obj, dict):
-            return {key: self.remove_nulls(value) for key, value in obj.items() if value is not None}
-        else:
-            return obj
-
-    def dict(self):
-        if self.Meta.remove_nulls is True:
-            return self.remove_nulls(asdict(self, dict_factory=dict))
-        return asdict(self)
-
-    def to_dict(self):
-        return self.dict()
-
-    def json(self, **kwargs):
-        encoder = self.__encoder__(**kwargs)
-        return encoder(asdict(self))
-
-    to_json = json
-
-class Model(ModelMixin, metaclass=ModelMeta):
-    """Model.
-
-    Basic dataclass-based Model.
-    """
-    Meta = Meta
+from .models import ModelMixin
 
 
 class BaseModel(ModelMixin, metaclass=ModelMeta):
