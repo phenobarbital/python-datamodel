@@ -7,6 +7,7 @@ import types
 from dataclasses import (
     _FIELD,
     _MISSING_TYPE,
+    MISSING,
     dataclass,
     is_dataclass,
     make_dataclass
@@ -146,6 +147,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             elif self.is_empty(value):
                 is_missing = isinstance(f.default, _MISSING_TYPE)
                 setattr(self, key, f.default_factory if is_missing else f.default)
+
             else:
                 try:
                     # be processed by _parse_type
@@ -169,6 +171,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             self._calculate_value(name, value, f)
             errors = {}
             try:
+                value = getattr(self, f.name)
                 error = self._validation(name, value, f)
                 if error:
                     errors[name] = error
