@@ -142,7 +142,7 @@ setup(
     ],
     tests_require=[
         'pytest>=7.2.2',
-        'pytest-asyncio==0.20.3',
+        'pytest-asyncio==0.21.0',
         'pytest-xdist==3.2.0',
         'pytest-assume==2.4.3'
     ],
