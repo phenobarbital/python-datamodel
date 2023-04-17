@@ -68,7 +68,7 @@ def test_person():
     assert person.attributes == {"hair_color": "blonde"}
 
     with pytest.raises(ValueError):
-        p1 = Column(default={}, factory=dict, default_factory=default_dict)
+        p1 = Column(default=None, factory=dict, default_factory=default_dict)
         person = Person(name="Bob", attributes=p1)
 
     age_field = Column(default=0, factory=int)

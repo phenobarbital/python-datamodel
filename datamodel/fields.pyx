@@ -70,8 +70,7 @@ class Field(ff):
         default: Optional[Callable] = None,
         nullable: bool = True,
         required: bool = False,
-        factory: Optional[Callable] = MISSING,
-        default_factory: Optional[Callable] = MISSING,
+        factory: Optional[Callable] = None,
         min: Union[int, float] = None,
         max: Union[int, float] = None,
         validator: Optional[Callable] = None,
@@ -158,33 +157,31 @@ class Field(ff):
             meta["readonly"] = False
         self._meta = {**meta, **_range, **kwargs}
         args["metadata"] = self._meta
-        ## Default Factory:
-        if factory is not MISSING and default_factory is not MISSING:
+        self._default_factory = MISSING
+        if default is not None:
+            self._default = default
+        else:
+            ## Default Factory:
+            default_factory = kwargs.get('default_factory', None)
             if factory is not None and default_factory is not None:
                 raise ValueError(
                     "Cannot specify both factory and default_factory"
                 )
-        if factory is not MISSING:
-            # if default is not None:
-            #     default_factory = MISSING
             if factory is not None:
-                default_factory = factory
-        if default_factory is not MISSING:
-            self._default_factory = default_factory
-            if default is not None:
-                self._default = default
-            else:
-                self._default = MISSING
-        elif default is not MISSING:
-            self._default = default
-            self._default_factory = MISSING
-        else:
-            self._default = None
-            self._default_factory = default_factory
-            if nullable is True: # Can be null
-                if factory is None:
-                    factory = self._default_factory
                 self._default_factory = factory
+                self._default = MISSING
+            elif default_factory is not None:
+                self._default_factory = default_factory
+                if default is not None:
+                    self._default = default
+                    self._default_factory = MISSING
+                else:
+                    if self._default_factory is not MISSING:
+                        self._default = MISSING
+                    if nullable is True: # Can be null
+                        if factory is None:
+                            factory = self._default_factory
+                        self._default_factory = factory
         # Calling Parent init
         if version_info.minor > 9:
             args["kw_only"] = kw_only

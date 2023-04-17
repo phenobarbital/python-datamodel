@@ -47,13 +47,11 @@ class ModelMixin:
         else:
             return obj
 
-    def dict(self):
+    def to_dict(self):
         if self.Meta.remove_nulls is True:
             return self.remove_nulls(asdict(self, dict_factory=dict))
         return asdict(self)
 
-    def to_dict(self):
-        return self.dict()
 
     def json(self, **kwargs):
         encoder = self.__encoder__(**kwargs)
