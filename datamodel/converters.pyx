@@ -8,7 +8,8 @@ from typing import Union
 from dataclasses import is_dataclass, _MISSING_TYPE
 from decimal import Decimal
 from cpython cimport datetime
-from dateutil import parser
+import pendulum
+from pendulum.parsing.exceptions import ParserError
 from uuid import UUID
 from cpython.ref cimport PyObject
 import orjson
@@ -54,8 +55,12 @@ cpdef datetime.date to_date(object obj):
         if isinstance(obj, (bytes, bytearray)):
             obj = obj.decode("ascii")
         try:
-            return parser.parse(obj).date()
-        except (ValueError, TypeError):
+            return datetime.datetime.fromisoformat(obj).date()
+        except ValueError:
+            pass
+        try:
+            return pendulum.parse(obj, strict=False).date()
+        except (ValueError, TypeError, ParserError):
             raise ValueError(
                 f"Can't convert invalid data *{obj}* to date"
             )
@@ -73,8 +78,12 @@ cpdef datetime.datetime to_datetime(object obj):
         if isinstance(obj, (bytes, bytearray)):
             obj = obj.decode("ascii")
         try:
-            return parser.parse(obj)
-        except (ValueError, TypeError):
+            return datetime.datetime.fromisoformat(obj)
+        except ValueError:
+            pass
+        try:
+            return pendulum.parse(obj, strict=False)
+        except (ValueError, TypeError, ParserError):
             raise ValueError(
                 f"Can't convert invalid data *{obj}* to datetime"
             )
@@ -216,7 +225,7 @@ cpdef object to_time(object obj):
             )
 
 
-cdef object strtobool (str val):
+cdef object strtobool(str val):
     """Convert a string representation of truth to true (1) or false (0).
 
     True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values
@@ -339,6 +348,23 @@ def parse_type(object T, object data, object encoder = None):
                         data = t(*data)
                     else:
                         data = None
+                elif callable(t):
+                    try:
+                        fn = encoders[t]
+                        try:
+                            data = fn(data)
+                        except TypeError as ex:
+                            print(t, data, ex)
+                            pass
+                        except (ValueError, RuntimeError) as exc:
+                            raise ValueError(
+                                f"Model: Error parsing {T}, {exc}"
+                            )
+                    except KeyError:
+                        logging.warning(
+                            f'Unsupported Encoder {t}'
+                        )
+                        pass
                 # F.type = args[0]
                 return data
             except KeyError:
