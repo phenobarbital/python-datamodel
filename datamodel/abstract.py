@@ -117,10 +117,6 @@ class ModelMeta(type):
                         df.type = _type
                         cols[field] = df
                         attrs[field] = df
-                    elif strict is True and field not in attrs:
-                        raise ValueError(
-                            f"Cannot create a new Field {field} on {cls.__name__}"
-                        )
                     else:
                         # add a new field, based on type
                         df = Field(type=_type, required=False, default=None)
