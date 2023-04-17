@@ -60,7 +60,9 @@ class Field(ff):
         '_required',
         '_nullable',
         '_primary',
-        '_dbtype'
+        '_dbtype',
+        '_alias',
+        '_pattern'
     )
 
     def __init__(

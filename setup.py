@@ -144,7 +144,8 @@ setup(
         "orjson==3.8.10",
         'typing_extensions==4.5.0',
         "asyncpg==0.27.0",
-        "python-dateutil==2.8.2"
+        "python-dateutil==2.8.2",
+        "pendulum==2.1.2"
     ],
     tests_require=[
         'pytest>=7.2.2',
