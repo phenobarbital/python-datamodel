@@ -296,9 +296,7 @@ cdef dict encoders = {
 }
 
 def parse_type(object T, object data, object encoder = None):
-    print('ENTERING HERE >> ', T, data)
     if T.__module__ == 'typing':
-        print('HERE > ', T, data)
         args = None
         try:
             args = T.__args__
@@ -375,7 +373,6 @@ def parse_type(object T, object data, object encoder = None):
                                 if data is not None:
                                     data = fn(data)
                             except TypeError as ex:
-                                print(t, data, ex)
                                 pass
                             except (ValueError, RuntimeError) as exc:
                                 raise ValueError(

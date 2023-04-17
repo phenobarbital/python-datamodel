@@ -176,15 +176,12 @@ class Field(ff):
                     self._default = default
                     self._default_factory = MISSING
                 else:
-                    print(' == ESTE FALLO ACA >> ')
-                    print(self._default, factory, nullable, self._default_factory)
                     if self._default_factory is not MISSING:
-                        self._default = None
-                    # if nullable is True: # Can be null
-                    #     if factory is None:
-                    #         factory = self._default_factory
-                    #     self._default_factory = factory
-            print('FACTORY > ', self._default_factory, self._default, kwargs.get('type'))
+                        self._default = MISSING
+                    if nullable is True: # Can be null
+                        if factory is None:
+                            factory = self._default_factory
+                        self._default_factory = factory
         # Calling Parent init
         if version_info.minor > 9:
             args["kw_only"] = kw_only

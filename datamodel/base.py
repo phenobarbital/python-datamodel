@@ -120,7 +120,6 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             try:
                 if f.type.__module__ == 'typing':  # a typing extension
                     new_val = parse_type(f.type, value, encoder)
-                    # print('NEW > ', key, new_val)
                     setattr(self, key, new_val)
                     return
             except (ValueError, AttributeError, TypeError) as e:
@@ -163,7 +162,6 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
          Post init method.
         Fill fields with function-factory or calling validations
         """
-        print('START HERE?')
         # checking if an attribute is already a dataclass:
         for _, f in self.__columns__.items():
             value = getattr(self, f.name)
