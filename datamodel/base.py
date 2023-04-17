@@ -120,6 +120,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             try:
                 if f.type.__module__ == 'typing':  # a typing extension
                     new_val = parse_type(f.type, value, encoder)
+                    # print('NEW > ', key, new_val)
                     setattr(self, key, new_val)
                     return
             except (ValueError, AttributeError, TypeError) as e:

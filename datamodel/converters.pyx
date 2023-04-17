@@ -305,7 +305,10 @@ def parse_type(object T, object data, object encoder = None):
         if T._name == 'Dict' and isinstance(data, dict):
             if args:
                 return {k: parse_type(T.__args__[1], v) for k, v in data.items()}
-        elif T._name == 'List' and isinstance(data, (list, tuple)):
+        #elif T._name == 'List' and isinstance(data, (list, tuple)):
+        elif T._name == 'List':
+            if not isinstance(data, (list, tuple)):
+                data = [data]
             arg = args[0]
             if arg.__module__ == 'typing': # nested typing
                 try:
@@ -347,25 +350,40 @@ def parse_type(object T, object data, object encoder = None):
                     elif isinstance(data, (list, tuple)):
                         data = t(*data)
                     else:
-                        data = None
+                        ## is already a dataclass, returning
+                        return data
                 elif callable(t):
-                    try:
-                        fn = encoders[t]
+                    if t.__module__ == 'typing': # nested typing
+                        # there is also a nested typing:
+                        if t._name == 'List' and isinstance(data, list):
+                            arg = t.__args__[0]
+                            if is_dataclass(arg):
+                                result = []
+                                for x in data:
+                                    if isinstance(x, dict):
+                                        result.append(arg(**x))
+                                    else:
+                                        result.append(arg(*x))
+                                return result
+                        return data
+                    else:
                         try:
-                            if data is not None:
-                                data = fn(data)
-                        except TypeError as ex:
-                            print(t, data, ex)
-                            pass
-                        except (ValueError, RuntimeError) as exc:
-                            raise ValueError(
-                                f"Model: Error parsing {T}, {exc}"
+                            fn = encoders[t]
+                            try:
+                                if data is not None:
+                                    data = fn(data)
+                            except TypeError as ex:
+                                print(t, data, ex)
+                                pass
+                            except (ValueError, RuntimeError) as exc:
+                                raise ValueError(
+                                    f"Model: Error parsing {T}, {exc}"
+                                )
+                        except KeyError:
+                            logging.warning(
+                                f'Unsupported Encoder {t}'
                             )
-                    except KeyError:
-                        logging.warning(
-                            f'Unsupported Encoder {t}'
-                        )
-                        pass
+                            pass
                 # F.type = args[0]
                 return data
             except KeyError:
