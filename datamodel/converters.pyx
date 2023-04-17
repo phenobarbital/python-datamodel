@@ -263,7 +263,7 @@ cpdef object to_boolean(object obj):
         return bool(obj)
 
 cpdef object to_object(object obj):
-    if isinstance(obj, (list, dict)):
+    if isinstance(obj, (list, dict,tuple)):
         return obj
     elif callable(obj):
         # its a function callable returning a value
@@ -292,7 +292,8 @@ cdef dict encoders = {
     datetime.time: to_time,
     Decimal: to_decimal,
     dict: to_object,
-    list: to_object
+    list: to_object,
+    tuple: to_object
 }
 
 def parse_type(object T, object data, object encoder = None):
