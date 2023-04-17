@@ -104,7 +104,7 @@ class ModelMeta(type):
                         cols[field] = attrs.get(field)
                     else:
                         ds = attrs.get(field)
-                        df = Field(required=False, factory=_type, type=_type, default=ds)
+                        df = Field(required=False, type=_type, default=ds)
                         df.name = field
                         df.type = _type
                         cols[field] = df
@@ -123,7 +123,7 @@ class ModelMeta(type):
                         )
                     else:
                         # add a new field, based on type
-                        df = Field(type=_type, factory=_type, required=False, default=None)
+                        df = Field(type=_type, required=False, default=None)
                         df.name = field
                         df.type = _type
                         cols[field] = df

@@ -167,20 +167,23 @@ class Field(ff):
                 raise ValueError(
                     "Cannot specify both factory and default_factory"
                 )
-            print('AQUI >> ', default_factory, factory)
             if factory is not None:
                 self._default_factory = factory
+                self._default = MISSING
             elif default_factory is not None:
                 self._default_factory = default_factory
                 if default is not None:
                     self._default = default
                     self._default_factory = MISSING
                 else:
-                    self._default = default
-                    if nullable is True: # Can be null
-                        if factory is None:
-                            factory = self._default_factory
-                        self._default_factory = factory
+                    print(' == ESTE FALLO ACA >> ')
+                    print(self._default, factory, nullable, self._default_factory)
+                    if self._default_factory is not MISSING:
+                        self._default = None
+                    # if nullable is True: # Can be null
+                    #     if factory is None:
+                    #         factory = self._default_factory
+                    #     self._default_factory = factory
             print('FACTORY > ', self._default_factory, self._default, kwargs.get('type'))
         # Calling Parent init
         if version_info.minor > 9:
