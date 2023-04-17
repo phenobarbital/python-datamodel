@@ -352,7 +352,8 @@ def parse_type(object T, object data, object encoder = None):
                     try:
                         fn = encoders[t]
                         try:
-                            data = fn(data)
+                            if data is not None:
+                                data = fn(data)
                         except TypeError as ex:
                             print(t, data, ex)
                             pass
