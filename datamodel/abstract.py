@@ -1,9 +1,10 @@
+from __future__ import annotations
 import logging
 from typing import Optional, Union, Any
 from collections.abc import Callable
 from collections import OrderedDict
 import types
-from dataclasses import dataclass, _FIELD
+from dataclasses import dataclass, _FIELD, InitVar
 from .parsers.json import JSONContent
 from .fields import Field
 
@@ -95,14 +96,15 @@ class ModelMeta(type):
             try:
                 strict = attrs['Meta'].strict
             except (TypeError, AttributeError, KeyError):
-                strict = True
+                strict = False
+            # set the slots of this class
             for field, _type in annotations.items():
-                if field in annotations:
+                if field in attrs:
                     if isinstance(attrs.get(field), Field):
                         cols[field] = attrs.get(field)
                     else:
                         ds = attrs.get(field)
-                        df = Field(required=False, default=ds)
+                        df = Field(required=False, factory=_type, type=_type, default=ds)
                         df.name = field
                         df.type = _type
                         cols[field] = df
@@ -110,21 +112,23 @@ class ModelMeta(type):
                         setattr(cls, field, df)
                 else:
                     if strict is False and field not in attrs:
-                        df = Field(factory=_type, required=False, default=None)
+                        df = Field(type=_type, required=False, default=None)
                         df.name = field
                         df.type = _type
                         cols[field] = df
                         attrs[field] = df
-                        setattr(cls, field, df)
+                    elif strict is True and field not in attrs:
+                        raise ValueError(
+                            f"Cannot create a new Field {field} on {cls.__name__}"
+                        )
                     else:
-                        df = attrs[field]
-                        df = Field(type=_type, required=False, default=df)
+                        # add a new field, based on type
+                        df = Field(type=_type, factory=_type, required=False, default=None)
                         df.name = field
                         df.type = _type
                         cols[field] = df
                         attrs[field] = df
                         setattr(cls, field, df)
-            # set the slots of this class
             cls.__slots__ = tuple(cols.keys())
         attr_meta = attrs.pop("Meta", None)
         new_cls = super().__new__(cls, name, bases, attrs, **kwargs)

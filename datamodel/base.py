@@ -163,6 +163,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
          Post init method.
         Fill fields with function-factory or calling validations
         """
+        print('START HERE?')
         # checking if an attribute is already a dataclass:
         for _, f in self.__columns__.items():
             value = getattr(self, f.name)

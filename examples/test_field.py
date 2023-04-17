@@ -5,7 +5,7 @@ from datamodel.types import default_dict, default_string
 
 @dataclass
 class Person:
-    name: str = Field(required=True, factory=default_string, comment='Factory not callable')
+    name: str = Field(required=True, factory=default_string, comment='Factory callable')
     first_name: str = Field(required=True, factory=default_string, comment='Factory callable')
     last_name: str = Field(required=True, default_factory=str, comment='Default Factory')
     age: int = Column(default=0)
