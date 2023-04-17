@@ -73,6 +73,8 @@ class Field(ff):
         min: Union[int, float] = None,
         max: Union[int, float] = None,
         validator: Optional[Callable] = None,
+        pattern: Optional[str] = None,
+        alias: Optional[str] = None,
         kw_only: bool = False,
         **kwargs,
     ):
@@ -101,6 +103,8 @@ class Field(ff):
         self.description = kwargs.get('description', None)
         self._primary = kwargs.get('primary_key', False)
         self._default = default
+        self._alias = alias
+        self._pattern = pattern
         meta['primary'] = self._primary
         if self._primary:
             del kwargs['primary_key']

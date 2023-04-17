@@ -225,7 +225,7 @@ cpdef object to_time(object obj):
             )
 
 
-cdef object strtobool (str val):
+cdef object strtobool(str val):
     """Convert a string representation of truth to true (1) or false (0).
 
     True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values
