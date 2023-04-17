@@ -369,6 +369,8 @@ def parse_type(object T, object data, object encoder = None):
                         return data
                     else:
                         try:
+                            if t == str:
+                                return data
                             fn = encoders[t]
                             try:
                                 if data is not None:
