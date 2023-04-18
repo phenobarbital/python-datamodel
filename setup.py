@@ -93,7 +93,7 @@ extensions = [
         name='datamodel.libs.mapping',
         sources=['datamodel/libs/mapping.pyx'],
         extra_compile_args=COMPILE_ARGS,
-        language="c++"
+        language="c"
     )
 ]
 
