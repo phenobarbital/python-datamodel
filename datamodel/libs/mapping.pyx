@@ -35,6 +35,7 @@ cdef class ClassDict(dict):
                             v = fn(v)
                             setattr(self, k, v)
                         else:
+                            v = fn
                             setattr(self, k, fn)
                     except (TypeError, KeyError):
                         pass
@@ -56,11 +57,17 @@ cdef class ClassDict(dict):
     def __contains__(self, key):
         return key in self._columns
 
+    def get(self, key, default=None):
+        return self.mapping.get(key, default)
+
     def __delitem__(self, key):
         if key in self.mapping:
-            value = self.mapping.pop(key)
+            self.mapping.pop(key, None)
             self._columns.remove(key)
-            self.pop(value, None)
+            if hasattr(self, key):
+                setattr(self, key, None)
+        else:
+            raise KeyError(key)
 
     def __setitem__(self, key, value):
         self.mapping[key] = value
@@ -68,8 +75,13 @@ cdef class ClassDict(dict):
             self._columns.append(key)
 
     def __getitem__(self, key):
+        if isinstance(key, list):
+            return [self.mapping[k] for k in key]
         try:
-            return self.mapping[key]
+            try:
+                return self.mapping[key]
+            except KeyError:
+                return None
         except KeyError:
             return self.default
 
@@ -102,19 +114,15 @@ cdef class ClassDict(dict):
         """
         Attributes for dict keys
         """
-        try:
-            return self.__getitem__(attr)
-        except KeyError as ex:
-            raise KeyError(
-                f"User Error: invalid field name {attr} on {self.mapping!r}"
-            ) from ex
-        except TypeError as ex:
-            raise TypeError(
-                f"User Error: invalid attribute value on {self.mapping!r} for {attr}"
-            ) from ex
+        if attr in self.mapping:
+            return self.mapping[attr]
+        elif attr in self._columns:
+            return self.mapping[attr]
+
+        raise KeyError(
+            f"User Error: invalid field name {attr} on {self.mapping!r}"
+        )
 
     def __delattr__(self, name: str) -> None:
-        value = self[name]
-        del self.mapping[name]
-        self._columns.remove(name)
-        self.pop(value, None)
+        if name in self.mapping:
+            self.pop(name, None)
