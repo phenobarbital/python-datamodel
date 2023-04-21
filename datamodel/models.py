@@ -65,3 +65,9 @@ class Model(ModelMixin, metaclass=ModelMeta):
     Basic dataclass-based Model.
     """
     Meta = Meta
+
+    def __post_init__(self) -> None:
+        """
+        Post init method.
+        Useful for making Post-validations of Model.
+        """
