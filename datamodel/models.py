@@ -52,7 +52,6 @@ class ModelMixin:
             return self.remove_nulls(asdict(self, dict_factory=dict))
         return asdict(self)
 
-
     def json(self, **kwargs):
         encoder = self.__encoder__(**kwargs)
         return encoder(asdict(self))

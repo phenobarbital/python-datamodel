@@ -165,11 +165,11 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         Fill fields with function-factory or calling validations
         """
         # checking if an attribute is already a dataclass:
+        errors = {}
         for _, f in self.__columns__.items():
             value = getattr(self, f.name)
             name = f.name
             self._calculate_value(name, value, f)
-            errors = {}
             try:
                 value = getattr(self, f.name)
                 error = self._validation(name, value, f)
@@ -181,7 +181,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             if self.Meta.strict is True:
                 raise ValidationError(
                     f"""{self.modelName}: There are errors in your Model. Hint: please check the "payload" attribute in the exception.""",
-                    payload = errors
+                    payload=errors
                 )
             self.__errors__ = errors
             object.__setattr__(self, "__valid__", False)
