@@ -31,10 +31,10 @@ def set_connection(cls, conn: Callable):
 
 
 def _dc_method_setattr(
-            self,
-            name: str,
-            value: Any,
-        ) -> None:
+    self,
+    name: str,
+    value: Any,
+) -> None:
     """
     _dc_method_setattr.
     Method for overwrite the "setattr" on Dataclasses.
@@ -49,9 +49,10 @@ def _dc_method_setattr(
         object.__setattr__(self, name, value)
         if name not in self.__fields__:
             if self.Meta.strict is True:
-                logging.warning(
-                    f"Warning: *{name}* doesn't exists on {self.modelName}"
-                )
+                # logging.warning(
+                #     f"Warning: *{name}* doesn't exists on {self.modelName}"
+                # )
+                return False
             else:
                 try:
                     # create a new Field on Model.
