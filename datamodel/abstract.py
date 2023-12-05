@@ -76,7 +76,14 @@ def create_dataclass(
     create_dataclass.
        Create a Dataclass from a simple Class
     """
-    dc = dataclass(unsafe_hash=strict, repr=False, init=True, order=False, eq=True, frozen=frozen)(new_cls)
+    dc = dataclass(
+        unsafe_hash=strict,
+        repr=False,
+        init=True,
+        order=False,
+        eq=True,
+        frozen=frozen
+    )(new_cls)
     setattr(dc, "__setattr__", _dc_method_setattr)
     # adding a properly internal json encoder:
     dc.__encoder__ = JSONContent

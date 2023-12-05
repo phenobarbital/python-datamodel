@@ -294,9 +294,10 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         return obj
 
     @classmethod
-    def from_json(cls, obj: str) -> dataclass:
+    def from_json(cls, obj: str, **kwargs) -> dataclass:
         try:
-            decoded = cls.__encoder__.loads(obj)
+            decoder = cls.__encoder__(**kwargs)
+            decoded = decoder.loads(obj)
             return cls(**decoded)
         except ValueError as e:
             raise RuntimeError(
@@ -313,7 +314,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             ) from e
 
     @classmethod
-    def model(cls, dialect: str = "json") -> Any:
+    def model(cls, dialect: str = "json", **kwargs) -> Any:
         """model.
 
         Return the json-version of current Model.
@@ -359,7 +360,8 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
                 "type": "object",
                 "properties": cols,
             }
-            result = cls.__encoder__.dumps(doc, option=OPT_INDENT_2)
+            encoder = cls.__encoder__(**kwargs)
+            result = encoder.dumps(doc, option=OPT_INDENT_2)
         return result
 
     @classmethod
