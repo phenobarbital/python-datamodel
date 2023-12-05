@@ -8,7 +8,7 @@ _end = datetime.now()
 print(f'Pydantic Loaded at: {_end - _started}')
 
 _started = datetime.now()
-from datamodel import Field
+from datamodel import Field, BaseModel
 from dataclasses import dataclass
 
 _end = datetime.now()

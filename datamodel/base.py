@@ -26,6 +26,49 @@ from .abstract import ModelMeta, Meta
 from .models import ModelMixin
 
 
+def _get_type_info(_type, name, title):
+    if _type.__module__ == 'typing':
+        if inspect.isfunction(_type):
+            if hasattr(_type, '__supertype__'):
+                return _type.__supertype__
+            raise ValueError(
+                f"You're using bare Functions to type hint on {name} for: {title}"
+            )
+        if _type._name == 'List':
+            return 'array'
+        if _type._name == 'Dict':
+            return 'object'
+        try:
+            return _type.__args__[0].__name__
+        except (AttributeError, ValueError):
+            return 'string'
+    elif hasattr(_type, '__supertype__'):
+        if type(_type) == type(Text):
+            return 'text'
+        if isinstance(_type.__supertype__, (str, int)):
+            return 'string' if isinstance(_type.__supertype__, str) else 'integer'
+    return JSON_TYPES.get(_type, 'string')
+
+
+def _get_ref_info(_type, field):
+    if isinstance(_type, EnumMeta):
+        return {
+            "type": "array",
+            "enum_type": {
+                "type": "string",
+                "enum": list(map(lambda c: c.value, _type))
+            }
+        }
+    elif isinstance(_type, ModelMeta):
+        return {
+            "type": "object",
+            "enum_type": None,
+            "schema": _type.schema(as_dict=True),
+            "ref": field.metadata.get('fk').split("|") if 'fk' in field.metadata else _type.schema(as_dict=True)['$id']
+        }
+    return None
+
+
 class BaseModel(ModelMixin, metaclass=ModelMeta):
     """
     BaseModel.
@@ -33,7 +76,13 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
     """
     Meta = Meta
 
-    def is_valid(self):
+    def is_valid(self) -> bool:
+        """is_valid.
+
+        returns True when current Model is valid under datatype validations.
+        Returns:
+            bool: True if current model is valid.
+        """
         return bool(self.__valid__)
 
     @classmethod
@@ -80,84 +129,57 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             value (Any): value to be assigned.
         """
         if name not in self.__columns__:
-            if name != '__errors__' and self.Meta.strict is False: # can be created new Fields
+            if name != '__errors__' and self.Meta.strict is False:
                 self.create_field(name, value)
         else:
             setattr(self, name, value)
 
     def _calculate_value(self, key: str, value: Any, f: Field) -> None:
-        if 'encoder' in f.metadata:
-            encoder = f.metadata['encoder']
-        else:
-            encoder = None
-        ### start checking:
+        encoder = f.metadata.get('encoder')
+
+        # Check if the value is callable and the field has a default
         if hasattr(f, 'default') and self.is_callable(value):
             return
-        ### Factory Value:
-        elif isinstance(f.type, types.MethodType):
-            raise ValueError(
-                f"DataModel: Wrong Type declared for Column {key}: {f.type}"
-            )
-        elif is_dataclass(f.type): # is already a dataclass
+
+        # Factory Value handling
+        if is_dataclass(f.type):  # f.type is a dataclass
             if hasattr(self.Meta, 'no_nesting'):
                 new_val = value
             elif value is None:
                 new_val = None
-            elif isinstance(value, dict):
-                new_val = f.type(**value)
-            elif isinstance(value, list):
-                new_val = f.type(*value)
+            elif isinstance(value, (dict, list)):
+                new_val = f.type(**value) if isinstance(value, dict) else f.type(*value)
             else:
-                ## if value is scalar
-                if isinstance(value, (int, str, UUID)):
-                    new_val = value
-                else:
-                    try:
-                        new_val = f.type(value)
-                    except (ValueError, AttributeError, TypeError):
-                        new_val = value
+                new_val = value if isinstance(value, (int, str, UUID)) else f.type(value)
             setattr(self, key, new_val)
         else:
-            try:
-                if f.type.__module__ == 'typing':  # a typing extension
-                    new_val = parse_type(f.type, value, encoder)
-                    setattr(self, key, new_val)
-                    return
-            except (ValueError, AttributeError, TypeError) as e:
-                raise TypeError(
-                    f"DataModel: Wrong Type for {key}: {f.type}, error: {e}"
-                ) from e
+            # Handle typing extensions
+            if f.type.__module__ == 'typing':
+                new_val = parse_type(f.type, value, encoder)
+                setattr(self, key, new_val)
+                return
+
+            # Handle list of dataclasses
             if isinstance(value, list):
                 try:
                     sub_type = f.type.__args__[0]
                     if is_dataclass(sub_type):
-                        # for every item
-                        items = []
-                        for item in value:
-                            try:
-                                if isinstance(item, dict):
-                                    items.append(sub_type(**item))
-                                else:
-                                    items.append(item)
-                            except (TypeError, AttributeError):
-                                return
+                        items = [sub_type(**item) if isinstance(item, dict) else item for item in value]
                         setattr(self, key, items)
+                        return
                 except AttributeError:
                     setattr(self, key, value)
-            elif self.is_empty(value):
+
+            # Handle empty values with defaults
+            if self.is_empty(value):
                 is_missing = isinstance(f.default, _MISSING_TYPE)
                 setattr(self, key, f.default_factory if is_missing else f.default)
-
             else:
                 try:
-                    # be processed by _parse_type
                     new_val = parse_type(f.type, value, encoder)
                     setattr(self, key, new_val)
                 except (TypeError, ValueError) as ex:
-                    raise ValueError(
-                        f"Wrong Type for {key}: {f.type}, error: {ex}"
-                    ) from ex
-                return
+                    raise ValueError(f"Wrong Type for {key}: {f.type}, error: {ex}") from ex
 
     def __post_init__(self) -> None:
         """
@@ -188,7 +210,6 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         else:
             object.__setattr__(self, "__valid__", True)
 
-
     def is_callable(self, value) -> bool:
         """is_callable.
             Check if current value is a callabled and not a _MISSING_TYPE or a partial function.
@@ -212,7 +233,6 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         elif str(value) == '':
             return True
         return False
-
 
     def _validation(self, name: str, value: Any, f: Field) -> Optional[Any]:
         """
@@ -391,106 +411,35 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         }
 
     @classmethod
-    def schema(cls, as_dict: bool = False) -> Any:
-        """schema.
-
-        Get JSON Schema of Current Model.
-        Returns: str: string (json) version of model.
-
-        TODO: using Nested Models to create the $ref/schemas/{name}
-        * Using $defs to define sub-schemas based on custom types.
-        * using "definitions" to create "enum" of enum fields.
-        """
-        if hasattr(cls.Meta, 'title'):
-            title = cls.Meta.title
-        t = cls.__name__
+    def schema(cls, as_dict=False):
+        title = getattr(cls.Meta, 'title', cls.__name__)
         try:
-            title = slugify_camelcase(t)
+            title = slugify_camelcase(title)
         except Exception:
-            title = t
+            pass
+
         schema = cls.Meta.schema
-        table = cls.Meta.name if cls.Meta.name else title.lower()
+        table = cls.Meta.name.lower() if cls.Meta.name else title.lower()
         columns = cls.get_columns().items()
-        description = cls.Meta.description
-        if not description:
-            description = cls.__doc__.strip("\n").strip()
+        description = cls.Meta.description or cls.__doc__.strip("\n").strip()
         fields = {}
         required = []
         defs = {}
+
         for name, field in columns:
             _type = field.type
-            ref = None
-            if _type.__module__ == 'typing':
-                if inspect.isfunction(_type):
-                    if hasattr(_type, '__supertype__'):
-                        t = _type.__supertype__
-                    else:
-                        raise ValueError(
-                            f"You're using a bare Function to type hinting on {name} for Model: {title}"
-                        )
-                # TODO: discover real value of typing
-                elif _type._name == 'List':
-                    t = 'array'
-                elif _type._name == 'Dict':
-                    t = 'object'
-                else:
-                    try:
-                        t = _type.__args__[0]
-                        t = t.__name__
-                    except (AttributeError, ValueError):
-                        t = 'string'
-            elif hasattr(_type, '__supertype__'):
-                if type(_type) == type(Text):  # it's a text object  pylint: disable=C0123
-                    t = 'text'
-                elif isinstance(_type.__supertype__, str):
-                    t = 'string'
-                elif isinstance(_type.__supertype__, int):
-                    t = 'integer'
-                else:
-                    t = 'object'
-            else:
-                if isinstance(_type, EnumMeta):
-                    t = 'array'
-                    enum_type = {
-                        "type": "string",
-                        "enum": list(map(lambda c: c.value, _type))
-                    }
-                elif isinstance(_type, ModelMeta):
-                    t = 'object'
-                    enum_type = None
-                    sch = _type.schema(as_dict = True)
-                    if 'fk' in field.metadata:
-                        api = field.metadata['api'] if 'api' in field.metadata else sch['table']
-                        fk = field.metadata['fk'].split("|")
-                        ref = {
-                            "api": api,
-                            "id": fk[0],
-                            "value":fk[1]
-                        }
-                    else:
-                        ref = sch['$id']
-
-                    defs[name] = sch
-                else:
-                    ref = None
-                    enum_type = None
-                    try:
-                        t = JSON_TYPES[_type]
-                    except KeyError:
-                        t = 'string'
-            ## check of min and max:
+            type_info = _get_type_info(_type, name, title)
+            ref_info = _get_ref_info(_type, field)
             minimum = field.metadata.get('min', None)
             maximum = field.metadata.get('max', None)
-            # secret:
             secret = field.metadata.get('secret', None)
             label = field.metadata.get('label', None)
-            try:
-                if field.metadata["required"] is True:
-                    required.append(name)
-            except KeyError:
-                pass
+
+            if field.metadata.get('required', False):
+                required.append(name)
+
             fields[name] = {
-                "type": t,
+                "type": type_info,
                 "nullable": field.metadata.get('nullable', False),
                 "label": label,
                 "attrs": {
@@ -500,20 +449,22 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
                 "readOnly": field.metadata.get('readonly', False),
                 "writeOnly": False
             }
+
             if 'pattern' in field.metadata:
                 fields[name]["attrs"]["pattern"] = field.metadata['pattern']
-            if enum_type:
-                fields[name]["items"] = enum_type
+
+            ref = ref_info.get('ref') if ref_info else None
             if ref:
                 fields[name]["$ref"] = ref
-            # check if field need to be represented:
+
             if field.repr is False:
                 fields[name]["attrs"]["visible"] = False
-            # if 'default' in field.metadata:
+
             fields[name]['default'] = field.default
             if secret is not None:
                 fields[name]['secret'] = secret
-            if t == 'string':
+
+            if type_info == 'string':
                 if minimum:
                     fields[name]['minLength'] = minimum
                 if maximum:
@@ -523,16 +474,11 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
                     fields[name]['minimum'] = minimum
                 if maximum:
                     fields[name]['maximum'] = maximum
-            if field.metadata['widget']:
-                fields[name]['widget'] = field.metadata['widget']
-        if cls.Meta.strict is True:
-            adp = True
-        else:
-            adp = False
+
         base_schema = {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
             "$id": f"/schemas/{table}",
-            "additionalProperties": adp,
+            "additionalProperties": cls.Meta.strict,
             "title": title,
             "description": description,
             "type": "object",
@@ -541,9 +487,11 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             "properties": fields,
             "required": required
         }
+
         if defs:
             base_schema["$defs"] = defs
-        if as_dict is True:
+
+        if as_dict:
             return base_schema
         else:
             return json_encoder(base_schema)
