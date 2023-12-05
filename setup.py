@@ -23,7 +23,6 @@ def readme():
 
 version = get_path('datamodel/version.py')
 with open(version, 'r', encoding='utf-8') as meta:
-    # exec(meta.read())
     t = compile(meta.read(), version, 'exec', ast.PyCF_ONLY_AST)
     for node in (n for n in t.body if isinstance(n, ast.Assign)):
         if len(node.targets) == 1:
