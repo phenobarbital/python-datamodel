@@ -7,7 +7,7 @@ import timeit
 
 class User(BaseModel):
     id: int
-    name = 'John Doe'
+    name: str = 'John Doe'
     signup_ts: Optional[datetime] = None
     friends: List[int] = []
 
@@ -21,7 +21,7 @@ print(is_dataclass(user))
 print(type(user.signup_ts), user.signup_ts)
 
 def create_user():
-    for i in range(100):
+    for i in range(10):
         external_data = {'id': '123', 'signup_ts': '2017-06-01 12:22', 'friends': [1, '2', b'3']}
         user = User(**external_data)
 
@@ -36,7 +36,7 @@ from datamodel import BaseModel, Field
 
 class NewUser(BaseModel):
     id: int
-    name = 'John Doe'
+    name: str = 'John Doe'
     signup_ts: Optional[datetime] = None # TODO: optional[datetime] can also be converted to type.
     friends: List[int] = Field(default_factory=list)
     ## check for error: ValueError: mutable default <class 'list'> for field friends is not allowed: use default_factory
@@ -51,7 +51,7 @@ print(is_dataclass(user))
 print(type(user.signup_ts), user.signup_ts)
 
 def create_user2():
-    for i in range(100):
+    for i in range(10):
         external_data = {'id': '123', 'signup_ts': '2017-06-01 12:22', 'friends': [1, '2', b'3']}
         user = NewUser(**external_data)
 

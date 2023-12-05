@@ -98,7 +98,7 @@ extensions = [
 ]
 
 setup(
-    name="python-datamodel",
+    name="datamodel",
     version=__version__,
     python_requires=">=3.9.14",
     url="https://github.com/phenobarbital/python-datamodel",
@@ -133,7 +133,7 @@ setup(
     setup_requires=[
         "setuptools==67.6.1",
         "Cython==3.0.6",
-        "wheel==0.40.0"
+        "wheel==0.42.0"
     ],
     install_requires=[
         "numpy==1.24.2",
@@ -141,9 +141,9 @@ setup(
         "asyncio==3.4.3",
         "faust-cchardet==2.1.18",
         "objectpath==0.6.1",
-        "orjson==3.9.9",
+        "orjson==3.9.10",
         'typing_extensions==4.8.0',
-        "asyncpg==0.28.0",
+        "asyncpg==0.29.0",
         "python-dateutil==2.8.2",
         "pendulum==2.1.2"
     ],

@@ -1,13 +1,13 @@
 [build-system]
 requires = [
     'setuptools==67.6.1',
-    'Cython==0.29.33',
-    'wheel==0.40.0'
+    'Cython==3.0.6',
+    'wheel==0.42.0'
 ]
 build-backend = "setuptools.build_meta"
 
 [tool.flit.metadata]
-module = "python-datamodel"
+module = "datamodel"
 author = "Jesus Lara Gimenez"
 author-email = "jesuslarag@gmail.com"
 home-page = "https://github.com/phenobarbital/python-datamodel"
@@ -50,7 +50,7 @@ filterwarnings = [
 
 [tool.black]
 line-length = 120
-target-version = [ 'py39', 'py310', 'py311']
+target-version = [ 'py39', 'py310', 'py311', 'py312']
 include = '\.pyi?$'
 exclude = '''
 /(
