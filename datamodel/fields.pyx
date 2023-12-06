@@ -62,7 +62,13 @@ class Field(ff):
         '_primary',
         '_dbtype',
         '_alias',
-        '_pattern'
+        '_pattern',
+        'gt',
+        'eq',
+        'lt',
+        'le',
+        'ge',
+        'schema_extra'
     )
 
     def __init__(
@@ -101,66 +107,41 @@ class Field(ff):
         self._dbtype = None
         self._required = required
         self._nullable = nullable
-        self.description = kwargs.get('description', None)
-        self._primary = kwargs.get('primary_key', False)
+        self.description = kwargs.pop('description', None)
+        self._primary = kwargs.pop('primary_key', False)
         self._default = default
         self._alias = alias
         self._pattern = pattern
         meta['primary'] = self._primary
-        if self._primary:
-            del kwargs['primary_key']
-        self._dbtype = kwargs.get("db_type", None)
-        if self._dbtype:
-            del kwargs["db_type"]
+        self._dbtype = kwargs.pop("db_type", None)
         _range = {}
         if min is not None:
             _range["min"] = min
         if max is not None:
             _range["max"] = max
         # representation:
-        args["repr"] = kwargs.get("repr", True)
-        try:
-            del kwargs["repr"]
-        except KeyError:
-            pass
-        args["init"] = kwargs.get("init", True)
-        try:
-            del kwargs["init"]
-        except KeyError:
-            pass
+        args["repr"] = kwargs.pop("repr", True)
+        args["init"] = kwargs.pop("init", True)
         if required is True:
             args["init"] = True
         if args["init"] is False:
             args["repr"] = False
         if validator is not None:
             meta["validator"] = validator
-        metadata = kwargs.get("metadata", {})
+        metadata = kwargs.pop("metadata", {})
         meta = {**meta, **metadata}
-        if metadata:
-            del kwargs["metadata"]
         ## Encoder, decoder and widget:
-        meta["widget"] = kwargs.get('widget', {})
-        if meta["widget"]:
-            del kwargs['widget']
+        meta["widget"] = kwargs.pop('widget', {})
         # Encoder and Decoder:
-        meta["encoder"] = kwargs.get('encoder', None)
-        if meta["encoder"]:
-            del kwargs['encoder']
-        meta["decoder"] = kwargs.get('decoder', None)
-        if meta["decoder"]:
-            del kwargs['decoder']
+        meta["encoder"] = kwargs.pop('encoder', None)
+        meta["decoder"] = kwargs.pop('decoder', None)
+        self.schema_extra = kwargs.pop('schema_extra', None)
         ## field is read-only
-        try:
-            meta["readonly"] = bool(kwargs['readonly'])
-            del kwargs['readonly']
-        except KeyError:
-            meta["readonly"] = False
+        meta["readonly"] = bool(kwargs.pop('readonly', False))
         self._meta = {**meta, **_range, **kwargs}
         args["metadata"] = self._meta
         self._default_factory = MISSING
-        if default is not None:
-            self._default = default
-        else:
+        if default is None:
             ## Default Factory:
             default_factory = kwargs.get('default_factory', None)
             if factory is not None and default_factory is not None:
@@ -172,16 +153,8 @@ class Field(ff):
                 self._default = MISSING
             elif default_factory is not None:
                 self._default_factory = default_factory
-                if default is not None:
-                    self._default = default
-                    self._default_factory = MISSING
-                else:
-                    if self._default_factory is not MISSING:
-                        self._default = MISSING
-                    if nullable is True: # Can be null
-                        if factory is None:
-                            factory = self._default_factory
-                        self._default_factory = factory
+                if self._default_factory is not MISSING:
+                    self._default = MISSING
         # Calling Parent init
         if version_info.minor > 9:
             args["kw_only"] = kw_only
