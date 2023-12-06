@@ -144,7 +144,8 @@ setup(
         'typing_extensions==4.8.0',
         "asyncpg==0.29.0",
         "python-dateutil==2.8.2",
-        "pendulum==2.1.2"
+        "pendulum==2.1.2",
+        "python-slugify==8.0.1"
     ],
     tests_require=[
         'pytest>=7.2.2',

@@ -118,7 +118,6 @@ class ModelMeta(type):
                 return cols
 
             cols = _initialize_fields(attrs, annotations, strict)
-            cls.__slots__ = tuple(cols.keys())
             # # set the slots of this class
             # for field, _type in annotations.items():
             #     if field in attrs:
@@ -154,6 +153,8 @@ class ModelMeta(type):
         new_cls = super().__new__(cls, name, bases, attrs, **kwargs)
         new_cls.Meta = attr_meta or getattr(new_cls, "Meta", Meta)
         new_cls.__dataclass_fields__ = cols
+        _columns = cols.keys()
+        cls.__slots__ = tuple(_columns)
         new_cls.__qualname__ = cls.__qualname__
         if not new_cls.Meta:
             new_cls.Meta = Meta
@@ -191,13 +192,13 @@ class ModelMeta(type):
             strict=new_cls.Meta.strict,
             frozen=frozen
         )
-        cols = {
-            k: v
-            for k, v in dc.__dataclass_fields__.items()
-            if v._field_type == _FIELD
-        }
+        # cols = {
+        #     k: v
+        #     for k, v in dc.__dataclass_fields__.items()
+        #     if v._field_type == _FIELD
+        # }
         dc.__columns__ = cols
-        dc.__fields__ = list(cols.keys())
+        dc.__fields__ = list(_columns)
         return dc
 
     def __init__(cls, *args, **kwargs) -> None:
