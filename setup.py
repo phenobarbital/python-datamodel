@@ -97,7 +97,7 @@ extensions = [
 ]
 
 setup(
-    name="datamodel",
+    name="python-datamodel",
     version=__version__,
     python_requires=">=3.9.14",
     url="https://github.com/phenobarbital/python-datamodel",
