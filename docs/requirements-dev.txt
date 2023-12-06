@@ -3,7 +3,7 @@ black==23.11.0
 build==1.0.3
 coverage[toml]==7.2.7
 flit==3.9.0
-hypothesis==6.68.0
+hypothesis==6.91.0
 ipython==8.14.0
 lint==1.2.1
 mypy==1.7.1
@@ -13,7 +13,7 @@ pytest>=6.0.0
 pytest-asyncio==0.23.2
 pytest-cov==4.0.0
 pytest-cython==0.2.0
-pytest-xdist==3.3.1
+pytest-xdist==3.5.0
 pytest-assume==2.4.3
 sdist==0.0.0
 sphinx==6.1.3
