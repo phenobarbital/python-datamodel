@@ -1,25 +1,20 @@
-from __future__ import annotations
 from typing import Any, Optional
 import inspect
 import logging
-import types
 # Dataclass
 from dataclasses import (
     _FIELD,
-    _MISSING_TYPE,
-    MISSING,
     dataclass,
-    is_dataclass,
-    make_dataclass
+    make_dataclass,
+    _MISSING_TYPE
 )
-from functools import partial
 from enum import EnumMeta
 from uuid import UUID
 from orjson import OPT_INDENT_2
 from datamodel.converters import parse_type, slugify_camelcase
 from datamodel.fields import Field
 from datamodel.types import JSON_TYPES, Text
-from datamodel.validation import validator
+from datamodel.validation import validator, is_callable, is_empty, is_dataclass
 from .exceptions import ValidationError
 from .parsers.encoders import json_encoder
 from .abstract import ModelMeta, Meta
@@ -75,6 +70,35 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
     Base Model for all DataModels.
     """
     Meta = Meta
+
+    def __post_init__(self) -> None:
+        """
+        Post init method.
+        Fill fields with function-factory or calling validations
+        """
+        # checking if an attribute is already a dataclass:
+        errors = {}
+        for name, f in self.__columns__.items():
+            try:
+                value = getattr(self, name)
+                self._calculate_value_(name, value, f)
+                error = self._validation_(name, value, f)
+                if error:
+                    errors[name] = error
+            except RuntimeError as err:
+                logging.exception(err)
+
+        if errors:
+            if self.Meta.strict is True:
+                raise ValidationError(
+                    f"""{self.modelName}: There are errors in Model. \
+                        Hint: please check the "payload" attribute in the exception.""",
+                    payload=errors
+                )
+            self.__errors__ = errors
+            object.__setattr__(self, "__valid__", False)
+        else:
+            object.__setattr__(self, "__valid__", True)
 
     def is_valid(self) -> bool:
         """is_valid.
@@ -134,116 +158,97 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         else:
             setattr(self, name, value)
 
-    def _calculate_value(self, key: str, value: Any, f: Field) -> None:
-        encoder = f.metadata.get('encoder')
+    def _calculate_value_(self, name: str, value: Any, f: Field) -> None:
+        _type = f.type
+        _encoder = f.metadata.get('encoder')
 
-        # Check if the value is callable and the field has a default
-        if hasattr(f, 'default') and self.is_callable(value):
+        if f.default is not None and is_callable(value):
             return
 
-        # Factory Value handling
-        if is_dataclass(f.type):  # f.type is a dataclass
-            if hasattr(self.Meta, 'no_nesting'):
-                new_val = value
-            elif value is None:
-                new_val = None
-            elif isinstance(value, (dict, list)):
-                new_val = f.type(**value) if isinstance(value, dict) else f.type(*value)
-            else:
-                new_val = value if isinstance(value, (int, str, UUID)) else f.type(value)
-            setattr(self, key, new_val)
+        # Handle dataclass types
+        if is_dataclass(_type):
+            new_val = self._handle_dataclass_type(value, _type)
+        elif _type.__module__ == 'typing':
+            new_val = parse_type(_type, value, _encoder)
+        elif isinstance(value, list) and hasattr(_type, '__args__'):
+            new_val = self._handle_list_of_dataclasses(value, _type)
         else:
-            # Handle typing extensions
-            if f.type.__module__ == 'typing':
-                new_val = parse_type(f.type, value, encoder)
-                setattr(self, key, new_val)
-                return
+            new_val = self._handle_default_case(value, f)
 
-            # Handle list of dataclasses
-            if isinstance(value, list):
-                try:
-                    sub_type = f.type.__args__[0]
-                    if is_dataclass(sub_type):
-                        items = [sub_type(**item) if isinstance(item, dict) else item for item in value]
-                        setattr(self, key, items)
-                        return
-                except AttributeError:
-                    setattr(self, key, value)
+        setattr(self, name, new_val)
 
-            # Handle empty values with defaults
-            if self.is_empty(value):
-                is_missing = isinstance(f.default, _MISSING_TYPE)
-                setattr(self, key, f.default_factory if is_missing else f.default)
-            else:
-                try:
-                    new_val = parse_type(f.type, value, encoder)
-                    setattr(self, key, new_val)
-                except (TypeError, ValueError) as ex:
-                    raise ValueError(f"Wrong Type for {key}: {f.type}, error: {ex}") from ex
+    def _handle_dataclass_type(self, value, _type):
+        if hasattr(self.Meta, 'no_nesting'):
+            return value
+        if value is None or is_dataclass(value):
+            return value
+        if isinstance(value, dict):
+            return _type(**value)
+        if isinstance(value, list):
+            return _type(*value)
+        return value if isinstance(value, (int, str, UUID)) else _type(value)
 
-    def __post_init__(self) -> None:
-        """
-         Post init method.
-        Fill fields with function-factory or calling validations
-        """
-        # checking if an attribute is already a dataclass:
-        errors = {}
-        for _, f in self.__columns__.items():
-            value = getattr(self, f.name)
-            name = f.name
-            self._calculate_value(name, value, f)
-            try:
-                value = getattr(self, f.name)
-                error = self._validation(name, value, f)
-                if error:
-                    errors[name] = error
-            except RuntimeError as err:
-                logging.exception(err)
-        if errors:
-            if self.Meta.strict is True:
-                raise ValidationError(
-                    f"""{self.modelName}: There are errors in your Model. Hint: please check the "payload" attribute in the exception.""",
-                    payload=errors
+    def _handle_list_of_dataclasses(self, value, _type):
+        try:
+            sub_type = _type.__args__[0]
+            if is_dataclass(sub_type):
+                return [sub_type(**item) if isinstance(item, dict) else item for item in value]
+        except AttributeError:
+            pass
+        return value
+
+    def _handle_default_case(self, value, f):
+        if is_empty(value):
+            return f.default_factory if isinstance(f.default, _MISSING_TYPE) else f.default
+        try:
+            return parse_type(f.type, value, f.metadata.get('encoder'))
+        except (TypeError, ValueError) as ex:
+            raise ValueError(f"Wrong Type for {f.name}: {f.type}, error: {ex}") from ex
+
+    def _field_checks_(self, f: Field, name: str, value: Any) -> None:
+        # Validate Primary Key
+        try:
+            if f.metadata['primary'] is True:
+                if 'db_default' in f.metadata:
+                    pass
+                else:
+                    raise ValueError(
+                        f"::{self.modelName}:: Missing Primary Key *{name}*"
+                    )
+        except KeyError:
+            pass
+        # Validate Required
+        try:
+            if f.metadata["required"] is True and self.Meta.strict is True:
+                if 'db_default' in f.metadata:
+                    return
+                if value is not None:
+                    return  # If default value is set, no need to raise an error
+                raise ValueError(
+                    f"::{self.modelName}:: Missing Required Field *{name}*"
                 )
-            self.__errors__ = errors
-            object.__setattr__(self, "__valid__", False)
-        else:
-            object.__setattr__(self, "__valid__", True)
+        except KeyError:
+            pass
+        # Nullable:
+        try:
+            if f.metadata["nullable"] is False and self.Meta.strict is True:
+                raise ValueError(
+                    f"::{self.modelName}:: *{name}* Cannot be null."
+                )
+        except KeyError:
+            pass
 
-    def is_callable(self, value) -> bool:
-        """is_callable.
-            Check if current value is a callabled and not a _MISSING_TYPE or a partial function.
-        Args:
-            value (Any): value from field.
-
-        Returns:
-            bool: True if value is a real callable.
+    def _validation_(self, name: str, value: Any, f: Field) -> Optional[Any]:
         """
-        is_missing = (value == _MISSING_TYPE)
-        is_function = isinstance(value, (types.BuiltinFunctionType, types.FunctionType, partial))
-        return callable(value) if not is_missing and is_function else False
-
-    def is_empty(self, value) -> bool:
-        if isinstance(value, _MISSING_TYPE):
-            return True
-        elif (value == _MISSING_TYPE):
-            return True
-        elif value is None:
-            return True
-        elif str(value) == '':
-            return True
-        return False
-
-    def _validation(self, name: str, value: Any, f: Field) -> Optional[Any]:
-        """
-        _validation.
+        _validation_.
         TODO: cover validations as length, not_null, required, max, min, etc
         """
         annotated_type = f.type
         val_type = type(value)
-        # Fix values of Data based on Default factory
-        if hasattr(f, 'default') and self.is_callable(value):
-            try:
+
+        # Calculate default value
+        if f.default is not None:
+            if is_callable(value):
                 if value.__module__ != 'typing':
                     try:
                         new_val = value()
@@ -253,48 +258,20 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
                         except TypeError:
                             new_val = None
                     setattr(self, name, new_val)
-            except TypeError as ex:
-                logging.warning(
-                    f'{self.modelName}: Missing *Column* {f} with name {name}: {ex}'
-                )
-                setattr(self, name, None)
-        if hasattr(f, 'default') and self.is_callable(f.default) and value is None:
-            # set value based on default, if value is None
-            try:
-                new_val = f.default()
-            except (AttributeError, RuntimeError):
-                new_val = None
-            setattr(self, name, new_val)
-            value = new_val
-        # first: check primary and required:
-        if val_type == type or value == annotated_type or self.is_empty(value):
-            try:
-                if f.metadata['primary'] is True:
-                    if 'db_default' in f.metadata:
-                        pass
-                    else:
-                        raise ValueError(
-                            f"::{self.modelName}:: Missing Primary Key *{name}*"
-                        )
-            except KeyError:
-                pass
-            try:
-                if f.metadata["required"] is True and self.Meta.strict is True:
-                    # if this has db_default:
-                    if 'db_default' in f.metadata:
-                        return
-                    raise ValueError(
-                        f"::{self.modelName}:: Missing Required Field *{name}*"
-                    )
-            except KeyError:
-                pass
-            try:
-                if f.metadata["nullable"] is False and self.Meta.strict is True:
-                    raise ValueError(
-                        f"::{self.modelName}:: Cannot null *{name}*"
-                    )
-            except KeyError:
-                pass
+            elif is_callable(f.default) and value is None:
+                # Set the default value first
+                try:
+                    new_val = f.default()
+                except (AttributeError, RuntimeError):
+                    new_val = None
+                setattr(self, name, new_val)
+                value = new_val  # Return the new value
+            elif not isinstance(f.default, _MISSING_TYPE) and value is None:
+                setattr(self, name, f.default)
+                value = f.default
+
+        if val_type == type or value == annotated_type or is_empty(value):
+            self._field_checks_(f, name, value)
         else:
             # capturing other errors from validator:
             return validator(f, name, value, annotated_type)

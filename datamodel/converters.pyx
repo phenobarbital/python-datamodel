@@ -5,15 +5,16 @@ import re
 import inspect
 import logging
 from typing import Union
-from dataclasses import is_dataclass, _MISSING_TYPE
+from dataclasses import _MISSING_TYPE
+import orjson
 from decimal import Decimal
 from cpython cimport datetime
 import pendulum
 from pendulum.parsing.exceptions import ParserError
 from uuid import UUID
 from cpython.ref cimport PyObject
-import orjson
 
+from .validation import is_dataclass
 
 cdef object to_uuid(object obj):
     """Returns a UUID version of a str column.
@@ -434,3 +435,48 @@ def parse_type(object T, object data, object encoder = None):
                     logging.error(f'Conversion Error {T!r}: {e}')
                 return data
         return data
+
+# def parse_type(object T, object data, object encoder = None):
+#     args = getattr(T, '__args__', None)
+
+#     if T.__module__ == 'typing':
+#         if T._name == 'Dict' and isinstance(data, dict) and args:
+#             return {k: parse_type(args[1], v) for k, v in data.items()}
+#         elif T._name == 'List':
+#             if not isinstance(data, (list, tuple)):
+#                 data = [data]
+#             return [parse_type(args[0], item) for item in data] if args else data
+#         elif T._name in ('Optional', 'Union') and args:
+#             return parse_type(args[0], data)
+
+#     if encoder and callable(encoder):
+#         return encoder(data)
+
+#     if is_dataclass(T):
+#         if isinstance(data, (dict, list, tuple)):
+#             return T(*data) if isinstance(data, (list, tuple)) else T(**data)
+#         return T(data)
+
+#     if T == str:
+#         return str(data)
+
+#     try:
+#         return encoders[T](data)
+#     except KeyError:
+#         pass
+#     except (TypeError, ValueError) as e:
+#         raise ValueError(f"Error type {T}: {e}") from e
+
+#     # The check for inspect.isclass(T)
+#     if inspect.isclass(T):
+#         try:
+#             if isinstance(data, dict):
+#                 return T(**data)
+#             elif isinstance(data, (list, tuple)):
+#                 return T(*data)
+#             elif isinstance(data, str):
+#                 return T(data)
+#         except (TypeError, ValueError) as e:
+#             logging.error(f'Conversion Error {T!r}: {e}')
+
+#     return data

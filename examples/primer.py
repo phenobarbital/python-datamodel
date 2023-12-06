@@ -3,7 +3,7 @@ import uuid
 import orjson
 from dataclasses import fields, is_dataclass
 from datamodel import Field, BaseModel, Column
-
+from datamodel.exceptions import ValidationError
 
 # 1.- basic Point example:
 
@@ -52,14 +52,20 @@ class Address(BaseModel):
     box: List[Optional[Coordinate]]
     rect: List[int] = Field(factory=default_rect)
 
-addr = Address(
-    street="Beato Juan de Avila",
-    location=(18.1, 22.1),
-    zipcode=45510,
-    box=[(2, 10), (4, 8)],
-    rect=[1, 2, 3, 4]
-)
-print(addr)
+addr = None
+try:
+    addr = Address(
+        street="Beato Juan de Avila",
+        location=(18.1, 22.1),
+        zipcode=45510,
+        box=[(2, 10), (4, 8)],
+        rect=[1, 2, 3, 4]
+    )
+    print(addr)
+except ValidationError as exc:
+    print(exc.payload)
+
+
 print('IS a Dataclass?: ', is_dataclass(addr))
 
 print(addr.location.get_location())
@@ -99,19 +105,18 @@ class Account(BaseModel):
         return super().__post_init__()
 
 
-
 user = {
     "name": "Jesus Lara",
     "address": addr
     # "address": {
-    #     "street": "Calle Beato Juan de Avila",
+    #     "street": "Calle San Crispin",
     #     "country": {
     #         "country": "Spain",
     #         "code": "ES"
     #     },
     #     "location": {
-    #         "latitude": 10.0,
-    #         "longitude": 10.0
+    #         "latitude": 20.0,
+    #         "longitude": 20.0
     #     },
     #     "zipcode": 45510
     # }
@@ -120,3 +125,4 @@ user = {
 user = Account(**user)
 print('==== Printing User ====')
 print(user)
+print('ADDRESS >> ', user.address)

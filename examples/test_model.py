@@ -56,7 +56,7 @@ def work_with_widgets():
     data = {
         "widget_type_id": "api-card",
         "widget_name": "Nuevo widget Template",
-        # "widget_slug": "iframe_new",
+        "widget_slug": "iframe_new",
         "widgetcat_id": 3
     }
     try:

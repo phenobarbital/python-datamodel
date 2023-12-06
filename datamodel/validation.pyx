@@ -25,11 +25,13 @@ cpdef bool is_callable(object value):
 
 cpdef bool is_empty(object value):
     cdef bool result = False
-    if isinstance(value, _MISSING_TYPE) or value == _MISSING_TYPE or value is None:
-        result = True
-    elif not value:
+    if value is None:
+        return True
+    if isinstance(value, _MISSING_TYPE) or value == _MISSING_TYPE:
         result = True
     elif isinstance(value, str) and value == '':
+        result = True
+    elif not value:
         result = True
     return result
 
