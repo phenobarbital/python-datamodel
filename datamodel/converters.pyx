@@ -319,8 +319,10 @@ def parse_type(object T, object data, object encoder = None):
                         for x in data:
                             if isinstance(x, dict):
                                 result.append(t(**x))
-                            else:
+                            elif isinstance(x, (list, tuple)):
                                 result.append(t(*x))
+                            else:
+                                result.append(t())
                         return result
                     else:
                         return data
