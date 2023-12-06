@@ -1,11 +1,11 @@
 from __future__ import annotations
-from typing import Any
+from typing import Any, ClassVar, Callable
 # Dataclass
 from dataclasses import asdict
 from operator import attrgetter
 from datamodel.fields import fields
 from .abstract import ModelMeta, Meta
-
+from .fields import Field
 
 class ModelMixin:
     """Interface for shared methods on Model classes.
@@ -26,10 +26,10 @@ class ModelMixin:
     def __getitem__(self, item):
         return getattr(self, item)
 
-    def column(self, name):
+    def column(self, name: str) -> Field:
         return self.__columns__[name]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         nodef_f_vals = (
             (f.name, attrgetter(f.name)(self))
             for f in fields(self)

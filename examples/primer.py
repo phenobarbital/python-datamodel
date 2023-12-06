@@ -19,7 +19,7 @@ class Coordinate(BaseModel, intSum):
         return (self.latitude, self.longitude)
 
 a = Coordinate(latitude=10, longitude=10)
-print(a)
+print('COORDINATE > ', a)
 print(fields(a))
 print('IS a Dataclass?: ', is_dataclass(a))
 print(a.get_location(), a.get_coordinates())
@@ -93,6 +93,11 @@ class Account(BaseModel):
 
     def __str__(self) -> str:
         return f'<{self.name}: {self.userid}>'
+
+    def __post_init__(self) -> None:
+        print('PRIMER')
+        return super().__post_init__()
+
 
 
 user = {

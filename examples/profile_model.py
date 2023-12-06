@@ -1,14 +1,26 @@
 import cProfile
-from datamodel import Model
+from typing import Optional, List
+from dataclasses import is_dataclass
+from datetime import datetime
+from datamodel import BaseModel, Field
 
-class User(Model):
-    name: str
-    age: int
+class NewUser(BaseModel):
+    id: int
+    name: str = 'John Doe'
+    signup_ts: Optional[datetime] = None
+    friends: List[int] = Field(default_factory=list)
 
-def main():
-    user = User(name='John', age=18)
-    print(user)
+external_data = {'id': '123', 'signup_ts': '2017-06-01 12:22', 'friends': [1, '2', b'3']}
+user = NewUser(**external_data)
+print(user)
+print(user.id)
+print(is_dataclass(user))
+print(type(user.signup_ts), user.signup_ts)
 
-if __name__ == "__main__":
-    # Run cProfile and save the profiling results to a file
-    cProfile.run("main()", filename="profile_results.prof")
+def create_user2():
+    for i in range(100):
+        external_data = {'id': '123', 'signup_ts': '2017-06-01 12:22', 'friends': [1, '2', b'3']}
+        user = NewUser(**external_data)
+
+print('Test with DataModel: ')
+cProfile.run("create_user2()", sort="cumulative")
