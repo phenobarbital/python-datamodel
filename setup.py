@@ -138,7 +138,7 @@ setup(
         "numpy==1.24.2",
         "uvloop==0.19.0",
         "asyncio==3.4.3",
-        "faust-cchardet==2.1.18",
+        "faust-cchardet==2.1.19",
         "objectpath==0.6.1",
         "orjson==3.9.10",
         'typing_extensions==4.8.0',
