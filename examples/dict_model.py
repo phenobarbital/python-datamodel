@@ -6,6 +6,8 @@ from datamodel.models import Model
 # from datamodel.libs.mapping import ClassDict
 from datamodel.libs.mutables import ClassDict
 
+
+runner = pyperf.Runner()
 class QueryObject(ClassDict):
     """Base Class for all options passed to Parsers.
     """
@@ -39,16 +41,14 @@ def create_models():
 
 
 print('=== TESTING CREATION OF DICT === ')
-time = timeit.timeit(create_dicts, number=10000)
+time = timeit.timeit(create_dicts, number=1000)
 print(f"Execution time: {time:.6f} seconds")
 print('===')
-runner = pyperf.Runner()
 runner.bench_func('create_objects', create_dicts)
 
 
-# print('=== TESTING CREATION OF MODEL === ')
-# time = timeit.timeit(create_models, number=10000)
-# print(f"Execution time: {time:.6f} seconds")
-# print('===')
-# runner = pyperf.Runner()
-# runner.bench_func('create_models', create_models)
+print('=== TESTING CREATION OF MODEL === ')
+time = timeit.timeit(create_models, number=1000)
+print(f"Execution time: {time:.6f} seconds")
+print('===')
+runner.bench_func('create_models', create_models)

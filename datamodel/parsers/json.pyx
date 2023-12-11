@@ -9,7 +9,8 @@ from asyncpg.pgproto import pgproto
 from dataclasses import _MISSING_TYPE, MISSING
 from typing import Any, Union
 from decimal import Decimal
-from datamodel.exceptions cimport ParserError
+from ..exceptions cimport ParserError
+from ..fields import Field
 import orjson
 
 
@@ -45,6 +46,8 @@ cdef class JSONContent:
             return None
         elif obj is MISSING:
             return None
+        elif isinstance(obj, Field):
+            return obj.to_dict()
         raise TypeError(f"{obj!r} is not JSON serializable")
 
     def encode(self, object obj, **kwargs) -> str:
