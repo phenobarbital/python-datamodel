@@ -1,7 +1,7 @@
 from __future__ import annotations
-from typing import Any, ClassVar, Callable
+from typing import Any
 # Dataclass
-from dataclasses import asdict
+from dataclasses import asdict as as_dict
 from operator import attrgetter
 from datamodel.fields import fields
 from .abstract import ModelMeta, Meta
@@ -49,12 +49,12 @@ class ModelMixin:
 
     def to_dict(self):
         if self.Meta.remove_nulls is True:
-            return self.remove_nulls(asdict(self, dict_factory=dict))
-        return asdict(self)
+            return self.remove_nulls(as_dict(self, dict_factory=dict))
+        return as_dict(self)
 
     def json(self, **kwargs):
         encoder = self.__encoder__(**kwargs)
-        return encoder(asdict(self))
+        return encoder(as_dict(self))
 
     to_json = json
 

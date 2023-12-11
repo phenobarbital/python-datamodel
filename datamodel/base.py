@@ -11,10 +11,10 @@ from dataclasses import (
 from enum import EnumMeta
 from uuid import UUID
 from orjson import OPT_INDENT_2
-from datamodel.converters import parse_type, slugify_camelcase
-from datamodel.fields import Field
-from datamodel.types import JSON_TYPES, Text
-from datamodel.validation import validator, is_callable, is_empty, is_dataclass
+from .converters import parse_type, slugify_camelcase
+from .fields import Field
+from .types import JSON_TYPES, Text
+from .validation import validator, is_callable, is_empty, is_dataclass
 from .exceptions import ValidationError
 from .parsers.encoders import json_encoder
 from .abstract import ModelMeta, Meta

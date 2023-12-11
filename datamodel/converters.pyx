@@ -3,9 +3,9 @@
 #
 import re
 import inspect
-import logging
+import logging # migrate to use cprint
 from typing import Union
-from dataclasses import _MISSING_TYPE
+from dataclasses import _MISSING_TYPE, _FIELDS, fields
 import orjson
 from decimal import Decimal
 from cpython cimport datetime
@@ -13,8 +13,8 @@ import pendulum
 from pendulum.parsing.exceptions import ParserError
 from uuid import UUID
 from cpython.ref cimport PyObject
-
 from .validation import is_dataclass
+
 
 cdef object to_uuid(object obj):
     """Returns a UUID version of a str column.
