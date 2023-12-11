@@ -3,7 +3,7 @@ from typing import Optional, Union, Any
 from collections.abc import Callable
 from collections import OrderedDict
 import types
-from dataclasses import dataclass, _FIELD
+from dataclasses import dataclass
 from .parsers.json import JSONContent
 from .fields import Field
 
@@ -192,11 +192,6 @@ class ModelMeta(type):
             strict=new_cls.Meta.strict,
             frozen=frozen
         )
-        # cols = {
-        #     k: v
-        #     for k, v in dc.__dataclass_fields__.items()
-        #     if v._field_type == _FIELD
-        # }
         dc.__columns__ = cols
         dc.__fields__ = list(_columns)
         return dc
