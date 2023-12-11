@@ -7,13 +7,17 @@ from typing import (
     Union,
     Any
 )
+from functools import wraps
 from collections.abc import Callable
-from dataclasses import Field as ff
 from dataclasses import (
     _FIELD,
     MISSING,
-    _MISSING_TYPE
+    _MISSING_TYPE,
+    _EMPTY_METADATA
 )
+from dataclasses import Field as ff
+import _thread
+from types import FunctionType, GenericAlias, MappingProxyType
 from datamodel.types import (
     DB_TYPES
 )
@@ -37,6 +41,27 @@ def fields(obj: Any):
     return tuple(f for f in _fields.values() if f._field_type is _FIELD)
 
 
+# This function's logic is copied from "recursive_repr" function in
+# reprlib module to avoid dependency.
+def _recursive_repr(user_function):
+    # Decorator to make a repr function return "..." for a recursive
+    # call.
+    repr_running = set()
+
+    @wraps(user_function)
+    def wrapper(self):
+        key = id(self), _thread.get_ident()
+        if key in repr_running:
+            return '...'
+        repr_running.add(key)
+        try:
+            result = user_function(self)
+        finally:
+            repr_running.discard(key)
+        return result
+    return wrapper
+
+
 class Field(ff):
     """
     Field.
@@ -48,14 +73,13 @@ class Field(ff):
         'description',
         'default',
         'default_factory',
-        '_default_factory',
-        '_default', # Private: default value
         'repr',
         'hash',
         'init',
         'compare',
         'metadata',
         '_meta',
+        'kw_only',
         '_field_type',  # Private: not to be used by user code.
         '_required',
         '_nullable',
@@ -73,7 +97,7 @@ class Field(ff):
 
     def __init__(
         self,
-        default: Optional[Callable] = None,
+        default: Optional[Union[Any, Callable]] = None,
         nullable: bool = True,
         required: bool = False,
         factory: Optional[Callable] = None,
@@ -85,49 +109,39 @@ class Field(ff):
         kw_only: bool = False,
         **kwargs,
     ):
-        args = {
-            "init": True,
-            "repr": True,
-            "hash": True,
-            "compare": True,
-            "metadata": None,
-        }
-        try:
-            args["compare"] = kwargs["compare"]
-            del kwargs["compare"]
-        except KeyError:
-            pass
+        self.name = None
+        self.type = None
+        self.compare = kwargs.pop("compare", True)
+        self.init = kwargs.pop("init", True)
+        self.repr = kwargs.pop("repr", True)
+        self.hash = kwargs.pop("hash", True)
+        self.default = default
+        self._nullable = nullable
+        self.kw_only = kw_only
+        # set field type and dbtype
+        self._field_type = None
+        self._dbtype = kwargs.pop("db_type", None)
+        self._required = required
+        self.description = kwargs.pop('description', None)
+        self._primary = kwargs.pop('primary_key', False)
+        self._alias = alias
+        self._pattern = pattern
         meta = {
             "required": required,
             "nullable": nullable,
-            "primary": False,
-            "validator": None
+            "primary": self._primary,
+            "validator": validator
         }
-        self._primary = False
-        self._dbtype = None
-        self._required = required
-        self._nullable = nullable
-        self.description = kwargs.pop('description', None)
-        self._primary = kwargs.pop('primary_key', False)
-        self._default = default
-        self._alias = alias
-        self._pattern = pattern
-        meta['primary'] = self._primary
-        self._dbtype = kwargs.pop("db_type", None)
         _range = {}
         if min is not None:
             _range["min"] = min
         if max is not None:
             _range["max"] = max
         # representation:
-        args["repr"] = kwargs.pop("repr", True)
-        args["init"] = kwargs.pop("init", True)
         if required is True:
-            args["init"] = True
-        if args["init"] is False:
-            args["repr"] = False
-        if validator is not None:
-            meta["validator"] = validator
+            self.init = True
+        if self.init is False:
+            self.repr = False
         metadata = kwargs.pop("metadata", {})
         meta = {**meta, **metadata}
         ## Encoder, decoder and widget:
@@ -135,12 +149,18 @@ class Field(ff):
         # Encoder and Decoder:
         meta["encoder"] = kwargs.pop('encoder', None)
         meta["decoder"] = kwargs.pop('decoder', None)
+        # Future TODO: add more json-schema attributes
         self.schema_extra = kwargs.pop('schema_extra', None)
         ## field is read-only
         meta["readonly"] = bool(kwargs.pop('readonly', False))
         self._meta = {**meta, **_range, **kwargs}
-        args["metadata"] = self._meta
-        self._default_factory = MISSING
+        # args["metadata"] = self._meta
+        self.metadata = (
+            _EMPTY_METADATA
+            if metadata is None else
+            MappingProxyType(metadata)
+        )
+        self.default_factory = MISSING
         if default is None:
             ## Default Factory:
             default_factory = kwargs.get('default_factory', None)
@@ -149,23 +169,14 @@ class Field(ff):
                     "Cannot specify both factory and default_factory"
                 )
             if factory is not None:
-                self._default_factory = factory
-                self._default = MISSING
+                self.default_factory = factory
+                self.default = MISSING
             elif default_factory is not None:
-                self._default_factory = default_factory
-                if self._default_factory is not MISSING:
-                    self._default = MISSING
-        # Calling Parent init
-        if version_info.minor > 9:
-            args["kw_only"] = kw_only
-        super().__init__(
-            default=self._default,
-            default_factory=self._default_factory,
-            **args
-        )
-        # set field type and dbtype
-        self._field_type = self.type
+                self.default_factory = default_factory
+                if self.default_factory is not MISSING:
+                    self.default = MISSING
 
+    @_recursive_repr
     def __repr__(self):
         return (
             "Field("
@@ -186,6 +197,15 @@ class Field(ff):
     def get_dbtype(self):
         return self._dbtype
 
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "type": str(self.type),
+            "default": self.default,
+            "required": self._required,
+            "primary": self._primary
+        }
+
     def db_type(self):
         if self._dbtype is not None:
             if self._dbtype == "array":
@@ -202,6 +222,23 @@ class Field(ff):
     @property
     def primary_key(self):
         return self._primary
+
+    # This is used to support the PEP 487 __set_name__ protocol in the
+    # case where we're using a field that contains a descriptor as a
+    # default value.  For details on __set_name__, see
+    # https://www.python.org/dev/peps/pep-0487/#implementation-details.
+    #
+    # Note that in _process_class, this Field object is overwritten
+    # with the default value, so the end result is a descriptor that
+    # had __set_name__ called on it at the right time.
+    def __set_name__(self, owner, name):
+        func = getattr(type(self.default), '__set_name__', None)
+        if func:
+            # There is a __set_name__ method on the descriptor, call
+            # it.
+            func(self.default, owner, name)
+
+    __class_getitem__ = classmethod(GenericAlias)
 
 
 def Column(
