@@ -253,6 +253,8 @@ cpdef object to_boolean(object obj):
 
     Convert and returns any object value to boolean version.
     """
+    if obj is None:
+        return False
     if isinstance(obj, bool):
         return obj
     if isinstance(obj, (bytes, bytearray)):
@@ -269,6 +271,8 @@ cpdef object to_boolean(object obj):
         return bool(obj)
 
 cpdef object to_object(object obj):
+    if obj is None:
+        return None
     if isinstance(obj, (list, dict,tuple)):
         return obj
     elif callable(obj):
