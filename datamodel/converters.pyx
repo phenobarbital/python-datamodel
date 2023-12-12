@@ -94,6 +94,8 @@ cpdef object to_integer(object obj):
 
     Returns object converted to integer.
     """
+    if obj is None:
+        return None
     if isinstance(obj, int):
         return obj
     elif callable(obj):
@@ -107,7 +109,7 @@ cpdef object to_integer(object obj):
             return int(obj)
         except (TypeError, ValueError) as e:
             raise ValueError(
-                f"Invalid conversion to Integer of literal {obj}"
+                f"Invalid conversion to Integer of {obj}"
             ) from e
 
 cpdef object to_float(object obj):
