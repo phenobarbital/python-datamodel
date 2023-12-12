@@ -4,6 +4,7 @@
 import re
 import inspect
 import logging # migrate to use cprint
+import ciso8601
 from typing import Union
 from dataclasses import _MISSING_TYPE, _FIELDS, fields
 import orjson
@@ -13,7 +14,7 @@ import pendulum
 from pendulum.parsing.exceptions import ParserError
 from uuid import UUID
 from cpython.ref cimport PyObject
-from .validation import is_dataclass
+from .validation import is_dataclass, is_iterable
 
 
 cdef object to_uuid(object obj):
@@ -56,7 +57,8 @@ cpdef datetime.date to_date(object obj):
         if isinstance(obj, (bytes, bytearray)):
             obj = obj.decode("ascii")
         try:
-            return datetime.datetime.fromisoformat(obj).date()
+            return ciso8601.parse_datetime(obj).date()
+            # return datetime.datetime.fromisoformat(obj).date()
         except ValueError:
             pass
         try:
@@ -79,7 +81,8 @@ cpdef datetime.datetime to_datetime(object obj):
         if isinstance(obj, (bytes, bytearray)):
             obj = obj.decode("ascii")
         try:
-            return datetime.datetime.fromisoformat(obj)
+            return ciso8601.parse_datetime(obj)
+            # return datetime.datetime.fromisoformat(obj)
         except ValueError:
             pass
         try:
@@ -309,14 +312,13 @@ def parse_type(object T, object data, object encoder = None):
         if T._name == 'Dict' and isinstance(data, dict):
             if args:
                 return {k: parse_type(T.__args__[1], v) for k, v in data.items()}
-        #elif T._name == 'List' and isinstance(data, (list, tuple)):
         elif T._name == 'List':
             if not isinstance(data, (list, tuple)):
                 data = [data]
-            arg = args[0]
-            if arg.__module__ == 'typing': # nested typing
+            arg_type = args[0]
+            if arg_type.__module__ == 'typing': # nested typing
                 try:
-                    t = arg.__args__[0]
+                    t = arg_type.__args__[0]
                     if is_dataclass(t):
                         result = []
                         for x in data:
@@ -331,7 +333,7 @@ def parse_type(object T, object data, object encoder = None):
                         return data
                 except AttributeError:
                     return data # data -as is-
-            elif is_dataclass(arg):
+            elif is_dataclass(arg_type):
                 if isinstance(data, list):
                     result = []
                     for d in data:
@@ -339,13 +341,20 @@ def parse_type(object T, object data, object encoder = None):
                         if is_dataclass(d):
                             result.append(d)
                         elif isinstance(d, list):
-                            result.append(arg(*d))
+                            result.append(arg_type(*d))
                         elif isinstance(d, dict):
-                            result.append(arg(**d))
+                            result.append(arg_type(**d))
                         else:
-                            result.append(arg(d))
+                            result.append(arg_type(d))
                 return result
             else:
+                result = []
+                if is_iterable(data):
+                    for item in data:
+                        # escalar value:
+                        converted_item = parse_type(arg_type, item, encoder)
+                        result.append(converted_item)
+                    return result
                 return data
         elif T._name is None or T._name in ('Optional', 'Union'):
             try:

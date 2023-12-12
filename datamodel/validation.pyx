@@ -5,11 +5,17 @@ from uuid import UUID
 from decimal import Decimal
 from libcpp cimport bool as bool_t
 from dataclasses import _MISSING_TYPE
+from collections.abc import Iterable
 import datetime
 from functools import partial
 import types
 from .types import uint64_min, uint64_max
 
+
+cpdef bool_t is_iterable(object value):
+    if isinstance(value, Iterable) and not isinstance(value, (str, bytes)):
+        return True
+    return False
 
 cpdef bool_t is_primitive(object value):
     """Returns True if value is a primitive type."""

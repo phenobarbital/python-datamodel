@@ -103,55 +103,6 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         else:
             object.__setattr__(self, "__valid__", True)
 
-    @classmethod
-    def add_field(cls, name: str, value: Any = None) -> None:
-        if cls.Meta.strict is True:
-            raise TypeError(
-                f'Cannot create a new field {name} on a Strict Model.'
-            )
-        if name != '__errors__':
-            f = Field(required=False, default=value)
-            f.name = name
-            f.type = type(value)
-            f._field_type = _FIELD
-            cls.__columns__[name] = f
-            cls.__dataclass_fields__[name] = f
-
-    def create_field(self, name: str, value: Any) -> None:
-        """create_field.
-        create a new Field on Model (when strict is False).
-        Args:
-            name (str): name of the field
-            value (Any): value to be assigned.
-        Raises:
-            TypeError: when try to create a new field on an Strict Model.
-        """
-        if self.Meta.strict is True:
-            raise TypeError(
-                f'Cannot create a new field {name} on a Strict Model.'
-            )
-        if name != '__errors__':
-            f = Field(required=False, default=value)
-            f.name = name
-            f.type = type(value)
-            f._field_type = _FIELD
-            self.__columns__[name] = f
-            self.__dataclass_fields__[name] = f
-            setattr(self, name, value)
-
-    def set(self, name: str, value: Any) -> None:
-        """set.
-        Alias for Create Field.
-        Args:
-            name (str): name of the field
-            value (Any): value to be assigned.
-        """
-        if name not in self.__columns__:
-            if name != '__errors__' and self.Meta.strict is False:
-                self.create_field(name, value)
-        else:
-            setattr(self, name, value)
-
     def _handle_default_value(self, value, f, name) -> Any:
         # Calculate default value
         if is_callable(value):
@@ -224,11 +175,11 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
                 raise ValueError(
                     f"Wrong Type for {f.name}: {f.type}, error: {ex}"
                 ) from ex
-        elif isinstance(value, list) and hasattr(_type, '__args__'):
-            new_val = self._handle_list_of_dataclasses(value, _type)
-            return self._validation_(name, new_val, f, _type)
         elif _type.__module__ == 'typing':
             new_val = parse_type(_type, value, _encoder)
+            return self._validation_(name, new_val, f, _type)
+        elif isinstance(value, list) and hasattr(_type, '__args__'):
+            new_val = self._handle_list_of_dataclasses(value, _type)
             return self._validation_(name, new_val, f, _type)
         elif is_dataclass(_type):
             new_val = self._handle_dataclass_type(value, _type)
@@ -291,6 +242,55 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             # capturing other errors from validator:
             # return _validation(f, name, value, _type, val_type)
             return None
+
+    @classmethod
+    def add_field(cls, name: str, value: Any = None) -> None:
+        if cls.Meta.strict is True:
+            raise TypeError(
+                f'Cannot create a new field {name} on a Strict Model.'
+            )
+        if name != '__errors__':
+            f = Field(required=False, default=value)
+            f.name = name
+            f.type = type(value)
+            f._field_type = _FIELD
+            cls.__columns__[name] = f
+            cls.__dataclass_fields__[name] = f
+
+    def create_field(self, name: str, value: Any) -> None:
+        """create_field.
+        create a new Field on Model (when strict is False).
+        Args:
+            name (str): name of the field
+            value (Any): value to be assigned.
+        Raises:
+            TypeError: when try to create a new field on an Strict Model.
+        """
+        if self.Meta.strict is True:
+            raise TypeError(
+                f'Cannot create a new field {name} on a Strict Model.'
+            )
+        if name != '__errors__':
+            f = Field(required=False, default=value)
+            f.name = name
+            f.type = type(value)
+            f._field_type = _FIELD
+            self.__columns__[name] = f
+            self.__dataclass_fields__[name] = f
+            setattr(self, name, value)
+
+    def set(self, name: str, value: Any) -> None:
+        """set.
+        Alias for Create Field.
+        Args:
+            name (str): name of the field
+            value (Any): value to be assigned.
+        """
+        if name not in self.__columns__:
+            if name != '__errors__' and self.Meta.strict is False:
+                self.create_field(name, value)
+        else:
+            setattr(self, name, value)
 
     def get_errors(self):
         return self.__errors__

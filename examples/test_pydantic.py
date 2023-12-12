@@ -26,7 +26,7 @@ def create_user():
         user = User(**external_data)
 
 print('Test with Pydantic: ')
-time = timeit.timeit(create_user, number=10000)
+time = timeit.timeit(create_user, number=1000)
 print(f"Execution time: {time:.6f} seconds")
 
 # runner.bench_func('pydantic', create_user)
@@ -54,7 +54,7 @@ def create_user1():
         user = User(**external_data)
 
 print('Test with Model: ')
-time = timeit.timeit(create_user1, number=10000)
+time = timeit.timeit(create_user1, number=1000)
 print(f"Execution time: {time:.6f} seconds")
 
 # runner = pyperf.Runner()
@@ -83,6 +83,7 @@ def create_user2():
 
 
 print('Test with DataModel: ')
-time = timeit.timeit(create_user2, number=10000)
+time = timeit.timeit(create_user2, number=1000)
 print(f"Execution time: {time:.6f} seconds")
 # runner.bench_func('datamodel', create_user2)
+print(user, user.friends)
