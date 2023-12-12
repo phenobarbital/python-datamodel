@@ -29,14 +29,18 @@ class ModelMixin:
     def column(self, name: str) -> Field:
         return self.__columns__[name]
 
+    # def __repr__(self) -> str:
+    #     nodef_f_vals = (
+    #         (f.name, getattr(self, f.name))
+    #         for f in fields(self)
+    #         if not (getattr(self, f.name) == f.default and not callable(f.default))
+    #     )
+    #     nodef_f_repr = ", ".join(f"{name}={value}" for name, value in nodef_f_vals)
+    #     return f"{self.__class__.__name__}({nodef_f_repr})"
+
     def __repr__(self) -> str:
-        nodef_f_vals = (
-            (f.name, attrgetter(f.name)(self))
-            for f in fields(self)
-            if attrgetter(f.name)(self) != f.default
-        )
-        nodef_f_repr = ", ".join(f"{name}={value}" for name, value in nodef_f_vals)
-        return f"{self.__class__.__name__}({nodef_f_repr})"
+        f_repr = ", ".join(f"{f.name}={getattr(self, f.name)}" for f in fields(self))
+        return f"{self.__class__.__name__}({f_repr})"
 
     def remove_nulls(self, obj: Any) -> dict[str, Any]:
         """Recursively removes any fields with None values from the given object."""
@@ -57,6 +61,15 @@ class ModelMixin:
         return encoder(as_dict(self))
 
     to_json = json
+
+    def is_valid(self) -> bool:
+        """is_valid.
+
+        returns True when current Model is valid under datatype validations.
+        Returns:
+            bool: True if current model is valid.
+        """
+        return bool(self.__valid__)
 
 class Model(ModelMixin, metaclass=ModelMeta):
     """Model.

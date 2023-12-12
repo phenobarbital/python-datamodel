@@ -1,11 +1,31 @@
 # cython: language_level=3, embedsignature=True, boundscheck=False, wraparound=True, initializedcheck=False
 # Copyright (C) 2018-present Jesus Lara
 #
-from libcpp cimport bool
+from uuid import UUID
+from decimal import Decimal
+from libcpp cimport bool as bool_t
 from dataclasses import _MISSING_TYPE
+import datetime
 from functools import partial
 import types
 from .types import uint64_min, uint64_max
+
+
+cpdef bool_t is_primitive(object value):
+    """Returns True if value is a primitive type."""
+    return value in (
+        int,
+        float,
+        str,
+        UUID,
+        Decimal,
+        bool,
+        bytes,
+        datetime.date,
+        datetime.datetime,
+        datetime.time,
+        datetime.timedelta
+    )
 
 cpdef is_dataclass(object obj):
     """Returns True if obj is a dataclass or an instance of a
@@ -13,18 +33,18 @@ cpdef is_dataclass(object obj):
     cls = obj if isinstance(obj, type) and not isinstance(obj, types.GenericAlias) else type(obj)
     return hasattr(cls, '__dataclass_fields__')
 
-cdef bool is_function(object value):
+cdef bool_t is_function(object value):
     return isinstance(value, (types.BuiltinFunctionType, types.FunctionType, partial))
 
-cpdef bool is_callable(object value):
+cpdef bool_t is_callable(object value):
     if value is None or value == _MISSING_TYPE:
         return False
     if is_function(value):
         return callable(value)
     return False
 
-cpdef bool is_empty(object value):
-    cdef bool result = False
+cpdef bool_t is_empty(object value):
+    cdef bool_t result = False
     if value is None:
         return True
     if isinstance(value, _MISSING_TYPE) or value == _MISSING_TYPE:
@@ -35,7 +55,7 @@ cpdef bool is_empty(object value):
         result = True
     return result
 
-cpdef bool is_instanceof(object value, type annotated_type):
+cpdef bool_t is_instanceof(object value, type annotated_type):
     if annotated_type.__module__ == 'typing':
         return True # TODO: validate subscripted generic (typing extensions)
     else:
@@ -46,69 +66,53 @@ cpdef bool is_instanceof(object value, type annotated_type):
                 f"{e}"
             )
 
-def validator(object F, str name, object value, object annotated_type):
-    val_type = type(value)
+cpdef list _validation(object F, str name, object value, object annotated_type, type val_type):
     if not annotated_type:
         annotated_type = F.type
     errors = []
     # first: calling (if exists) custom validator:
-    if 'validator' in F.metadata:
-        fn = F.metadata['validator']
+    fn = F.metadata.get('validator', None)
+    if fn is not None:
         if is_callable(fn):
             try:
                 result = fn(F, value)
                 if not result:
-                    errors.append({
-                        "field": name,
-                        "value": value,
-                        "error": f"Validator {fn!r}: {result}",
-                        "value_type": val_type,
-                        "annotation": annotated_type,
-                        "exception": None
-                    })
+                    error_msg = f"Validator {fn!r} Failed: {result}"
+                    errors.append(
+                        _create_error(name, value, error_msg, val_type, annotated_type)
+                    )
             except (ValueError, AttributeError, TypeError) as e:
-                errors.append({
-                    "field": name,
-                    "value": value,
-                    "error": f"Validator {fn!r}",
-                    "value_type": val_type,
-                    "annotation": annotated_type,
-                    "exception": e
-                })
+                error_msg = f"Validator {fn!r} Failed: {result}"
+                errors.append(
+                    _create_error(name, value, error_msg, val_type, annotated_type, e)
+                )
     # check: data type hint
     try:
         if annotated_type.__module__ == 'typing':
             # TODO: validation of annotated types
             pass
-        elif hasattr(F, 'required'):
-            if F.required() is False or F.nullable() is True:
-                if value is None:
-                    pass
-        elif is_function(val_type):
-            pass # value will be calculated.
         elif val_type <> annotated_type:
             instance = is_instanceof(value, annotated_type)
             if not instance:
-                errors.append({
-                    "field": name,
-                    "value": value,
-                    "error": "Instance Type",
-                    "value_type": val_type,
-                    "annotation": annotated_type,
-                    "exception": None
-                })
-        else:
-            return errors
+                errors.append(
+                    _create_error(name, value, "Instance Type", val_type, annotated_type)
+                )
     except (TypeError, ValueError) as e:
-        errors.append({
-            "field": name,
-            "value": value,
-            "error": "Instance Type",
-            "value_type": val_type,
-            "annotation": annotated_type,
-            "exception": e
-        })
+        error_msg = f"Value type {val_type} does not match expected type {annotated_type}."
+        errors.append(
+            _create_error(name, value, error_msg, val_type, annotated_type, e)
+        )
     return errors
+
+cdef dict _create_error(str name, object value, object error, type val_type, object annotated_type, object exception = None):
+    return {
+        "field": name,
+        "value": value,
+        "error": error,
+        "value_type": val_type,
+        "annotation": annotated_type,
+        "exception": exception
+    }
 
 # Define a validator function for uint64
 def validate_uint64(value: int) -> None:

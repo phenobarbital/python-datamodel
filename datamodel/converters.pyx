@@ -389,7 +389,6 @@ def parse_type(object T, object data, object encoder = None):
                                 f'Unsupported Encoder {t}'
                             )
                             pass
-                # F.type = args[0]
                 return data
             except KeyError:
                 pass
@@ -400,7 +399,7 @@ def parse_type(object T, object data, object encoder = None):
                 return encoder(data)
             except ValueError as e:
                 raise ValueError(
-                    f"DataModel: Error parsing type {T}, {e}"
+                    f"Error parsing type {T}, {e}"
                 )
         elif is_dataclass(T):
             if isinstance(data, dict):
@@ -410,8 +409,6 @@ def parse_type(object T, object data, object encoder = None):
             else:
                 data = T(data)
             return data
-        elif T == str:
-            return str(data)
         else:
             try:
                 conv = encoders[T]
@@ -432,51 +429,39 @@ def parse_type(object T, object data, object encoder = None):
                     elif isinstance(data, str):
                         data = T(data)
                 except (TypeError, ValueError) as e:
-                    logging.error(f'Conversion Error {T!r}: {e}')
+                    logging.error(
+                        f'Conversion Error {T!r}: {e}'
+                    )
                 return data
         return data
 
-# def parse_type(object T, object data, object encoder = None):
-#     args = getattr(T, '__args__', None)
+cpdef object parse_basic(object T, object data, object encoder = None):
+    """parse_type.
 
-#     if T.__module__ == 'typing':
-#         if T._name == 'Dict' and isinstance(data, dict) and args:
-#             return {k: parse_type(args[1], v) for k, v in data.items()}
-#         elif T._name == 'List':
-#             if not isinstance(data, (list, tuple)):
-#                 data = [data]
-#             return [parse_type(args[0], item) for item in data] if args else data
-#         elif T._name in ('Optional', 'Union') and args:
-#             return parse_type(args[0], data)
+    Parse a value to primitive types as str or int.
+    --- (int, float, str, bool, bytes)
+    """
+    if T == str:
+        return str(data)
+    elif T == bytes:
+        return bytes(data)
 
-#     if encoder and callable(encoder):
-#         return encoder(data)
+    # Using the encoders for basic types:
+    try:
+        return encoders[T](data)
+    except KeyError:
+        pass
+    except (TypeError, ValueError) as e:
+        raise ValueError(
+            f"Encoder Error {T}: {e}"
+        ) from e
 
-#     if is_dataclass(T):
-#         if isinstance(data, (dict, list, tuple)):
-#             return T(*data) if isinstance(data, (list, tuple)) else T(**data)
-#         return T(data)
-
-#     if T == str:
-#         return str(data)
-
-#     try:
-#         return encoders[T](data)
-#     except KeyError:
-#         pass
-#     except (TypeError, ValueError) as e:
-#         raise ValueError(f"Error type {T}: {e}") from e
-
-#     # The check for inspect.isclass(T)
-#     if inspect.isclass(T):
-#         try:
-#             if isinstance(data, dict):
-#                 return T(**data)
-#             elif isinstance(data, (list, tuple)):
-#                 return T(*data)
-#             elif isinstance(data, str):
-#                 return T(data)
-#         except (TypeError, ValueError) as e:
-#             logging.error(f'Conversion Error {T!r}: {e}')
-
-#     return data
+    # function encoder:
+    if encoder and callable(encoder):
+        # using a function encoder:
+        try:
+            return encoder(data)
+        except ValueError as e:
+            raise ValueError(
+                f"Error parsing type {T}, {e}"
+            )

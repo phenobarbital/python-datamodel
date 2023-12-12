@@ -8,9 +8,16 @@ _end = datetime.now()
 print(f'Pydantic Loaded at: {_end - _started}')
 
 @dataclass
+class Country:
+    country: str
+    code: str = 'ES'
+    iso_code: str = '+34'
+
+@dataclass
 class Address:
     street: str
     zipcode: int
+    country: Country
 
 @dataclass
 class User:
@@ -20,7 +27,13 @@ class User:
     address: Optional[Address] = None
 
 
-user = User(id='42', signup_ts='2032-06-21T12:00', address=Address(street="Calle Mayor", zipcode=45510))
+user = User(
+    id='42',
+    signup_ts='2032-06-21T12:00',
+    address={
+        "street": "Calle Mayor", "zipcode": 45510, "country": {"country": "Spain"}
+    }
+)
 print(user)
 
 @dataclass
@@ -44,18 +57,30 @@ from dataclasses import dataclass
 _end = datetime.now()
 print(f'BaseModel Loaded at: {_end - _started}')
 
-@dataclass
-class Address:
+def country_iso_code():
+    return '+34'
+
+class Country(BaseModel):
+    country: str
+    code: str = Field(default='ES')
+    iso_code: str = Field(default=country_iso_code)
+class Address(BaseModel):
     street: str
     zipcode: int
-
+    country: Country
 class User(BaseModel):
     id: int
     name: str = 'John Doe'
     signup_ts: datetime = None
     address: Optional[Address]
 
-user = User(id='42', signup_ts='2032-06-21T12:00', address={"street": "Calle Mayor", "zipcode": 45510})
+user = User(
+    id='42',
+    signup_ts='2032-06-21T12:00',
+    address={
+        "street": "Calle Mayor", "zipcode": 45510, "country": {"country": "Spain"}
+    }
+)
 print(user)
 
 class HttpsUrl(AnyUrl):
