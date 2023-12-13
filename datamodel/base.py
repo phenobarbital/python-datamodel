@@ -431,6 +431,13 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             if field.metadata.get('required', False):
                 required.append(name)
 
+            # UI objects:
+            ui_objects = {
+                k.replace('_', ':'): v for k, v in field.metadata.items() if k.startswith('ui_')
+            }
+            # schema_extra:
+            schema_extra = field.metadata.get('schema_extra', {})
+
             fields[name] = {
                 "type": type_info,
                 "nullable": field.metadata.get('nullable', False),
@@ -440,7 +447,9 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
                     "format": field.metadata.get('format', None),
                 },
                 "readOnly": field.metadata.get('readonly', False),
-                "writeOnly": False
+                "writeOnly": False,
+                **ui_objects,
+                **schema_extra
             }
 
             if 'pattern' in field.metadata:

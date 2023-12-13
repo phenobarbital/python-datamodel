@@ -157,8 +157,8 @@ class Field(ff):
         # args["metadata"] = self._meta
         self.metadata = (
             _EMPTY_METADATA
-            if metadata is None else
-            MappingProxyType(metadata)
+            if self._meta is None else
+            MappingProxyType(self._meta)
         )
         self.default_factory = MISSING
         if default is None:
