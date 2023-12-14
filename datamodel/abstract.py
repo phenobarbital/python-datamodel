@@ -23,6 +23,7 @@ class Meta:
     datasource: Optional[str] = None
     connection: Optional[Callable] = None
     remove_nulls: bool = False
+    endpoint: str = ""
 
 
 def set_connection(cls, conn: Callable):

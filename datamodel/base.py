@@ -61,11 +61,12 @@ def _get_ref_info(_type, field):
             }
         }
     elif isinstance(_type, ModelMeta):
+        _schema = _type.schema(as_dict=True)
         return {
             "type": "object",
-            "enum_type": None,
-            "schema": _type.schema(as_dict=True),
-            "ref": field.metadata.get('fk').split("|") if 'fk' in field.metadata else _type.schema(as_dict=True)['$id']
+            "schema": _schema,
+            "$ref": _schema.get('$id', f"/schemas/{_type.__name__}"),
+            "columns": field.metadata.get('fk').split("|") if 'fk' in field.metadata else []
         }
     return None
 
@@ -411,6 +412,11 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         except Exception:
             pass
 
+        try:
+            endpoint = cls.Meta.endpoint
+        except AttributeError:
+            endpoint = None
+
         schema = cls.Meta.schema
         table = cls.Meta.name.lower() if cls.Meta.name else title.lower()
         columns = cls.get_columns().items()
@@ -423,12 +429,16 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             _type = field.type
             type_info = _get_type_info(_type, name, title)
             ref_info = _get_ref_info(_type, field)
+            if ref_info:
+                defs[name] = ref_info.pop('schema', None)
+            else:
+                ref_info = {}
+
             minimum = field.metadata.get('min', None)
             maximum = field.metadata.get('max', None)
             secret = field.metadata.get('secret', None)
-            label = field.metadata.get('label', None)
 
-            if field.metadata.get('required', False):
+            if field.metadata.get('required', False) or field.metadata.get('primary', False):
                 required.append(name)
 
             # UI objects:
@@ -441,23 +451,22 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             fields[name] = {
                 "type": type_info,
                 "nullable": field.metadata.get('nullable', False),
-                "label": label,
+                "label": field.metadata.get('label', None),
                 "attrs": {
                     "placeholder": field.metadata.get('description', None),
                     "format": field.metadata.get('format', None),
                 },
                 "readOnly": field.metadata.get('readonly', False),
-                "writeOnly": False,
                 **ui_objects,
-                **schema_extra
+                **schema_extra,
+                **ref_info
             }
+
+            if 'write_only' in field.metadata:
+                fields[name]["writeOnly"] = field.metadata.get('write_only', False)
 
             if 'pattern' in field.metadata:
                 fields[name]["attrs"]["pattern"] = field.metadata['pattern']
-
-            ref = ref_info.get('ref') if ref_info else None
-            if ref:
-                fields[name]["$ref"] = ref
 
             if field.repr is False:
                 fields[name]["attrs"]["visible"] = False
@@ -477,9 +486,14 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
                 if maximum:
                     fields[name]['maximum'] = maximum
 
+        endpoint_kwargs = {}
+        if endpoint is not None:
+            endpoint_kwargs["endpoint"] = endpoint
+
         base_schema = {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
             "$id": f"/schemas/{table}",
+            **endpoint_kwargs,
             "additionalProperties": cls.Meta.strict,
             "title": title,
             "description": description,
@@ -487,7 +501,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             "table": table,
             "schema": schema,
             "properties": fields,
-            "required": required
+            "required": required,
         }
 
         if defs:
