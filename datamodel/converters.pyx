@@ -51,14 +51,17 @@ cpdef datetime.date to_date(object obj):
 
     Returns obj converted to date.
     """
+    if obj is None:
+        return None
     if isinstance(obj, datetime.date):
         return obj
+    elif isinstance(obj, str):
+        return ciso8601.parse_datetime(obj).date()
     else:
         if isinstance(obj, (bytes, bytearray)):
             obj = obj.decode("ascii")
         try:
-            return ciso8601.parse_datetime(obj).date()
-            # return datetime.datetime.fromisoformat(obj).date()
+            return datetime.datetime.fromisoformat(obj).date()
         except ValueError:
             pass
         try:
@@ -73,16 +76,19 @@ cpdef datetime.datetime to_datetime(object obj):
 
     Returns obj converted to datetime.
     """
+    if obj is None:
+        return None
     if isinstance(obj, datetime.datetime):
         return obj
     elif obj == _MISSING_TYPE:
         return None
+    elif isinstance(obj, str):
+        return ciso8601.parse_datetime(obj)
     else:
         if isinstance(obj, (bytes, bytearray)):
             obj = obj.decode("ascii")
         try:
-            return ciso8601.parse_datetime(obj)
-            # return datetime.datetime.fromisoformat(obj)
+            return datetime.datetime.fromisoformat(obj)
         except ValueError:
             pass
         try:
@@ -141,6 +147,8 @@ cpdef object to_decimal(object obj):
 
     Returns a Decimal version of object.
     """
+    if obj is None:
+        return None
     if isinstance(obj, Decimal):
         return obj
     elif callable(obj):
@@ -199,6 +207,8 @@ cpdef object to_time(object obj):
 
      Returns obj converted to datetime.time.
     """
+    if obj is None:
+        return None
     if isinstance(obj, datetime.time):
         return obj
     elif callable(obj):
