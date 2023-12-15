@@ -72,7 +72,7 @@ cpdef bool_t is_instanceof(object value, type annotated_type):
                 f"{e}"
             )
 
-cpdef list _validation(object F, str name, object value, object annotated_type, type val_type):
+cpdef list _validation(object F, str name, object value, object annotated_type, object val_type):
     if not annotated_type:
         annotated_type = F.type
     errors = []

@@ -87,12 +87,13 @@ def create_dataclass(
         frozen=frozen
     )(new_cls)
     dc.__values__: dict = {}
-    setattr(dc, "__setattr__", _dc_method_setattr_)
     # adding a properly internal json encoder:
     dc.__encoder__: Any = JSONContent
     dc.__valid__: bool = False
     dc.__errors__: Union[list, None] = None
     dc.__frozen__: bool = strict
+    dc.__initialised__: bool = False
+    setattr(dc, "__setattr__", _dc_method_setattr_)
     dc.modelName = dc.__name__
     return dc
 
@@ -126,13 +127,12 @@ class ModelMeta(type):
                 return cols
 
             cols = _initialize_fields(attrs, annotations, strict)
+        _columns = cols.keys()
+        cls.__slots__ = tuple(_columns)
         attr_meta = attrs.pop("Meta", None)
         new_cls = super().__new__(cls, name, bases, attrs, **kwargs)
         new_cls.Meta = attr_meta or getattr(new_cls, "Meta", Meta)
         new_cls.__dataclass_fields__ = cols
-        _columns = cols.keys()
-        cls.__slots__ = tuple(_columns)
-        new_cls.__qualname__ = cls.__qualname__
         if not new_cls.Meta:
             new_cls.Meta = Meta
         new_cls.Meta.set_connection = types.MethodType(
@@ -172,3 +172,10 @@ class ModelMeta(type):
         dc.__columns__ = cols
         dc.__fields__ = list(_columns)
         return dc
+
+    def __init__(cls, *args, **kwargs) -> None:
+        cls.modelName = cls.__name__
+        # Initialized Data Model = True
+        cls.__initialised__ = True
+        cls.__errors__ = None
+        super().__init__(*args, **kwargs)

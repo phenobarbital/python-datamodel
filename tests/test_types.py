@@ -36,16 +36,16 @@ external_data = {
         "address": {"street": "Calle Mayor", "zipcode": 45510},
         "accounts": [
             {
-            "provider": "twilio",
-            "phone": "+343317871"
+                "provider": "twilio",
+                "phone": "+343317871"
             },
             {
-            "provider": "email",
-            "address": "jesuslara@jesuslara.com"
+                "provider": "email",
+                "address": "jesuslara@jesuslara.com"
             },
             {
-            "provider": "jabber",
-            "address": "jesuslara@jesuslara.com"
+                "provider": "jabber",
+                "address": "jesuslara@jesuslara.com"
             }
         ]
 }

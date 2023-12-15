@@ -154,12 +154,6 @@ class Field(ff):
         ## field is read-only
         meta["readonly"] = bool(kwargs.pop('readonly', False))
         self._meta = {**meta, **_range, **kwargs}
-        # args["metadata"] = self._meta
-        self.metadata = (
-            _EMPTY_METADATA
-            if self._meta is None else
-            MappingProxyType(self._meta)
-        )
         self.default_factory = MISSING
         if default is None:
             ## Default Factory:
@@ -175,6 +169,21 @@ class Field(ff):
                 self.default_factory = default_factory
                 if self.default_factory is not MISSING:
                     self.default = MISSING
+        args = {
+            "init": self.init,
+            "repr": self.repr,
+            "hash": self.hash,
+            "compare": self.compare,
+            "metadata": self._meta,
+            "kw_only": self.kw_only
+        }
+        super().__init__(
+            default=self.default,
+            default_factory=self.default_factory,
+            **args
+        )
+        # set field type and dbtype
+        self._field_type = self.type
 
     @_recursive_repr
     def __repr__(self):
@@ -222,23 +231,6 @@ class Field(ff):
     @property
     def primary_key(self):
         return self._primary
-
-    # This is used to support the PEP 487 __set_name__ protocol in the
-    # case where we're using a field that contains a descriptor as a
-    # default value.  For details on __set_name__, see
-    # https://www.python.org/dev/peps/pep-0487/#implementation-details.
-    #
-    # Note that in _process_class, this Field object is overwritten
-    # with the default value, so the end result is a descriptor that
-    # had __set_name__ called on it at the right time.
-    def __set_name__(self, owner, name):
-        func = getattr(type(self.default), '__set_name__', None)
-        if func:
-            # There is a __set_name__ method on the descriptor, call
-            # it.
-            func(self.default, owner, name)
-
-    __class_getitem__ = classmethod(GenericAlias)
 
 
 def Column(

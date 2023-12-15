@@ -77,6 +77,7 @@ class BadgeAssign(BaseModel):
         fk='corporate_email|display_name',
         api='adp_employees'
     )
+    job_code: str = Field(fk='job_code|job_code_title', api='adp_employees')
     # receiver_user: User = Field(
     #     required=True,
     #     fk='user_id|display_name',

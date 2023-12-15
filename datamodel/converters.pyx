@@ -56,20 +56,22 @@ cpdef datetime.date to_date(object obj):
     if isinstance(obj, datetime.date):
         return obj
     elif isinstance(obj, str):
-        return ciso8601.parse_datetime(obj).date()
-    else:
-        if isinstance(obj, (bytes, bytearray)):
-            obj = obj.decode("ascii")
         try:
-            return datetime.datetime.fromisoformat(obj).date()
+            return ciso8601.parse_datetime(obj).date()
         except ValueError:
             pass
-        try:
-            return pendulum.parse(obj, strict=False).date()
-        except (ValueError, TypeError, ParserError):
-            raise ValueError(
-                f"Can't convert invalid data *{obj}* to date"
-            )
+    if isinstance(obj, (bytes, bytearray)):
+        obj = obj.decode("ascii")
+    try:
+        return datetime.datetime.fromisoformat(obj).date()
+    except ValueError:
+        pass
+    try:
+        return pendulum.parse(obj, strict=False).date()
+    except (ValueError, TypeError, ParserError):
+        raise ValueError(
+            f"Can't convert invalid data *{obj}* to date"
+        )
 
 cpdef datetime.datetime to_datetime(object obj):
     """to_datetime.
@@ -83,20 +85,22 @@ cpdef datetime.datetime to_datetime(object obj):
     elif obj == _MISSING_TYPE:
         return None
     elif isinstance(obj, str):
-        return ciso8601.parse_datetime(obj)
-    else:
-        if isinstance(obj, (bytes, bytearray)):
-            obj = obj.decode("ascii")
         try:
-            return datetime.datetime.fromisoformat(obj)
+            return ciso8601.parse_datetime(obj)
         except ValueError:
             pass
-        try:
-            return pendulum.parse(obj, strict=False)
-        except (ValueError, TypeError, ParserError):
-            raise ValueError(
-                f"Can't convert invalid data *{obj}* to datetime"
-            )
+    if isinstance(obj, (bytes, bytearray)):
+        obj = obj.decode("ascii")
+    try:
+        return datetime.datetime.fromisoformat(obj)
+    except ValueError:
+        pass
+    try:
+        return pendulum.parse(obj, strict=False)
+    except (ValueError, TypeError, ParserError):
+        raise ValueError(
+            f"Can't convert invalid data *{obj}* to datetime"
+        )
 
 cpdef object to_integer(object obj):
     """to_integer.

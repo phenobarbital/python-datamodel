@@ -249,8 +249,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             self._field_checks_(f, name, value)
         else:
             # capturing other errors from validator:
-            # return _validation(f, name, value, _type, val_type)
-            return None
+            return _validation(f, name, value, _type, val_type)
 
     @classmethod
     def add_field(cls, name: str, value: Any = None) -> None:
