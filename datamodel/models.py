@@ -26,6 +26,12 @@ class ModelMixin:
     def __getitem__(self, item):
         return getattr(self, item)
 
+    def reset_values(self):
+        try:
+            self.__values__ = {}
+        except AttributeError:
+            pass
+
     def old_value(self, name: str) -> Any:
         """
         old_value.
@@ -45,15 +51,6 @@ class ModelMixin:
     def column(self, name: str) -> Field:
         return self.__columns__[name]
 
-    # def __repr__(self) -> str:
-    #     nodef_f_vals = (
-    #         (f.name, getattr(self, f.name))
-    #         for f in fields(self)
-    #         if not (getattr(self, f.name) == f.default and not callable(f.default))
-    #     )
-    #     nodef_f_repr = ", ".join(f"{name}={value}" for name, value in nodef_f_vals)
-    #     return f"{self.__class__.__name__}({nodef_f_repr})"
-
     def __repr__(self) -> str:
         f_repr = ", ".join(f"{f.name}={getattr(self, f.name)}" for f in fields(self))
         return f"{self.__class__.__name__}({f_repr})"
@@ -63,7 +60,10 @@ class ModelMixin:
         if isinstance(obj, list):
             return [self.remove_nulls(item) for item in obj]
         elif isinstance(obj, dict):
-            return {key: self.remove_nulls(value) for key, value in obj.items() if value is not None}
+            return {
+                key: self.remove_nulls(value) for key, value in obj.items()
+                if value is not None
+            }
         else:
             return obj
 

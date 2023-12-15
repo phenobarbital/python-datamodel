@@ -78,14 +78,6 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
     """
     Meta = Meta
 
-    def __setattr__(self, name, value):
-        self.custom_attr_handler(name, value)
-        super().__setattr__(name, value)
-
-    def custom_attr_handler(self, name, value):
-        print('Custom attribute handling logic for', name)
-        # Your custom logic here
-
     def __post_init__(self) -> None:
         """
         Post init method.
@@ -236,7 +228,12 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         except KeyError:
             pass
 
-    def _validation_(self, name: str, value: Any, f: Field, _type: Any) -> Optional[Any]:
+    def _validation_(
+        self,
+        name: str,
+        value: Any,
+        f: Field, _type: Any
+    ) -> Optional[Any]:
         """
         _validation_.
         TODO: cover validations as length, not_null, required, max, min, etc

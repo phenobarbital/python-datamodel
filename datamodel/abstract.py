@@ -39,12 +39,17 @@ def _dc_method_setattr_(
     _dc_method_setattr_.
     Method for overwrite the "setattr" on Dataclasses.
     """
+    # Initialize __values__ if it doesn't exist
+    if not hasattr(self, '__values__'):
+        object.__setattr__(self, '__values__', {})
+
     # Check if the attribute is a field
     if name in self.__fields__:
         # Only store the initial value:
         if name not in self.__values__:
             # Store the initial value in __values__
             self.__values__[name] = value
+
     if self.Meta.frozen is True and name not in self.__fields__:
         raise TypeError(
             f"Cannot add New attribute {name} on {self.modelName}, "
@@ -53,6 +58,8 @@ def _dc_method_setattr_(
     else:
         value = None if callable(value) else value
         object.__setattr__(self, name, value)
+        if name == '__values__':
+            return
         if name not in self.__fields__:
             if self.Meta.strict is True:
                 return False
@@ -174,7 +181,6 @@ class ModelMeta(type):
         return dc
 
     def __init__(cls, *args, **kwargs) -> None:
-        cls.modelName = cls.__name__
         # Initialized Data Model = True
         cls.__initialised__ = True
         cls.__errors__ = None
