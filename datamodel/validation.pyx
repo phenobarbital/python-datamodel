@@ -10,7 +10,7 @@ import datetime
 from functools import partial
 import types
 from .types import uint64_min, uint64_max
-
+from .abstract import ModelMeta
 
 cpdef bool_t is_iterable(object value):
     if isinstance(value, Iterable) and not isinstance(value, (str, bytes)):
@@ -94,7 +94,20 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
                 )
     # check: data type hint
     try:
-        if annotated_type.__module__ == 'typing':
+        if type(annotated_type) is ModelMeta:
+            # Check if there's a field in the annotated type that matches the name and type
+            try:
+                field = annotated_type.get_column(name)
+                field_type = field.type
+                if field_type <> val_type:
+                    errors.append(
+                        _create_error(name, value, f'invalid type for {annotated_type}.{name}, expected {field_type}', val_type, annotated_type)
+                    )
+            except AttributeError as e:
+                errors.append(
+                    _create_error(name, value, f'{annotated_type} has no column {name}', val_type, annotated_type, e)
+                )
+        elif annotated_type.__module__ == 'typing':
             # TODO: validation of annotated types
             pass
         elif val_type <> annotated_type:

@@ -20,6 +20,15 @@ class ModelMixin:
     def get_columns(cls):
         return cls.__columns__
 
+    @classmethod
+    def get_column(cls, name: str) -> Field:
+        try:
+            return cls.__columns__[name]
+        except KeyError:
+            raise AttributeError(
+                f"{cls.__name__} has no column {name}"
+            )
+
     def get_fields(self):
         return self.__fields__
 
