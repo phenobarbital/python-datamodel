@@ -111,7 +111,6 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             object.__setattr__(self, "__valid__", False)
         else:
             object.__setattr__(self, "__valid__", True)
-        self.__initialised__ = True
 
     def _handle_default_value(self, value, f, name) -> Any:
         # Calculate default value

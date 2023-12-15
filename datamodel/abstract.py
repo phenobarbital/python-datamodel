@@ -94,8 +94,6 @@ def create_dataclass(
     dc.__errors__: Union[list, None] = None
     dc.__frozen__: bool = strict
     dc.modelName = dc.__name__
-    # Initialized Model
-    dc.__initialised__: bool = False
     return dc
 
 
