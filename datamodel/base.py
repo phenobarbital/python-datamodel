@@ -441,6 +441,9 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             maximum = field.metadata.get('max', None)
             secret = field.metadata.get('secret', None)
 
+            # custom endpoint for every field:
+            custom_endpoint = field.metadata.get('endpoint', None)
+
             if field.metadata.get('required', False) or field.metadata.get('primary', False):
                 required.append(name)
 
@@ -454,7 +457,6 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             fields[name] = {
                 "type": type_info,
                 "nullable": field.metadata.get('nullable', False),
-                "label": field.metadata.get('label', None),
                 "attrs": {
                     "placeholder": field.metadata.get('description', None),
                     "format": field.metadata.get('format', None),
@@ -464,6 +466,11 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
                 **schema_extra,
                 **ref_info
             }
+            label = field.metadata.get('label', None)
+            if label:
+                fields[name]["label"] = label
+            if custom_endpoint:
+                fields[name]["endpoint"] = custom_endpoint
 
             if 'write_only' in field.metadata:
                 fields[name]["writeOnly"] = field.metadata.get('write_only', False)
@@ -474,7 +481,9 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             if field.repr is False:
                 fields[name]["attrs"]["visible"] = False
 
-            fields[name]['default'] = field.default
+            if field.default:
+                fields[name]['default'] = field.default
+
             if secret is not None:
                 fields[name]['secret'] = secret
 
