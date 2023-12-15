@@ -26,6 +26,22 @@ class ModelMixin:
     def __getitem__(self, item):
         return getattr(self, item)
 
+    def old_value(self, name: str) -> Any:
+        """
+        old_value.
+        Get the old value of an attribute.
+        Args:
+            name (str): name of the attribute.
+        Returns:
+            Any: value of the attribute.
+        """
+        try:
+            return self.__values__[name]
+        except KeyError:
+            raise AttributeError(
+                f"{self.__class__.__name__} has no attribute {name}"
+            )
+
     def column(self, name: str) -> Field:
         return self.__columns__[name]
 
@@ -83,3 +99,4 @@ class Model(ModelMixin, metaclass=ModelMeta):
         Post init method.
         Useful for making Post-validations of Model.
         """
+        self.__initialised__ = True

@@ -39,6 +39,12 @@ def _dc_method_setattr_(
     _dc_method_setattr_.
     Method for overwrite the "setattr" on Dataclasses.
     """
+    # Check if the attribute is a field
+    if name in self.__fields__:
+        # Only store the initial value:
+        if name not in self.__values__:
+            # Store the initial value in __values__
+            self.__values__[name] = value
     if self.Meta.frozen is True and name not in self.__fields__:
         raise TypeError(
             f"Cannot add New attribute {name} on {self.modelName}, "
@@ -80,6 +86,7 @@ def create_dataclass(
         eq=True,
         frozen=frozen
     )(new_cls)
+    dc.__values__: dict = {}
     setattr(dc, "__setattr__", _dc_method_setattr_)
     # adding a properly internal json encoder:
     dc.__encoder__: Any = JSONContent
@@ -87,6 +94,8 @@ def create_dataclass(
     dc.__errors__: Union[list, None] = None
     dc.__frozen__: bool = strict
     dc.modelName = dc.__name__
+    # Initialized Model
+    dc.__initialised__: bool = False
     return dc
 
 
@@ -119,37 +128,6 @@ class ModelMeta(type):
                 return cols
 
             cols = _initialize_fields(attrs, annotations, strict)
-            # # set the slots of this class
-            # for field, _type in annotations.items():
-            #     if field in attrs:
-            #         df = attrs.get(field)
-            #         if isinstance(df, Field):
-            #             cols[field] = df
-            #             setattr(cls, field, df)
-            #         else:
-            #             df = Field(required=False, type=_type, default=df)
-            #             df.name = field
-            #             df.type = _type
-            #             cols[field] = df
-            #             attrs[field] = df
-            #             setattr(cls, field, df)
-            #     else:
-            #         if strict is False and field not in attrs:
-            #             df = Field(type=_type, required=False, default=None)
-            #             df.name = field
-            #             df.type = _type
-            #             cols[field] = df
-            #             attrs[field] = df
-            #             setattr(cls, field, df)
-            #         else:
-            #             # add a new field, based on type
-            #             df = Field(type=_type, required=False, default=None)
-            #             df.name = field
-            #             df.type = _type
-            #             cols[field] = df
-            #             attrs[field] = df
-            #             setattr(cls, field, df)
-            #
         attr_meta = attrs.pop("Meta", None)
         new_cls = super().__new__(cls, name, bases, attrs, **kwargs)
         new_cls.Meta = attr_meta or getattr(new_cls, "Meta", Meta)
@@ -196,9 +174,3 @@ class ModelMeta(type):
         dc.__columns__ = cols
         dc.__fields__ = list(_columns)
         return dc
-
-    def __init__(cls, *args, **kwargs) -> None:
-        # Initialized Data Model = True
-        cls.__initialised__ = True
-        # Reuse the dataclass instance created in __new__
-        super().__init__(*args, **kwargs)

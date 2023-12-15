@@ -78,6 +78,14 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
     """
     Meta = Meta
 
+    def __setattr__(self, name, value):
+        self.custom_attr_handler(name, value)
+        super().__setattr__(name, value)
+
+    def custom_attr_handler(self, name, value):
+        print('Custom attribute handling logic for', name)
+        # Your custom logic here
+
     def __post_init__(self) -> None:
         """
         Post init method.
@@ -103,6 +111,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             object.__setattr__(self, "__valid__", False)
         else:
             object.__setattr__(self, "__valid__", True)
+        self.__initialised__ = True
 
     def _handle_default_value(self, value, f, name) -> Any:
         # Calculate default value
@@ -412,11 +421,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         except Exception:
             pass
 
-        try:
-            endpoint = cls.Meta.endpoint
-        except AttributeError:
-            endpoint = None
-
+        endpoint = cls.Meta.endpoint
         schema = cls.Meta.schema
         table = cls.Meta.name.lower() if cls.Meta.name else title.lower()
         columns = cls.get_columns().items()
@@ -487,7 +492,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
                     fields[name]['maximum'] = maximum
 
         endpoint_kwargs = {}
-        if endpoint is not None:
+        if endpoint:
             endpoint_kwargs["endpoint"] = endpoint
 
         base_schema = {
