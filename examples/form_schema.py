@@ -69,7 +69,7 @@ class Employee(BaseModel):
 
 class BadgeAssign(BaseModel):
     reward_id: Reward = Field(
-        required=True, fk='reward_id|reward', endpoint='rewards', label="Badge"
+        required=True, fk='reward_id|reward', api='rewards', label="Badge"
     )
     reward: str = Field(repr=False)
     receiver_email: Employee = Field(

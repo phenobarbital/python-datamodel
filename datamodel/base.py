@@ -62,10 +62,20 @@ def _get_ref_info(_type, field):
         }
     elif isinstance(_type, ModelMeta):
         _schema = _type.schema(as_dict=True)
+        if 'fk' not in field.metadata:
+            ref = _schema.get('$id', f"/{_type.__name__}")
+        else:
+            _id, _value = field.metadata.get('fk').split("|")
+            ref = {
+                "api": field.metadata.get('api', _schema['table']),
+                "id": _id,
+                "value": _value,
+                "$ref": _schema.get('$id', f"/{_type.__name__}")
+            }
         return {
             "type": "object",
             "schema": _schema,
-            "$ref": _schema.get('$id', f"/schemas/{_type.__name__}"),
+            "$ref": ref,
             "columns": field.metadata.get('fk').split("|") if 'fk' in field.metadata else []
         }
     return None
