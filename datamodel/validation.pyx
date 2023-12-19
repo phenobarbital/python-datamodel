@@ -4,6 +4,7 @@
 from uuid import UUID
 from decimal import Decimal
 from libcpp cimport bool as bool_t
+from enum import Enum
 from dataclasses import _MISSING_TYPE
 from collections.abc import Iterable
 import datetime
@@ -110,6 +111,14 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
         elif annotated_type.__module__ == 'typing':
             # TODO: validation of annotated types
             pass
+        elif issubclass(annotated_type, Enum):
+            # Enum validation
+            enum_values = [e.value for e in annotated_type]
+            if value not in enum_values:
+                error_msg = f"Value {value} is not a valid option for {annotated_type}. Valid options: {enum_values}"
+                errors.append(
+                    _create_error(name, value, error_msg, val_type, annotated_type)
+                )
         elif val_type <> annotated_type:
             instance = is_instanceof(value, annotated_type)
             if not instance:
