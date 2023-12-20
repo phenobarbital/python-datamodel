@@ -62,10 +62,12 @@ def _get_ref_info(_type, field):
         }
     elif isinstance(_type, ModelMeta):
         _schema = _type.schema(as_dict=True)
+        columns = []
         if 'fk' not in field.metadata:
             ref = _schema.get('$id', f"/{_type.__name__}")
         else:
-            _id, _value = field.metadata.get('fk').split("|")
+            columns = field.metadata.get('fk').split("|")
+            _id, _value = columns
             ref = {
                 "api": field.metadata.get('api', _schema['table']),
                 "id": _id,
@@ -76,7 +78,28 @@ def _get_ref_info(_type, field):
             "type": "object",
             "schema": _schema,
             "$ref": ref,
-            "columns": field.metadata.get('fk').split("|") if 'fk' in field.metadata else []
+            "columns": columns
+        }
+    elif 'api' in field.metadata:
+        # reference information, no matter the type:
+        try:
+            columns = field.metadata.get('fk').split("|")
+            _id, _value = columns
+            _fields = {
+                "id": _id,
+                "value": _value,
+            }
+        except (TypeError, ValueError):
+            _fields = {}
+            columns = []
+        ref = {
+            "api": field.metadata.get('api'),
+            **_fields
+        }
+        return {
+            "type": "object",
+            "$ref": ref,
+            "columns": columns
         }
     return None
 
@@ -420,6 +443,15 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
 
     @classmethod
     def schema(cls, as_dict=False):
+        """Convert Model to JSON-Schema.
+
+        Args:
+            as_dict (bool, optional): if false, Returns JSON-schema as a JSON object.
+            Defaults to False.
+
+        Returns:
+            _type_: JSON-Schema version of Model.
+        """
         title = getattr(cls.Meta, 'title', cls.__name__)
         try:
             title = slugify_camelcase(title)
@@ -434,6 +466,13 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         fields = {}
         required = []
         defs = {}
+
+        # settings:
+        settings = getattr(cls.Meta, 'settings', {})
+        if settings:
+            settings = {
+                "settings": settings
+            }
 
         for name, field in columns:
             _type = field.type
@@ -513,6 +552,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             "$schema": "https://json-schema.org/draft/2020-12/schema",
             "$id": f"/schemas/{table}",
             **endpoint_kwargs,
+            **settings,
             "additionalProperties": cls.Meta.strict,
             "title": title,
             "description": description,

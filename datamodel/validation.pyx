@@ -10,7 +10,7 @@ from collections.abc import Iterable
 import datetime
 from functools import partial
 import types
-from .types import uint64_min, uint64_max
+from .types import uint64_min, uint64_max, Text
 from .abstract import ModelMeta
 
 cpdef bool_t is_iterable(object value):
@@ -111,10 +111,16 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
         elif annotated_type.__module__ == 'typing':
             # TODO: validation of annotated types
             pass
+        elif annotated_type == Text:
+            if val_type != str:
+                errors.append(
+                    _create_error(name, value, f'invalid type for {annotated_type}.{name}, expected {annotated_type}', val_type, annotated_type)
+                )
         elif issubclass(annotated_type, Enum):
             # Enum validation
             enum_values = [e.value for e in annotated_type]
-            if value not in enum_values:
+            val = value.value if isinstance(value, annotated_type) else value
+            if val not in enum_values:
                 error_msg = f"Value {value} is not a valid option for {annotated_type}. Valid options: {enum_values}"
                 errors.append(
                     _create_error(name, value, error_msg, val_type, annotated_type)
@@ -132,7 +138,7 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
         )
     return errors
 
-cdef dict _create_error(str name, object value, object error, type val_type, object annotated_type, object exception = None):
+cdef dict _create_error(str name, object value, object error, object val_type, object annotated_type, object exception = None):
     return {
         "field": name,
         "value": value,
