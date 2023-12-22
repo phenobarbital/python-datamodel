@@ -189,7 +189,10 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             pass
         return value
 
-    def _process_field_(self, name: str, value: Any, f: Field) -> dict[Any]:
+    def _process_field_(
+        self,
+        name: str, value: Any, f: Field
+    ) -> Optional[dict[Any, Any]]:
         _type = f.type
         _encoder = f.metadata.get('encoder')
         new_val = value
@@ -203,7 +206,8 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
 
         if is_primitive(_type):
             try:
-                new_val = parse_basic(f.type, value, _encoder)
+                if value is not None:
+                    new_val = parse_basic(f.type, value, _encoder)
                 return self._validation_(name, new_val, f, _type)
             except (TypeError, ValueError) as ex:
                 raise ValueError(
@@ -266,7 +270,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         name: str,
         value: Any,
         f: Field, _type: Any
-    ) -> Optional[Any]:
+    ) -> Optional[dict[Any, Any]]:
         """
         _validation_.
         TODO: cover validations as length, not_null, required, max, min, etc
@@ -276,7 +280,11 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         setattr(self, name, value)
 
         if val_type == type or value == _type or is_empty(value):
-            self._field_checks_(f, name, value)
+            try:
+                self._field_checks_(f, name, value)
+                return True
+            except (ValueError, TypeError):
+                raise
         else:
             # capturing other errors from validator:
             return _validation(f, name, value, _type, val_type)
