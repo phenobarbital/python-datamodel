@@ -58,6 +58,8 @@ cpdef bool_t is_empty(object value):
         result = True
     elif isinstance(value, str) and value == '':
         result = True
+    elif isinstance(value, (int, float)) and value == 0:
+        result = False
     elif not value:
         result = True
     return result

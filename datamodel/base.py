@@ -255,7 +255,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
                     f"::{self.modelName}:: Missing Required Field *{name}*"
                 )
         except KeyError:
-            pass
+            return
         # Nullable:
         try:
             if f.metadata["nullable"] is False and self.Meta.strict is True:
@@ -263,7 +263,8 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
                     f"::{self.modelName}:: *{name}* Cannot be null."
                 )
         except KeyError:
-            pass
+            return
+        return
 
     def _validation_(
         self,
@@ -282,7 +283,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         if val_type == type or value == _type or is_empty(value):
             try:
                 self._field_checks_(f, name, value)
-                return True
+                return None
             except (ValueError, TypeError):
                 raise
         else:
