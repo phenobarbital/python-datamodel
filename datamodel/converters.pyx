@@ -321,7 +321,7 @@ cdef dict encoders = {
 }
 
 def parse_type(object T, object data, object encoder = None):
-    if T.__module__ == 'typing':
+    if inspect.isclass(T) and T.__module__ == 'typing':
         args = None
         try:
             args = T.__args__

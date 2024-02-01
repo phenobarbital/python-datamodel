@@ -15,6 +15,9 @@ develop:
 	pip install -e .
 	pip install -Ur docs/requirements-dev.txt
 
+compile:
+	python setup.py build_ext --inplace
+
 release:
 	lint test clean
 	flit publish

@@ -121,6 +121,8 @@ class ModelMeta(type):
             def _initialize_fields(attrs, annotations, strict):
                 cols = OrderedDict()
                 for field, _type in annotations.items():
+                    if isinstance(_type, Field):
+                        _type = _type.type
                     df = attrs.get(
                         field,
                         Field(type=_type, required=False, default=None)

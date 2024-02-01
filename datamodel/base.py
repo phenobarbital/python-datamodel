@@ -196,7 +196,6 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         _type = f.type
         _encoder = f.metadata.get('encoder')
         new_val = value
-
         if is_empty(value):
             new_val = f.default_factory if isinstance(f.default, (_MISSING_TYPE)) else f.default
             setattr(self, name, new_val)
@@ -213,7 +212,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
                 raise ValueError(
                     f"Wrong Type for {f.name}: {f.type}, error: {ex}"
                 ) from ex
-        elif _type.__module__ == 'typing':
+        elif inspect.isclass(_type) and _type.__module__ == 'typing':
             new_val = parse_type(_type, value, _encoder)
             return self._validation_(name, new_val, f, _type)
         elif isinstance(value, list) and hasattr(_type, '__args__'):

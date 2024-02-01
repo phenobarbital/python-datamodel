@@ -177,7 +177,8 @@ class Field(ff):
             "metadata": self._meta,
             "kw_only": self.kw_only
         }
-        super().__init__(
+        ff.__init__(
+            self,
             default=self.default,
             default_factory=self.default_factory,
             **args

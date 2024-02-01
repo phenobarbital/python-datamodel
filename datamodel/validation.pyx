@@ -2,6 +2,7 @@
 # Copyright (C) 2018-present Jesus Lara
 #
 from uuid import UUID
+import inspect
 from decimal import Decimal
 from libcpp cimport bool as bool_t
 from enum import Enum
@@ -12,6 +13,7 @@ from functools import partial
 import types
 from .types import uint64_min, uint64_max, Text
 from .abstract import ModelMeta
+from .fields import Field
 
 cpdef bool_t is_iterable(object value):
     if isinstance(value, Iterable) and not isinstance(value, (str, bytes)):
@@ -78,6 +80,8 @@ cpdef bool_t is_instanceof(object value, type annotated_type):
 cpdef list _validation(object F, str name, object value, object annotated_type, object val_type):
     if not annotated_type:
         annotated_type = F.type
+    elif isinstance(annotated_type, Field):
+        annotated_type = annotated_type.type
     errors = []
     # first: calling (if exists) custom validator:
     fn = F.metadata.get('validator', None)
@@ -110,7 +114,8 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
                 errors.append(
                     _create_error(name, value, f'{annotated_type} has no column {name}', val_type, annotated_type, e)
                 )
-        elif annotated_type.__module__ == 'typing':
+        elif inspect.isclass(annotated_type) and annotated_type.__module__ == 'typing':
+        # elif annotated_type.__module__ == 'typing':
             # TODO: validation of annotated types
             pass
         elif annotated_type == Text:
@@ -118,7 +123,7 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
                 errors.append(
                     _create_error(name, value, f'invalid type for {annotated_type}.{name}, expected {annotated_type}', val_type, annotated_type)
                 )
-        elif issubclass(annotated_type, Enum):
+        elif inspect.isclass(annotated_type) and issubclass(annotated_type, Enum):
             # Enum validation
             enum_values = [e.value for e in annotated_type]
             val = value.value if isinstance(value, annotated_type) else value
