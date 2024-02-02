@@ -99,7 +99,7 @@ extensions = [
 setup(
     name="python-datamodel",
     version=__version__,
-    python_requires=">=3.9.14",
+    python_requires=">=3.9.13",
     url="https://github.com/phenobarbital/python-datamodel",
     description=__description__,
     keywords=['asyncio', 'dataclass', 'dataclasses', 'data models'],
