@@ -5,7 +5,7 @@ import re
 import inspect
 import logging # migrate to use cprint
 import ciso8601
-from typing import Union
+from typing import get_args, get_origin, Union, Optional
 from dataclasses import _MISSING_TYPE, _FIELDS, fields
 import orjson
 from decimal import Decimal
@@ -321,7 +321,7 @@ cdef dict encoders = {
 }
 
 def parse_type(object T, object data, object encoder = None):
-    if inspect.isclass(T) and T.__module__ == 'typing':
+    if hasattr(T, '__module__') and T.__module__ == 'typing':
         args = None
         try:
             args = T.__args__
@@ -375,6 +375,15 @@ def parse_type(object T, object data, object encoder = None):
                     return result
                 return data
         elif T._name is None or T._name in ('Optional', 'Union'):
+            origin = get_origin(T)
+            args = get_args(T)
+            # Handling Optional types
+            if origin == Union and type(None) in args:
+                if data is None:
+                    return None
+                else:
+                    non_none_arg = args[0] if args[1] is type(None) else args[1]
+                    return parse_type(non_none_arg, data, encoder)
             try:
                 t = args[0]
                 if is_dataclass(t):
