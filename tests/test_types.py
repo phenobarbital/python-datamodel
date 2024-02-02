@@ -20,7 +20,7 @@ class Account(BaseModel):
 
 class User(BaseModel):
     id: int
-    name = 'John Doe'
+    name: str = 'John Doe'
     signup_ts: Optional[datetime] = None
     born: Optional[date] = None
     friends: List[int] = Field(default_factory=list)
@@ -29,25 +29,25 @@ class User(BaseModel):
     ## check for error: ValueError: mutable default <class 'list'> for field friends is not allowed: use default_factory
 
 external_data = {
-        'id': '123',
-        'signup_ts': '2017-06-01 12:22',
-        'born': '23-10-1978',
-        'friends': [1, '2', '3'],
-        "address": {"street": "Calle Mayor", "zipcode": 45510},
-        "accounts": [
-            {
-                "provider": "twilio",
-                "phone": "+343317871"
-            },
-            {
-                "provider": "email",
-                "address": "jesuslara@jesuslara.com"
-            },
-            {
-                "provider": "jabber",
-                "address": "jesuslara@jesuslara.com"
-            }
-        ]
+    'id': '123',
+    'signup_ts': '2017-06-01 12:22',
+    'born': '23-10-1978',
+    'friends': [1, '2', '3'],
+    "address": {"street": "Calle Mayor", "zipcode": 45510},
+    "accounts": [
+        {
+            "provider": "twilio",
+            "phone": "+343317871"
+        },
+        {
+            "provider": "email",
+            "address": "jesuslara@jesuslara.com"
+        },
+        {
+            "provider": "jabber",
+            "address": "jesuslara@jesuslara.com"
+        }
+    ]
 }
 user = User(**external_data)
 

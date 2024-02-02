@@ -1,11 +1,14 @@
 # cython: language_level=3, embedsignature=True, boundscheck=False, wraparound=True, initializedcheck=False
 # Copyright (C) 2018-present Jesus Lara
 #
+from typing import get_args, get_origin, Union, Optional
+import typing
 from uuid import UUID
 import inspect
 from decimal import Decimal
 from libcpp cimport bool as bool_t
 from enum import Enum
+import pendulum
 from dataclasses import _MISSING_TYPE
 from collections.abc import Iterable
 import datetime
@@ -69,6 +72,9 @@ cpdef bool_t is_empty(object value):
 cpdef bool_t is_instanceof(object value, type annotated_type):
     if annotated_type.__module__ == 'typing':
         return True # TODO: validate subscripted generic (typing extensions)
+    elif value in (pendulum.Date, pendulum.Time, pendulum.DateTime):
+        # check if is a pendulum instance:
+        return issubclass(value, (datetime.date, datetime.time, datetime.datetime, pendulum.Date, pendulum.Time, pendulum.DateTime))
     else:
         try:
             return isinstance(value, annotated_type)
@@ -76,6 +82,11 @@ cpdef bool_t is_instanceof(object value, type annotated_type):
             raise TypeError(
                 f"{e}"
             )
+
+cpdef bool_t is_optional_type(object annotated_type):
+    if get_origin(annotated_type) is Union:
+        return type(None) in get_args(annotated_type)
+    return False
 
 cpdef list _validation(object F, str name, object value, object annotated_type, object val_type):
     if not annotated_type:
@@ -114,10 +125,23 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
                 errors.append(
                     _create_error(name, value, f'{annotated_type} has no column {name}', val_type, annotated_type, e)
                 )
-        elif inspect.isclass(annotated_type) and annotated_type.__module__ == 'typing':
-        # elif annotated_type.__module__ == 'typing':
+        elif is_optional_type(annotated_type):
+            inner_types = get_args(annotated_type)
+            for t in inner_types:
+                if t is type(None) and value is None:
+                    break
+                elif is_instanceof(val_type, t):
+                    break
+                elif val_type == t:
+                    break
+                else:
+                    errors.append(
+                        _create_error(name, value, f'invalid type for {annotated_type}.{name}, expected {t}', val_type, annotated_type)
+                    )
+        elif hasattr(annotated_type, '__module__') and annotated_type.__module__ == 'typing':
             # TODO: validation of annotated types
             pass
+            # elif inspect.isclass(annotated_type) and
         elif annotated_type == Text:
             if val_type != str:
                 errors.append(
