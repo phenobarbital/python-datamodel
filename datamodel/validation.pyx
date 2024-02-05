@@ -134,10 +134,10 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
                     break
                 elif val_type == t:
                     break
-                else:
-                    errors.append(
-                        _create_error(name, value, f'invalid type for {annotated_type}.{name}, expected {t}', val_type, annotated_type)
-                    )
+            else:
+                errors.append(
+                    _create_error(name, value, f'invalid type for {annotated_type}.{name}, expected {t}', val_type, annotated_type)
+                )
         elif hasattr(annotated_type, '__module__') and annotated_type.__module__ == 'typing':
             # TODO: validation of annotated types
             pass

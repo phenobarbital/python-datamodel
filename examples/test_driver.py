@@ -19,7 +19,9 @@ class jdbcDriver(BaseModel):
     dsn_format: str = None
     jar: Union[list, str] = Field(Required=True)
     classpath: Path = Field(Required=False)
-    required_properties: Optional[Union[list, tuple]] = Field(repr=False, default=jdbc_properties())
+    required_properties: Optional[Union[list, tuple]] = Field(
+        repr=False, default=jdbc_properties()
+    )
 
     def __post_init__(self, username, *args, **kwargs):
         if isinstance(self.jar, str):
