@@ -135,14 +135,14 @@ setup(
         "wheel==0.42.0"
     ],
     install_requires=[
-        "numpy==1.24.2",
+        "numpy==1.26.4",
         "uvloop==0.19.0",
         "asyncio==3.4.3",
         "faust-cchardet==2.1.19",
         "ciso8601==2.3.1",
         "objectpath==0.6.1",
-        "orjson==3.9.10",
-        'typing_extensions==4.8.0',
+        "orjson==3.9.15",
+        'typing_extensions==4.9.0',
         "asyncpg==0.29.0",
         "python-dateutil==2.8.2",
         "pendulum==2.1.2",
