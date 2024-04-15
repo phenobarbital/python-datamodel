@@ -130,7 +130,7 @@ setup(
     include_package_data=True,
     license=__license__,
     setup_requires=[
-        "setuptools==67.6.1",
+        "setuptools==69.5.1",
         "Cython==3.0.9",
         "wheel==0.42.0"
     ],
