@@ -141,7 +141,7 @@ setup(
         "faust-cchardet==2.1.19",
         "ciso8601==2.3.1",
         "objectpath==0.6.1",
-        "orjson==3.9.15",
+        "orjson==3.10.3",
         'typing_extensions==4.9.0',
         "asyncpg==0.29.0",
         "python-dateutil==2.8.2",
