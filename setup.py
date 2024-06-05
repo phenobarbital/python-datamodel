@@ -117,6 +117,7 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Framework :: AsyncIO",
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
@@ -157,7 +158,7 @@ setup(
     test_suite='tests',
     ext_modules=cythonize(extensions),
     project_urls={  # Optional
-        "Source": "https://github.com/phenobarbital/datamodels",
+        "Source": "https://github.com/phenobarbital/datamodel",
         "Funding": "https://paypal.me/phenobarbital",
         "Say Thanks!": "https://saythanks.io/to/phenobarbital",
     },

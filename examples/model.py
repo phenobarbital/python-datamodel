@@ -27,7 +27,7 @@ class User(BaseModel):
     """
     User Basic Structure
     """
-    id: uuid.UUID = Column(primary_key=True, required=True, default=auto_now_add(), db_default='uuid_generate_v4()')
+    id: uuid.UUID = Column(primary_key=True, required=True, default=auto_now_add, db_default='uuid_generate_v4()')
     firstname: str
     lastname: str
     bignumber: np.int64

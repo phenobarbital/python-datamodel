@@ -536,7 +536,11 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
                 fields[name]["attrs"]["visible"] = False
 
             if field.default:
-                fields[name]['default'] = field.default
+                d = field.default
+                if is_callable(d):
+                    fields[name]['default'] = f"fn:{d!r}"
+                else:
+                    fields[name]['default'] = f"{d!s}"
 
             if secret is not None:
                 fields[name]['secret'] = secret
