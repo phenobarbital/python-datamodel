@@ -449,8 +449,39 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             "required": required
         }
 
+    def _get_meta_value(self, key: str, fallback: Any = None, locale: Any = None):
+        value = getattr(self.Meta, key, fallback)
+        if locale is not None:
+            value = locale(value)
+        return value
+
+    def _get_metadata(self, field, key: str, locale: Any = None):
+        value = field.metadata.get(key, None)
+        if locale is not None:
+            value = locale(value)
+        return value
+
+    def _get_field_schema(
+        self,
+        type_info: str,
+        field: object,
+        description: str,
+        locale: Any = None,
+        **kwargs
+    ) -> dict:
+        return {
+            "type": type_info,
+            "nullable": field.metadata.get('nullable', False),
+            "attrs": {
+                "placeholder": description,
+                "format": field.metadata.get('format', None),
+            },
+            "readOnly": field.metadata.get('readonly', False),
+            **kwargs
+        }
+
     @classmethod
-    def schema(cls, as_dict=False):
+    def schema(cls, as_dict=False, locale: Any = None):
         """Convert Model to JSON-Schema.
 
         Args:
@@ -460,27 +491,47 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         Returns:
             _type_: JSON-Schema version of Model.
         """
-        title = getattr(cls.Meta, 'title', cls.__name__)
+        # description:
+        description = cls._get_meta_value(
+            cls,
+            'description',
+            fallback=cls.__doc__.strip("\n").strip(),
+            locale=locale
+        )
+        title = cls._get_meta_value(
+            cls,
+            'title',
+            fallback=cls.__name__,
+            locale=locale
+        )
         try:
             title = slugify_camelcase(title)
         except Exception:
             pass
 
+        # Table Name:
+        table = cls.Meta.name.lower() if cls.Meta.name else title.lower()
         endpoint = cls.Meta.endpoint
         schema = cls.Meta.schema
-        table = cls.Meta.name.lower() if cls.Meta.name else title.lower()
         columns = cls.get_columns().items()
-        description = cls.Meta.description or cls.__doc__.strip("\n").strip()
+
         fields = {}
         required = []
         defs = {}
 
         # settings:
-        settings = getattr(cls.Meta, 'settings', {})
-        if settings:
+        settings = cls._get_meta_value(
+            cls,
+            'settings',
+            fallback={},
+            locale=None
+        )
+        try:
             settings = {
                 "settings": settings
             }
+        except TypeError:
+            settings = {}
 
         for name, field in columns:
             _type = field.type
@@ -494,7 +545,6 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             minimum = field.metadata.get('min', None)
             maximum = field.metadata.get('max', None)
             secret = field.metadata.get('secret', None)
-
             # custom endpoint for every field:
             custom_endpoint = field.metadata.get('endpoint', None)
 
@@ -507,22 +557,27 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             }
             # schema_extra:
             schema_extra = field.metadata.get('schema_extra', {})
-
-            fields[name] = {
-                "type": type_info,
-                "nullable": field.metadata.get('nullable', False),
-                "attrs": {
-                    "placeholder": field.metadata.get('description', None),
-                    "format": field.metadata.get('format', None),
-                },
-                "readOnly": field.metadata.get('readonly', False),
+            meta_description = cls._get_metadata(
+                cls,
+                field,
+                key='description',
+                locale=locale
+            )
+            fields[name] = cls._get_field_schema(
+                cls,
+                type_info,
+                field,
+                description=meta_description,
+                locale=locale,
                 **ui_objects,
                 **schema_extra,
                 **ref_info
-            }
-            label = field.metadata.get('label', None)
+            )
+            label = cls._get_metadata(cls, field, 'label', locale=locale)
             if label:
                 fields[name]["label"] = label
+            if meta_description:
+                fields[name]["description"] = meta_description
             if custom_endpoint:
                 fields[name]["endpoint"] = custom_endpoint
 
@@ -578,7 +633,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         if defs:
             base_schema["$defs"] = defs
 
-        if as_dict:
+        if as_dict is True:
             return base_schema
         else:
             return json_encoder(base_schema)
