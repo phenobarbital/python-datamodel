@@ -1,17 +1,15 @@
 venv:
-	python3.10 -m venv .venv
+	python3.11 -m venv .venv
 	echo 'run `source .venv/bin/activate` to start develop DataModel'
 
-venv11:
-	python3.11 -m venv .venv11
+venv12:
+	python3.12 -m venv .venv11
 	echo 'run `source .venv/bin/activate` to start develop DataModel'
 
-setup:
-	pip install wheel==0.42.0
+install:
 	pip install -e .
 
 develop:
-	pip install wheel==0.42.0
 	pip install -e .
 	pip install -Ur docs/requirements-dev.txt
 

@@ -131,18 +131,18 @@ setup(
     include_package_data=True,
     license=__license__,
     setup_requires=[
-        "setuptools==67.6.1",
-        "Cython==3.0.9",
-        "wheel==0.42.0"
+        'setuptools==74.0.0',
+        'Cython==3.0.11',
+        'wheel==0.44.0'
     ],
     install_requires=[
-        "numpy==1.26.4",
-        "uvloop==0.19.0",
+        "numpy>=1.26.4",
+        "uvloop>=0.20.0",
         "asyncio==3.4.3",
         "faust-cchardet==2.1.19",
         "ciso8601==2.3.1",
         "objectpath==0.6.1",
-        "orjson==3.10.3",
+        "orjson==3.10.7",
         'typing_extensions>=4.9.0',
         "asyncpg>=0.29.0",
         "python-dateutil==2.8.2",
