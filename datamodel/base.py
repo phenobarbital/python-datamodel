@@ -455,6 +455,26 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             value = locale(value)
         return value
 
+    def _get_meta_values(
+        self,
+        key: dict,
+        fallback: Any = None,
+        locale: Any = None
+    ):
+        """
+        _get_meta_values.
+
+        Translates the entire dictionary of Meta values.
+        """
+        values = getattr(self.Meta, key, fallback)
+        if locale is not None:
+            for key, val in values.items():
+                try:
+                    values[key] = locale(val)
+                except (KeyError, TypeError):
+                    pass
+        return values
+
     def _get_metadata(self, field, key: str, locale: Any = None):
         value = field.metadata.get(key, None)
         if locale is not None:
@@ -520,11 +540,11 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         defs = {}
 
         # settings:
-        settings = cls._get_meta_value(
+        settings = cls._get_meta_values(
             cls,
             'settings',
             fallback={},
-            locale=None
+            locale=locale
         )
         try:
             settings = {

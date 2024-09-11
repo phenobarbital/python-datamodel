@@ -39,6 +39,11 @@ class Airport(BaseModel):
         description: str = 'airports'
         title: str = 'airports'
         schema = 'public'
+        settings = {
+            "showSubmit": True,
+            "SubmitLabel": "submit",
+            "showCancel": False
+        }
         strict = True
 
 localization = 'it_IT'
