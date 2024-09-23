@@ -22,7 +22,7 @@ class Airport(BaseModel):
         required=True, label="airport"
     )
     city: str = Column(
-        required=False, label="city"
+        required=False, label="city", multiple=True
     )
     country: str = Column(
         required=False, label="country"

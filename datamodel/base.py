@@ -562,21 +562,24 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             else:
                 ref_info = {}
 
-            minimum = field.metadata.get('min', None)
-            maximum = field.metadata.get('max', None)
-            secret = field.metadata.get('secret', None)
+            _metadata = field.metadata.copy()
+
+            minimum = _metadata.pop('min', None)
+            maximum = _metadata.pop('max', None)
+            secret = _metadata.pop('secret', None)
+
             # custom endpoint for every field:
-            custom_endpoint = field.metadata.get('endpoint', None)
+            custom_endpoint = _metadata.pop('endpoint', None)
 
             if field.metadata.get('required', False) or field.metadata.get('primary', False):
                 required.append(name)
 
             # UI objects:
             ui_objects = {
-                k.replace('_', ':'): v for k, v in field.metadata.items() if k.startswith('ui_')
+                k.replace('_', ':'): v for k, v in _metadata.items() if k.startswith('ui_')
             }
             # schema_extra:
-            schema_extra = field.metadata.get('schema_extra', {})
+            schema_extra = _metadata.pop('schema_extra', {})
             meta_description = cls._get_metadata(
                 cls,
                 field,
@@ -602,13 +605,34 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
                 fields[name]["endpoint"] = custom_endpoint
 
             if 'write_only' in field.metadata:
-                fields[name]["writeOnly"] = field.metadata.get('write_only', False)
+                fields[name]["writeOnly"] = _metadata.pop('write_only', False)
 
             if 'pattern' in field.metadata:
-                fields[name]["attrs"]["pattern"] = field.metadata['pattern']
+                fields[name]["attrs"]["pattern"] = _metadata.pop('pattern')
 
             if field.repr is False:
                 fields[name]["attrs"]["visible"] = False
+
+            _meta = {}
+            _rejected = [
+                'required',
+                'nullable',
+                'primary',
+                'readonly',
+                'label',
+                'validator',
+                'encoder',
+                'decoder'
+            ]
+            for key, val in _metadata.items():
+                if key not in _rejected:
+                    _meta[key] = val
+
+            if _meta:
+                fields[name]["attrs"] = {
+                    **fields[name]["attrs"],
+                    **_meta
+                }
 
             if field.default:
                 d = field.default
