@@ -137,15 +137,15 @@ setup(
     ],
     install_requires=[
         "numpy>=1.26.4",
-        "uvloop>=0.20.0",
+        "uvloop>=0.21.0",
         "asyncio==3.4.3",
         "faust-cchardet==2.1.19",
         "ciso8601==2.3.1",
         "objectpath==0.6.1",
-        "orjson==3.10.7",
+        "orjson==3.10.11",
         'typing_extensions>=4.9.0',
         "asyncpg>=0.29.0",
-        "python-dateutil==2.8.2",
+        "python-dateutil>=2.8.2",
         "pendulum==3.0.0",
         "python-slugify==8.0.1"
     ],
