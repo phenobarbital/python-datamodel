@@ -529,6 +529,14 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         except Exception:
             pass
 
+        # display_name:
+        display_name = cls._get_meta_value(
+            cls,
+            'display_name',
+            fallback=f"{title}_name".lower(),
+            locale=locale
+        )
+
         # Table Name:
         table = cls.Meta.name.lower() if cls.Meta.name else title.lower()
         endpoint = cls.Meta.endpoint
@@ -596,6 +604,11 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
                 **schema_extra,
                 **ref_info
             )
+            if field.metadata.get('primary', False) is True:
+                fields[name]["primary_key"] = True
+            if field.metadata.get('required', False) is True:
+                fields[name]["required"] = True
+
             label = cls._get_metadata(cls, field, 'label', locale=locale)
             if label:
                 fields[name]["label"] = label
@@ -672,6 +685,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             "schema": schema,
             "properties": fields,
             "required": required,
+            "display_name": display_name,
         }
 
         if defs:
