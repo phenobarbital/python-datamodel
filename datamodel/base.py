@@ -10,6 +10,7 @@ from dataclasses import (
 )
 from enum import EnumMeta
 from uuid import UUID
+from concurrent.futures import ThreadPoolExecutor
 from orjson import OPT_INDENT_2
 from .converters import parse_basic, parse_type, slugify_camelcase
 from .fields import Field
@@ -380,6 +381,8 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         Returns:
             str: string (json) version of model.
         """
+        if hasattr(cls, '__computed_model__'):
+            return cls.__computed_model__
         result = None
         clsname = cls.__name__
         schema = cls.Meta.schema
@@ -421,6 +424,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             }
             encoder = cls.__encoder__(**kwargs)
             result = encoder.dumps(doc, option=OPT_INDENT_2)
+        cls.__computed_model__ = result
         return result
 
     @classmethod
@@ -511,6 +515,11 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         Returns:
             _type_: JSON-Schema version of Model.
         """
+        if hasattr(cls, '__computed_schema__'):
+            if as_dict:
+                return cls.__computed_schema__
+            else:
+                return json_encoder(cls.__computed_schema__)
         # description:
         description = cls._get_meta_value(
             cls,
@@ -606,6 +615,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             )
             if field.metadata.get('primary', False) is True:
                 fields[name]["primary_key"] = True
+
             if field.metadata.get('required', False) is True:
                 fields[name]["required"] = True
 
@@ -635,7 +645,9 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
                 'label',
                 'validator',
                 'encoder',
-                'decoder'
+                'decoder',
+                'default_factory',
+                'type'
             ]
             for key, val in _metadata.items():
                 if key not in _rejected:
@@ -691,7 +703,8 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         if defs:
             base_schema["$defs"] = defs
 
-        if as_dict is True:
-            return base_schema
-        else:
+        cls.__computed_schema__ = base_schema
+
+        if as_dict is False:
             return json_encoder(base_schema)
+        return base_schema
