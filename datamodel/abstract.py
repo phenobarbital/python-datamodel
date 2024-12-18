@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Union, Any
+from typing import Optional, Any, List, Dict
 from collections.abc import Callable
 from collections import OrderedDict
 import types
@@ -7,9 +7,20 @@ from dataclasses import dataclass
 from .parsers.json import JSONContent
 from .fields import Field
 
+
 class Meta:
     """
     Metadata information about Model.
+
+    Attributes:
+    name: str = "" name of the model
+    description: str = "" description of the model
+    schema: str = "" schema of the model (optional)
+    app_label: str = "" app label of the model (optional)
+    frozen: bool = False if the model (dataclass) is read-only (frozen state)
+    strict: bool = True if the model (dataclass) should raise an error on invalid data.
+    remove_null: bool = True if the model should remove null values from the data.
+    concurrent: bool = True if processing fields should be called concurrently.
     """
     name: str = ""
     description: str = ""
@@ -24,6 +35,7 @@ class Meta:
     connection: Optional[Callable] = None
     remove_nulls: bool = False
     endpoint: str = ""
+    concurrent: bool = False
 
 
 def set_connection(cls, conn: Callable):
@@ -38,6 +50,7 @@ def _dc_method_setattr_(
     """
     _dc_method_setattr_.
     Method for overwrite the "setattr" on Dataclasses.
+
     """
     # Initialize __values__ if it doesn't exist
     if not hasattr(self, '__values__'):
@@ -76,40 +89,18 @@ def _dc_method_setattr_(
                 raise
 
 
-def create_dataclass(
-    new_cls: Union[object, Any],
-    strict: bool = False,
-    frozen: bool = False
-) -> Callable:
-    """
-    create_dataclass.
-       Create a Dataclass from a simple Class.
-    """
-    dc = dataclass(
-        unsafe_hash=strict,
-        repr=False,
-        init=True,
-        order=False,
-        eq=True,
-        frozen=frozen
-    )(new_cls)
-    dc.__values__: dict = {}
-    # adding a properly internal json encoder:
-    dc.__encoder__: Any = JSONContent
-    dc.__valid__: bool = False
-    dc.__errors__: Union[list, None] = None
-    dc.__frozen__: bool = strict
-    dc.__initialised__: bool = False
-    setattr(dc, "__setattr__", _dc_method_setattr_)
-    dc.modelName = dc.__name__
-    return dc
-
-
 class ModelMeta(type):
+    """ModelMeta.
+
+    Metaclass for DataModels, convert any Model into a dataclass-compatible object.
+    """
+    __columns__: Dict
+    __fields__: List
 
     def __new__(cls, name, bases, attrs, **kwargs):
         cols = OrderedDict()
         strict = False
+
         if "__annotations__" in attrs:
             annotations = attrs.get('__annotations__', {})
             try:
@@ -132,14 +123,22 @@ class ModelMeta(type):
                     df.name = field
                     df.type = _type
                     cols[field] = df
+                    # Assign the field object to the attrs so dataclass can pick it up
                     attrs[field] = df
                 return cols
 
+            # Initialize the fields
             cols = _initialize_fields(attrs, annotations, strict)
+
         _columns = cols.keys()
         cls.__slots__ = tuple(_columns)
+
+        # Pop Meta before creating the class so we can assign it after
         attr_meta = attrs.pop("Meta", None)
+        # Create the class
         new_cls = super().__new__(cls, name, bases, attrs, **kwargs)
+
+        # Attach Meta class
         new_cls.Meta = attr_meta or getattr(new_cls, "Meta", Meta)
         new_cls.__dataclass_fields__ = cols
         if not new_cls.Meta:
@@ -152,6 +151,7 @@ class ModelMeta(type):
         except AttributeError:
             new_cls.Meta.frozen = False
             frozen = False
+
         # mix values from Meta to an existing Meta Class
         new_cls.Meta.__annotations__ = Meta.__annotations__
         for key, _ in Meta.__annotations__.items():
@@ -162,7 +162,8 @@ class ModelMeta(type):
                     logging.warning(
                         f'Missing Meta Key: {key}, {e}'
                     )
-        # adding a "class init method"
+
+        # If there's a __model_init__ method, call it
         try:
             new_cls.__model_init__(
                 new_cls,
@@ -172,14 +173,28 @@ class ModelMeta(type):
         except AttributeError:
             pass
 
-        # Create the dataclass once
-        dc = create_dataclass(
-            new_cls,
-            strict=new_cls.Meta.strict,
+        # Now that fields are in attrs, decorate the class as a dataclass
+        dc = dataclass(
+            unsafe_hash=strict,
+            repr=False,
+            init=True,
+            order=False,
+            eq=True,
             frozen=frozen
-        )
+        )(new_cls)
+        # Set additional attributes:
         dc.__columns__ = cols
         dc.__fields__ = list(_columns)
+        dc.__values__ = {}
+        dc.__encoder__ = JSONContent
+        dc.__valid__ = False
+        dc.__errors__ = None
+        dc.__frozen__ = strict
+        dc.__initialised__ = False
+        dc.modelName = dc.__name__
+
+        # Override __setattr__ method
+        setattr(dc, "__setattr__", _dc_method_setattr_)
         return dc
 
     def __init__(cls, *args, **kwargs) -> None:
