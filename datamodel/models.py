@@ -1,12 +1,95 @@
 from __future__ import annotations
-from enum import Enum
 from typing import Any
+from enum import Enum, EnumMeta
 # Dataclass
+import inspect
 from dataclasses import asdict as as_dict
 from operator import attrgetter
 from datamodel.fields import fields
 from .abstract import ModelMeta, Meta
 from .fields import Field
+from .parsers.encoders import json_encoder
+from .converters import slugify_camelcase
+from .types import JSON_TYPES, Text
+from .validation import is_callable
+
+
+def _get_type_info(_type, name, title):
+    if _type.__module__ == 'typing':
+        if inspect.isfunction(_type):
+            if hasattr(_type, '__supertype__'):
+                return _type.__supertype__
+            raise ValueError(
+                f"You're using bare Functions to type hint on {name} for: {title}"
+            )
+        if _type._name == 'List':
+            return 'array'
+        if _type._name == 'Dict':
+            return 'object'
+        try:
+            return _type.__args__[0].__name__
+        except (AttributeError, ValueError):
+            return 'string'
+    elif hasattr(_type, '__supertype__'):
+        if type(_type) == type(Text):  # pylint: disable=C0123 # noqa
+            return 'text'
+        if isinstance(_type.__supertype__, (str, int)):
+            return 'string' if isinstance(_type.__supertype__, str) else 'integer'
+    return JSON_TYPES.get(_type, 'string')
+
+
+def _get_ref_info(_type, field):
+    if isinstance(_type, EnumMeta):
+        return {
+            "type": "array",
+            "enum_type": {
+                "type": "string",
+                "enum": list(map(lambda c: c.value, _type))
+            }
+        }
+    elif isinstance(_type, ModelMeta):
+        _schema = _type.schema(as_dict=True)
+        columns = []
+        if 'fk' not in field.metadata:
+            ref = _schema.get('$id', f"/{_type.__name__}")
+        else:
+            columns = field.metadata.get('fk').split("|")
+            _id, _value = columns
+            ref = {
+                "api": field.metadata.get('api', _schema['table']),
+                "id": _id,
+                "value": _value,
+                "$ref": _schema.get('$id', f"/{_type.__name__}")
+            }
+        return {
+            "type": "object",
+            "schema": _schema,
+            "$ref": ref,
+            "columns": columns
+        }
+    elif 'api' in field.metadata:
+        # reference information, no matter the type:
+        try:
+            columns = field.metadata.get('fk').split("|")
+            _id, _value = columns
+            _fields = {
+                "id": _id,
+                "value": _value,
+            }
+        except (TypeError, ValueError):
+            _fields = {}
+            columns = []
+        ref = {
+            "api": field.metadata.get('api'),
+            **_fields
+        }
+        return {
+            "type": "object",
+            "$ref": ref,
+            "columns": columns
+        }
+    return None
+
 
 class ModelMixin:
     """Interface for shared methods on Model classes.
@@ -112,6 +195,372 @@ class ModelMixin:
             bool: True if current model is valid.
         """
         return bool(self.__valid__)
+
+    def _get_meta_value(self, key: str, fallback: Any = None, locale: Any = None):
+        value = getattr(self.Meta, key, fallback)
+        if locale is not None:
+            value = locale(value)
+        return value
+
+    def _get_meta_values(
+        self,
+        key: dict,
+        fallback: Any = None,
+        locale: Any = None
+    ):
+        """
+        _get_meta_values.
+
+        Translates the entire dictionary of Meta values.
+        """
+        values = getattr(self.Meta, key, fallback)
+        if locale is not None:
+            for key, val in values.items():
+                try:
+                    values[key] = locale(val)
+                except (KeyError, TypeError):
+                    pass
+        return values
+
+    def _get_metadata(self, field, key: str, locale: Any = None):
+        value = field.metadata.get(key, None)
+        if locale is not None:
+            value = locale(value)
+        return value
+
+    def _get_field_schema(
+        self,
+        type_info: str,
+        field: object,
+        description: str,
+        locale: Any = None,
+        **kwargs
+    ) -> dict:
+        return {
+            "type": type_info,
+            "nullable": field.metadata.get('nullable', False),
+            "attrs": {
+                "placeholder": description,
+                "format": field.metadata.get('format', None),
+            },
+            "readOnly": field.metadata.get('readonly', False),
+            **kwargs
+        }
+
+    @classmethod
+    def _build_schema_basics(cls, locale: Any = None):
+        """Build basic schema metadata such as title, description, etc."""
+        # description:
+        description = cls._get_meta_value(
+            cls,
+            'description',
+            fallback=cls.__doc__.strip("\n").strip(),
+            locale=locale
+        )
+        title = cls._get_meta_value(
+            cls,
+            'title',
+            fallback=cls.__name__,
+            locale=locale
+        )
+        try:
+            title = slugify_camelcase(title)
+        except Exception:
+            pass
+        # display_name:
+        display_name = cls._get_meta_value(
+            cls,
+            'display_name',
+            fallback=f"{title}_name".lower(),
+            locale=locale
+        )
+        # Table Name:
+        table = cls.Meta.name.lower() if cls.Meta.name else title.lower()
+        endpoint = cls.Meta.endpoint
+        schema = cls.Meta.schema
+        return title, description, display_name, table, endpoint, schema
+
+    @classmethod
+    def _build_settings(cls, locale: Any = None) -> dict:
+        """Build the settings part of the schema."""
+        # settings:
+        settings = cls._get_meta_values(
+            cls,
+            'settings',
+            fallback={},
+            locale=locale
+        )
+        if not isinstance(settings, dict):
+            # Ensure settings is always a dict
+            settings = {}
+        return {"settings": settings}
+
+    @classmethod
+    def _build_fields(cls, title: str, locale: Any = None) -> dict:
+        """Build the fields part of the schema."""
+        fields = {}
+        required = []
+        defs = {}
+
+        # Get the columns of the Model.
+        for name, field in cls.get_columns().items():
+            field_schema, field_defs, field_required = cls._process_field_schema(
+                name, field, locale, title
+            )
+            fields[name] = field_schema
+            if field_required:
+                required.append(name)
+            if field_defs:
+                defs[name] = field_defs.get('schema')
+        return fields, required, defs
+
+    @classmethod
+    def _extract_field_basics(cls, name: str, field: Field, title: str):
+        _type = field.type
+        type_info = _get_type_info(_type, name, title)
+        ref_info = _get_ref_info(_type, field) or {}
+        field_defs = {}
+
+        if 'schema' in ref_info:
+            field_defs['schema'] = ref_info.pop('schema', None)
+
+        return type_info, ref_info, field_defs
+
+    @classmethod
+    def _extract_and_filter_metadata(cls, field: Field, locale: Any):
+        """Extract and filter metadata."""
+        _metadata = field.metadata.copy()
+        minimum = _metadata.pop('min', None)
+        maximum = _metadata.pop('max', None)
+        secret = _metadata.pop('secret', None)
+        custom_endpoint = _metadata.pop('endpoint', None)
+
+        field_required = field.metadata.get(
+            'required', False
+        ) or field.metadata.get('primary', False)
+
+        ui_objects = {
+            k.replace('_', ':'): v for k, v in _metadata.items() if k.startswith('ui_')
+        }
+        schema_extra = _metadata.pop('schema_extra', {})
+
+        meta_description = cls._get_metadata(
+            cls, field, key='description', locale=locale
+        )
+
+        return (
+            _metadata,
+            minimum,
+            maximum,
+            secret,
+            custom_endpoint,
+            field_required,
+            ui_objects,
+            schema_extra,
+            meta_description
+        )
+
+    @classmethod
+    def _apply_extra_metadata(cls, field_schema: dict, _metadata: dict):
+        """Move non-rejected metadata keys into the 'attrs' dict."""
+        _rejected = [
+            'required', 'nullable', 'primary', 'readonly',
+            'label', 'validator', 'encoder', 'decoder',
+            'default_factory', 'type'
+        ]
+        _meta = {k: v for k, v in _metadata.items() if k not in _rejected}
+
+        if _meta:
+            field_schema["attrs"] = {
+                **field_schema["attrs"],
+                **_meta
+            }
+
+    @classmethod
+    def _apply_defaults_and_constraints(
+        cls,
+        field_schema: dict,
+        field: Field,
+        secret: Any,
+        type_info: str,
+        minimum: Any,
+        maximum: Any
+    ):
+        """Handle default values, secret fields, and min/max constraints."""
+        if field.default:
+            d = field.default
+            if is_callable(d):
+                field_schema['default'] = f"fn:{d!r}"
+            else:
+                field_schema['default'] = f"{d!s}"
+
+        if secret is not None:
+            field_schema['secret'] = secret
+
+        # Handle length/size constraints
+        if type_info == 'string':
+            if minimum is not None:
+                field_schema['minLength'] = minimum
+            if maximum is not None:
+                field_schema['maxLength'] = maximum
+        else:
+            if minimum is not None:
+                field_schema['minimum'] = minimum
+            if maximum is not None:
+                field_schema['maximum'] = maximum
+
+    @classmethod
+    def _process_field_schema(
+        cls,
+        name: str,
+        field: Field,
+        locale: Any,
+        title: str
+    ) -> tuple:
+        """Process the schema for a single field."""
+        # Get the field type and description.
+
+        type_info, ref_info, field_defs = cls._extract_field_basics(name, field, title)
+
+        # Extract and handle metadata
+        (
+            _metadata,
+            minimum,
+            maximum,
+            secret,
+            custom_endpoint,
+            field_required,
+            ui_objects,
+            schema_extra,
+            meta_description
+        ) = cls._extract_and_filter_metadata(
+            field, locale
+        )
+
+        if 'schema' in ref_info:
+            field_defs['schema'] = ref_info.pop('schema', None)
+
+        # Build the basic field schema
+        field_schema = cls._get_field_schema(
+            cls,
+            type_info,
+            field,
+            description=meta_description,
+            locale=locale,
+            **ui_objects,
+            **schema_extra,
+            **ref_info
+        )
+
+        # Handle primary/required keys
+        if field.metadata.get('primary', False) is True:
+            field_schema["primary_key"] = True
+        if field_required:
+            field_schema["required"] = True
+
+        # Add label and description if available
+        label = cls._get_metadata(cls, field, 'label', locale=locale)
+        if label:
+            field_schema["label"] = label
+        if meta_description:
+            field_schema["description"] = meta_description
+
+        # Add custom endpoint
+        if custom_endpoint:
+            field_schema["endpoint"] = custom_endpoint
+
+        # Handle write_only, pattern, visible attributes
+        if 'write_only' in field.metadata:
+            field_schema["writeOnly"] = _metadata.pop('write_only', False)
+
+        if 'pattern' in field.metadata:
+            field_schema["attrs"]["pattern"] = _metadata.pop('pattern')
+
+        if field.repr is False:
+            field_schema["attrs"]["visible"] = False
+
+        # Remove some rejected keys and move others into attrs
+        cls._apply_extra_metadata(field_schema, _metadata)
+
+        # Handle default, secret, and constraints
+        cls._apply_defaults_and_constraints(
+            field_schema,
+            field,
+            secret,
+            type_info,
+            minimum,
+            maximum
+        )
+
+        return field_schema, field_defs, field_required
+
+    @classmethod
+    def schema(cls, as_dict=False, locale: Any = None):
+        """
+        Convert the Model to a JSON-Schema representation.
+
+        This method generates a JSON-Schema that describes the structure and constraints
+        of the Model. It includes information about fields, their types,
+        validation rules, and other metadata.
+
+        Args:
+            as_dict (bool, optional): If True,
+                returns the schema as a Python dictionary.
+                                      If False,
+                returns the schema as a JSON-encoded string. Defaults to False.
+            locale (Any, optional):
+                The locale to use for internationalization of schema
+                elements like descriptions and labels. Defaults to None.
+
+        Returns:
+            Union[dict, str]:
+                The JSON-Schema representation of the Model. If as_dict is True,
+                returns a Python dictionary. Otherwise, returns a JSON-encoded string.
+
+        Note:
+            This method caches the computed schema in the __computed_schema__ attribute
+            of the class for subsequent calls.
+        """
+        # Check if schema is already computed and cached.
+        if hasattr(cls, '__computed_schema__'):
+            return cls.__computed_schema__ if as_dict else json_encoder(
+                cls.__computed_schema__
+            )
+
+        # Build basic schema attributes (title, description, display_name, etc.)
+        title, description, display_name, table, endpoint, schema = cls._build_schema_basics(locale)  # pylint: disable=C0301 # noqa
+        settings = cls._build_settings(locale)
+        endpoint_kwargs = {"endpoint": endpoint} if endpoint else {}
+
+        # Build the fields part of the schema.
+        fields, required, defs = cls._build_fields(title, locale)
+
+        base_schema = {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": f"/schemas/{table}",
+            **endpoint_kwargs,
+            **settings,
+            "additionalProperties": cls.Meta.strict,
+            "title": title,
+            "description": description,
+            "type": "object",
+            "table": table,
+            "schema": schema,
+            "properties": fields,
+            "required": required,
+            "display_name": display_name,
+        }
+
+        if defs:
+            base_schema["$defs"] = defs
+
+        # Cache the computed schema for subsequent calls
+        cls.__computed_schema__ = base_schema
+
+        if as_dict:
+            return base_schema
+        return json_encoder(base_schema)
+
 
 class Model(ModelMixin, metaclass=ModelMeta):
     """Model.
