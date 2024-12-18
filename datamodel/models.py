@@ -1,4 +1,5 @@
 from __future__ import annotations
+from enum import Enum
 from typing import Any
 # Dataclass
 from dataclasses import asdict as as_dict
@@ -76,10 +77,26 @@ class ModelMixin:
         else:
             return obj
 
-    def to_dict(self):
-        if self.Meta.remove_nulls is True:
-            return self.remove_nulls(as_dict(self, dict_factory=dict))
-        return as_dict(self)
+    def __convert_enums__(self, obj: Any) -> dict[str, Any]:
+        """Recursively converts any Enum values to their value."""
+        if isinstance(obj, list):
+            return [self.__convert_enums__(item) for item in obj]
+        elif isinstance(obj, dict):
+            return {
+                key: self.__convert_enums__(value) for key, value in obj.items()
+            }
+        else:
+            if isinstance(obj, Enum):
+                return obj.value
+            return obj
+
+    def to_dict(self, remove_nulls: bool = False, convert_enums: bool = False):
+        d = as_dict(self, dict_factory=dict)
+        if convert_enums:
+            d = self.__convert_enums__(d)
+        if self.Meta.remove_nulls is True or remove_nulls is True:
+            return self.remove_nulls(d)
+        return d
 
     def json(self, **kwargs):
         encoder = self.__encoder__(**kwargs)
