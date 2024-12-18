@@ -20,3 +20,14 @@ class User(BaseModel):
 
 schema = User.schema(as_dict=False)
 pp.pprint(schema)
+
+users = []
+users.append(
+    User(user_id=1, first_name="John", last_name="Doe", user_type=UserType.STAFF)
+)
+users.append(
+    User(user_id=2, first_name="Jane", last_name="Doe", email="janedoe@example.com", user_type=UserType.ADMIN)
+)
+print(
+    [user.to_dict(convert_enums=True) for user in users]
+)

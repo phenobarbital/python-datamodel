@@ -1,10 +1,14 @@
 from typing import Optional, List
+import pprint
 from enum import Enum
 from datetime import datetime, date
 from dataclasses import is_dataclass
 from datamodel import BaseModel, Field
 from datamodel.types import Text
 from datamodel.exceptions import ValidationError
+
+
+pp = pprint.PrettyPrinter(width=41, compact=True)
 
 class UserType(Enum):
     USER = 1  # , 'user'
@@ -36,6 +40,9 @@ print(user)
 #> User id=123 name='John Doe' signup_ts=datetime.datetime(2017, 6, 1, 12, 22) friends=[1, 2, 3]
 print(user.id, user.user_role)
 #> 123
-print(is_dataclass(user))
+print('Is a Dataclass: ', is_dataclass(user))
 print(type(user.signup_ts), user.signup_ts)
-print(isinstance(user.born, date))
+print('Born is a date?: ', isinstance(user.born, date))
+
+print('======= Schema ====')
+pp.pprint(NewUser.schema(as_dict=False))

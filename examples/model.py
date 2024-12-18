@@ -3,6 +3,7 @@ from datetime import (
     time,
     date
 )
+from pprint import pprint
 import uuid
 from decimal import Decimal
 from datamodel import BaseModel, Column
@@ -31,7 +32,7 @@ class User(BaseModel):
     firstname: str
     lastname: str
     bignumber: np.int64
-    name: str = Column(required=True, default='John Doe')
+    name: str = Column(required=True, default='John Doe', ui_widget='TextInput')
     age: int = Column(default=18, required=True)
     salary: Decimal = Column(default=10.0)
     in_time: time = Column(default='15:00')
@@ -47,6 +48,8 @@ class User(BaseModel):
         schema = 'public'
         driver = 'pg'
         strict = False
+        endpoint: str = 'users/api/v1/users'
+
 
 u = User()
 print(u.model(dialect='json'))
@@ -61,3 +64,4 @@ print('JSON ::')
 print(b)
 jlara = User.from_json(b)
 print(jlara)
+pprint(User.schema(as_dict=True))

@@ -2,6 +2,7 @@ import uuid
 from typing import Union, List, Optional
 from dataclasses import dataclass, field, is_dataclass
 from datamodel import BaseModel, Column, Field
+from pprint import pprint
 
 def auto_uid():
     return uuid.uuid4()
@@ -30,12 +31,12 @@ class Employee(User):
     """
     Base Employee.
     """
-    id: uuid.UUID = field(default_factory=auto_uid)
+    id: uuid.UUID = Field(required=False)
     role: str
-    address: Address # composition of a dataclass inside of DataModel
+    address: Address = Field(required=False)
 
-    def info(self) -> str:
-        return f"Name is {self.first_name}, {self.last_name}"
+    # def info(self) -> str:
+    #     return f"Name is {self.first_name}, {self.last_name}"
 
 # Supporting multiple inheritance, even from pure dataclasses
 # Wage Policies
@@ -98,16 +99,25 @@ class PayrollSystem:
             print("")
 
 
-# Testing Model:
-john = Manager(name='John Doe', first_name='John', last_name='Doe', salary=2500, commission=500)
-john.address = Address('121 Admin Road', "Concord", "NH", "03301")
-jane = Secretary(name='Jane Doe', first_name='Jane', last_name='Doe', salary=1500)
-jane.address = Address('Rodeo Drive, Rd', 'Los Angeles', 'CA', '31050')
-bob = FactoryWorker(name='Bob Doyle', first_name='Bob', last_name='Doyle', salary=15, hours_worked=40)
-mitch = FactoryWorker(name='Mitch Brian', first_name='Mitch', last_name='Brian', salary=20, hours_worked=35)
-kevin = SalesPerson(name='Kevin Bacon', first_name='Kevin', last_name='Bacon', salary=35, hours_worked=35, commission=250)
+# # Testing Model:
+# john = Manager(name='John Doe', first_name='John', last_name='Doe', salary=2500, commission=500)
+# john.address = Address('121 Admin Road', "Concord", "NH", "03301")
+# jane = Secretary(name='Jane Doe', first_name='Jane', last_name='Doe', salary=1500)
+# jane.address = Address('Rodeo Drive, Rd', 'Los Angeles', 'CA', '31050')
+# bob = FactoryWorker(name='Bob Doyle', first_name='Bob', last_name='Doyle', salary=15, hours_worked=40)
+# mitch = FactoryWorker(name='Mitch Brian', first_name='Mitch', last_name='Brian', salary=20, hours_worked=35)
+# kevin = SalesPerson(name='Kevin Bacon', first_name='Kevin', last_name='Bacon', salary=35, hours_worked=35, commission=250)
 
-payroll = PayrollSystem()
-payroll.calculate_payroll([jane, bob, mitch, john, kevin])
+# payroll = PayrollSystem()
+# payroll.calculate_payroll([jane, bob, mitch, john, kevin])
 
-print('IS DATACLASS? > ', is_dataclass(mitch))
+# print('IS DATACLASS? > ', is_dataclass(mitch))
+
+if __name__ == '__main__':
+    doe = Employee(
+        name='John Doe', first_name='John', last_name='Doe', address={"street": '121 Admin Road', "city": "Concord", "state": "NH", "zipcode": "03301"}
+    )
+    print(doe)
+    print(doe.address, type(doe.address))
+    print('--------------------')
+    pprint(Employee.schema(as_dict=True))

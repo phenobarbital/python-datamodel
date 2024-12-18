@@ -14,7 +14,7 @@ class Address(BaseModel):
 
 class UserType(Enum):
     CUSTOMER = 'customer'
-    STAFF  = 'staff'
+    STAFF = 'staff'
     MODERATOR = 'moderator'
     ADMIN = 'admin'
     ROOT = 'superuser'
@@ -36,9 +36,9 @@ class User(BaseModel):
     is_active: bool = Column(required=True, default=True)
     is_new: bool = Column(required=True, default=True)
     is_staff: bool = Column(required=False, default=True)
-    title: str = Column(equired=False, max=90)
-    registration_key: str = Column(equired=False, max=512, repr=False, readonly=True)
-    reset_pwd_key: str = Column(equired=False, max=512, repr=False, readonly=True)
+    title: str = Column(required=False, max=90)
+    registration_key: str = Column(required=False, max=512, repr=False, readonly=True)
+    reset_pwd_key: str = Column(required=False, max=512, repr=False, readonly=True)
     avatar: Text = Column(max=512, repr=False, ui_widget='ImageUploader', ui_help='User Avatar, Hint: please upload a PNG file.')
     associate_id: str = Column(required=False, repr=False)
     group_id: list[int] = Column(required=False)
