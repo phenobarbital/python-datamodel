@@ -17,6 +17,24 @@ from cpython.ref cimport PyObject
 from .validation import is_dataclass, is_iterable
 
 
+cdef str to_string(object obj):
+    """
+    Returns a string version of an object.
+    """
+    if obj is None:
+        return None
+    if isinstance(obj, str):
+        return obj
+    elif isinstance(obj, bytes):
+        return obj.decode()
+    elif callable(obj):
+        # its a function callable returning a value
+        try:
+            return str(obj())
+        except:
+            pass
+    return str(obj)
+
 cdef object to_uuid(object obj):
     """Returns a UUID version of a str column.
     """
@@ -305,7 +323,15 @@ cpdef object to_object(object obj):
             f"Can't convert invalid data {obj} to Object"
         )
 
+cpdef object register_converter(object _type, object converter_func):
+    """register_converter.
+
+    Register a new converter function for a given type.
+    """
+    encoders[_type] = converter_func
+
 cdef dict encoders = {
+    str: to_string,
     UUID: to_uuid,
     bool: to_boolean,
     int: to_integer,
