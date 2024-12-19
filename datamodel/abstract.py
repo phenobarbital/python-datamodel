@@ -3,12 +3,14 @@ from typing import Optional, Any, List, Dict
 from collections.abc import Callable
 from collections import OrderedDict
 import types
-import numbers
 from inspect import isclass
-from dataclasses import dataclass, is_dataclass
+from dataclasses import dataclass
 from .parsers.json import JSONContent
 from .fields import Field
-
+from .functions import (
+    is_dataclass,
+    is_primitive
+)
 
 class Meta:
     """
@@ -90,8 +92,6 @@ def _dc_method_setattr_(
                 logging.exception(err, stack_info=True)
                 raise
 
-def is_primitive(t) -> bool:
-    return t in (int, float, bool, str, bytes)
 
 class ModelMeta(type):
     """ModelMeta.
