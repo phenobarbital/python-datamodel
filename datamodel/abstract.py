@@ -3,7 +3,9 @@ from typing import Optional, Any, List, Dict
 from collections.abc import Callable
 from collections import OrderedDict
 import types
-from dataclasses import dataclass
+import numbers
+from inspect import isclass
+from dataclasses import dataclass, is_dataclass
 from .parsers.json import JSONContent
 from .fields import Field
 
@@ -88,6 +90,8 @@ def _dc_method_setattr_(
                 logging.exception(err, stack_info=True)
                 raise
 
+def is_primitive(t) -> bool:
+    return t in (int, float, bool, str, bytes)
 
 class ModelMeta(type):
     """ModelMeta.
@@ -96,10 +100,12 @@ class ModelMeta(type):
     """
     __columns__: Dict
     __fields__: List
+    __field_types__: List
 
-    def __new__(cls, name, bases, attrs, **kwargs):
+    def __new__(cls, name, bases, attrs, **kwargs):  # noqa
         cols = OrderedDict()
         strict = False
+        cls.__field_types__ = {}
 
         if "__annotations__" in attrs:
             annotations = attrs.get('__annotations__', {})
@@ -111,6 +117,7 @@ class ModelMeta(type):
             @staticmethod
             def _initialize_fields(attrs, annotations, strict):
                 cols = OrderedDict()
+                _types = {}
                 for field, _type in annotations.items():
                     if isinstance(_type, Field):
                         _type = _type.type
@@ -123,12 +130,26 @@ class ModelMeta(type):
                     df.name = field
                     df.type = _type
                     cols[field] = df
+                    # check type of field:
+                    if is_primitive(_type):
+                        _types[field] = 'primitive'
+                    elif is_dataclass(_type):
+                        _types[field] = 'dataclass'
+                    else:
+                        # Additional checks for typing can be done here:
+                        if hasattr(_type, '__module__') and _type.__module__ == 'typing':  # noqa
+                            _types[field] = 'typing'
+                        elif isclass(_type):
+                            _types[field] = 'class'
+                        else:
+                            _types[field] = 'complex'
                     # Assign the field object to the attrs so dataclass can pick it up
                     attrs[field] = df
-                return cols
+                return cols, _types
 
             # Initialize the fields
-            cols = _initialize_fields(attrs, annotations, strict)
+            cols, _types = _initialize_fields(attrs, annotations, strict)
+            cls.__field_types__ = _types
 
         _columns = cols.keys()
         cls.__slots__ = tuple(_columns)
