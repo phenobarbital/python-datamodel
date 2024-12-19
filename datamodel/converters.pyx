@@ -14,7 +14,7 @@ import pendulum
 from pendulum.parsing.exceptions import ParserError
 from uuid import UUID
 from cpython.ref cimport PyObject
-from .functions import is_dataclass, is_iterable
+from .functions import is_dataclass, is_iterable, is_primitive
 
 
 cdef str to_string(object obj):
@@ -346,8 +346,110 @@ cdef dict encoders = {
     tuple: to_object
 }
 
-def parse_type(object T, object data, object encoder = None):
-    if hasattr(T, '__module__') and T.__module__ == 'typing':
+
+cdef object _parse_list_type(object T, object data, object encoder):
+    cdef object arg_type = get_args(T)[0]
+    cdef list result = []
+
+    if not isinstance(data, (list, tuple)):
+        data = [data]
+
+    # If it's a dataclass
+    if is_dataclass(arg_type):
+        for d in data:
+            if is_dataclass(d):
+                result.append(d)
+            elif isinstance(d, dict):
+                result.append(arg_type(**d))
+            elif isinstance(d, (list, tuple)):
+                result.append(arg_type(*d))
+            else:
+                result.append(arg_type(d))
+        return result
+    else:
+        # General conversion
+        for item in data:
+            result.append(parse_type(arg_type, item, encoder))
+        return result
+
+
+cdef object _parse_dict_type(object T, object data, object encoder):
+    cdef object val_type = get_args(T)[1]
+    cdef dict new_dict = {}
+    for k, v in data.items():
+        new_dict[k] = parse_type(val_type, v, encoder)
+    return new_dict
+
+cdef object _parse_union_type(object T, object data, object encoder):
+    cdef tuple args = get_args(T)
+    cdef object origin = get_origin(T)
+    if origin is Union and type(None) in args:
+        # Optional type
+        if data is None:
+            return None
+        # Find the non-None type
+        for a in args:
+            if a is not type(None):
+                return parse_type(a, data, encoder)
+        return data  # fallback
+    else:
+        # General Union: return first matching type
+        for a in args:
+            try:
+                return parse_type(a, data, encoder)
+            except:
+                pass
+        return data
+
+
+cdef object _parse_dataclass_type(object T, object data):
+    if isinstance(data, dict):
+        return T(**data)
+    elif isinstance(data, (list, tuple)):
+        return T(*data)
+    else:
+        return T(data)
+
+cdef object _parse_builtin_type(object T, object data, object encoder):
+    if encoder is not None:
+        try:
+            return encoder(data)
+        except ValueError as e:
+            raise ValueError(f"Error parsing type {T}, {e}")
+    elif is_dataclass(T):
+        return _parse_dataclass_type(T, data)
+    else:
+        # Try encoders dict:
+        try:
+            conv = encoders[T]
+            return conv(data)
+        except KeyError:
+            # attempt direct construction:
+            if inspect.isclass(T):
+                try:
+                    if isinstance(data, dict):
+                        return T(**data)
+                    elif isinstance(data, (list, tuple)):
+                        return T(*data)
+                    elif isinstance(data, str):
+                        return T(data)
+                except (TypeError, ValueError) as e:
+                    logging.error(f'Conversion Error {T!r}: {e}')
+            return data
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"Error type {T}: {e}") from e
+
+cpdef parse_type(object T, object data, object encoder = None, str field_type = None):
+    cdef object origin = get_origin(T)
+    cdef tuple args = get_args(T)
+
+    if origin is dict and isinstance(data, dict):
+        return _parse_dict_type(T, data, encoder)
+
+    if origin is list:
+        return _parse_list_type(T, data, encoder)
+
+    if field_type == 'typing':
         args = None
         try:
             args = T.__args__
@@ -457,47 +559,7 @@ def parse_type(object T, object data, object encoder = None):
             except KeyError:
                 pass
     else:
-        if encoder is not None:
-            # using a function encoder:
-            try:
-                return encoder(data)
-            except ValueError as e:
-                raise ValueError(
-                    f"Error parsing type {T}, {e}"
-                )
-        elif is_dataclass(T):
-            if isinstance(data, dict):
-                data = T(**data)
-            elif isinstance(data, (list, tuple)):
-                data = T(*data)
-            else:
-                data = T(data)
-            return data
-        else:
-            try:
-                conv = encoders[T]
-                return conv(data)
-            except KeyError:
-                pass
-            except (TypeError, ValueError) as e:
-                raise ValueError(
-                    f"Error type {T}: {e}"
-                ) from e
-            # making last conversion:
-            if inspect.isclass(T):
-                try:
-                    if isinstance(data, dict):
-                        data = T(**data)
-                    elif isinstance(data, (list, tuple)):
-                        data = T(*data)
-                    elif isinstance(data, str):
-                        data = T(data)
-                except (TypeError, ValueError) as e:
-                    logging.error(
-                        f'Conversion Error {T!r}: {e}'
-                    )
-                return data
-        return data
+        return _parse_builtin_type(T, data, encoder)
 
 cpdef object parse_basic(object T, object data, object encoder = None):
     """parse_type.

@@ -40,12 +40,13 @@ cpdef bool_t is_optional_type(object annotated_type):
         return type(None) in get_args(annotated_type)
     return False
 
-cpdef list _validation(object F, str name, object value, object annotated_type, object val_type):
+cpdef list _validation(object F, str name, object value, object annotated_type, object val_type, str field_type):
     if not annotated_type:
         annotated_type = F.type
     elif isinstance(annotated_type, Field):
         annotated_type = annotated_type.type
     errors = []
+
     # first: calling (if exists) custom validator:
     fn = F.metadata.get('validator', None)
     if fn is not None:
@@ -64,7 +65,22 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
                 )
     # check: data type hint
     try:
-        if type(annotated_type) is ModelMeta:
+        # If field_type is known, short-circuit certain checks
+        if field_type == 'primitive':
+            # For primitives, just check if val_type matches annotated_type
+            if val_type != annotated_type:
+                errors.append(
+                    _create_error(name, value, f'Invalid type, expected {annotated_type}', val_type, annotated_type)
+                )
+        elif annotated_type == Text:
+            if val_type != str:
+                errors.append(
+                    _create_error(name, value, f'invalid type for {annotated_type}.{name}, expected {annotated_type}', val_type, annotated_type)
+                )
+        elif hasattr(annotated_type, '__module__') and annotated_type.__module__ == 'typing':
+            # TODO: validation of annotated types
+            pass
+        elif type(annotated_type) is ModelMeta:
             # Check if there's a field in the annotated type that matches the name and type
             try:
                 field = annotated_type.get_column(name)
@@ -90,15 +106,6 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
                 errors.append(
                     _create_error(name, value, f'invalid type for {annotated_type}.{name}, expected {t}', val_type, annotated_type)
                 )
-        elif hasattr(annotated_type, '__module__') and annotated_type.__module__ == 'typing':
-            # TODO: validation of annotated types
-            pass
-            # elif inspect.isclass(annotated_type) and
-        elif annotated_type == Text:
-            if val_type != str:
-                errors.append(
-                    _create_error(name, value, f'invalid type for {annotated_type}.{name}, expected {annotated_type}', val_type, annotated_type)
-                )
         elif inspect.isclass(annotated_type) and issubclass(annotated_type, Enum):
             # Enum validation
             enum_values = [e.value for e in annotated_type]
@@ -108,7 +115,7 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
                 errors.append(
                     _create_error(name, value, error_msg, val_type, annotated_type)
                 )
-        elif val_type <> annotated_type:
+        elif val_type != annotated_type:
             instance = is_instanceof(value, annotated_type)
             if not instance:
                 errors.append(
