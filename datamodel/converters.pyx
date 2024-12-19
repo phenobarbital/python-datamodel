@@ -443,12 +443,6 @@ cpdef parse_type(object T, object data, object encoder = None, str field_type = 
     cdef object origin = get_origin(T)
     cdef tuple args = get_args(T)
 
-    if origin is dict and isinstance(data, dict):
-        return _parse_dict_type(T, data, encoder)
-
-    if origin is list:
-        return _parse_list_type(T, data, encoder)
-
     if field_type == 'typing':
         args = None
         try:
@@ -558,6 +552,13 @@ cpdef parse_type(object T, object data, object encoder = None, str field_type = 
                 return data
             except KeyError:
                 pass
+    elif origin is dict and isinstance(data, dict):
+        return _parse_dict_type(T, data, encoder)
+    elif origin is list:
+        return _parse_list_type(T, data, encoder)
+    elif origin is not None:
+        # Other typing constructs can be handled here
+        return data
     else:
         return _parse_builtin_type(T, data, encoder)
 
