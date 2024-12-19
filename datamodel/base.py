@@ -4,16 +4,12 @@ import logging
 # Dataclass
 from dataclasses import (
     _FIELD,
-    dataclass,
-    make_dataclass,
     _MISSING_TYPE
 )
 from uuid import UUID
 from concurrent.futures import ThreadPoolExecutor
-from orjson import OPT_INDENT_2
 from .converters import parse_basic, parse_type
 from .fields import Field
-from .types import JSON_TYPES
 from .validation import (
     _validation,
     is_callable,
@@ -24,6 +20,7 @@ from .validation import (
 from .exceptions import ValidationError
 from .abstract import ModelMeta, Meta
 from .models import ModelMixin
+
 
 class BaseModel(ModelMixin, metaclass=ModelMeta):
     """
@@ -39,13 +36,33 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         """
         # checking if an attribute is already a dataclass:
         errors = {}
-        for name, f in self.__columns__.items():
+        columns = list(self.__columns__.items())
+
+        def process_field(item: tuple):
+            name, f = item
             try:
                 value = getattr(self, name)
-                if (error := self._process_field_(name, value, f)):
+                error = self._process_field_(name, value, f)
+                return name, error
+            except Exception as e:
+                # Capture the exception in an error dictionary
+                return name, {"error": str(e)}
+
+        if self.Meta.concurrent is True:
+            with ThreadPoolExecutor() as executor:
+                results = executor.map(process_field, columns)
+            for name, error in results:
+                if error:
                     errors[name] = error
-            except RuntimeError as err:
-                logging.exception(err)
+        else:
+            for name, f in columns:
+                try:
+                    value = getattr(self, name)
+                    if (error := self._process_field_(name, value, f)):
+                        errors[name] = error
+                except RuntimeError as err:
+                    logging.exception(err)
+
         if errors:
             if self.Meta.strict is True:
                 raise ValidationError(
@@ -104,7 +121,9 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             sub_type = _type.__args__[0]
             if is_dataclass(sub_type):
                 return [
-                    sub_type(**item) if isinstance(item, dict) else item for item in value
+                    sub_type(
+                        **item
+                    ) if isinstance(item, dict) else item for item in value
                 ]
         except AttributeError:
             pass
@@ -118,7 +137,9 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         _encoder = f.metadata.get('encoder')
         new_val = value
         if is_empty(value):
-            new_val = f.default_factory if isinstance(f.default, (_MISSING_TYPE)) else f.default
+            new_val = f.default_factory if isinstance(
+                f.default, (_MISSING_TYPE)
+            ) else f.default
             setattr(self, name, new_val)
 
         if f.default is not None:
@@ -261,114 +282,3 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
 
     def get_errors(self):
         return self.__errors__
-
-    @classmethod
-    def make_model(cls, name: str, schema: str = "public", fields: list = None):
-        parent = inspect.getmro(cls)
-        obj = make_dataclass(name, fields, bases=(parent[0],))
-        m = Meta()
-        m.name = name
-        m.schema = schema
-        m.app_label = schema
-        obj.Meta = m
-        return obj
-
-    @classmethod
-    def from_json(cls, obj: str, **kwargs) -> dataclass:
-        try:
-            decoder = cls.__encoder__(**kwargs)
-            decoded = decoder.loads(obj)
-            return cls(**decoded)
-        except ValueError as e:
-            raise RuntimeError(
-                "DataModel: Invalid string (JSON) data for decoding: {e}"
-            ) from e
-
-    @classmethod
-    def from_dict(cls, obj: dict) -> dataclass:
-        try:
-            return cls(**obj)
-        except ValueError as e:
-            raise RuntimeError(
-                "DataModel: Invalid Dictionary data for decoding: {e}"
-            ) from e
-
-    @classmethod
-    def model(cls, dialect: str = "json", **kwargs) -> Any:
-        """model.
-
-        Return the json-version of current Model.
-        Returns:
-            str: string (json) version of model.
-        """
-        if hasattr(cls, '__computed_model__'):
-            return cls.__computed_model__
-        result = None
-        clsname = cls.__name__
-        schema = cls.Meta.schema
-        table = cls.Meta.name if cls.Meta.name else clsname.lower()
-        columns = cls.columns(cls).items()
-        if dialect == 'json':
-            cols = {}
-            for _, field in columns:
-                key = field.name
-                _type = field.type
-                if _type.__module__ == 'typing':
-                    # TODO: discover real value of typing
-                    if _type._name == 'List':
-                        t = 'array'
-                    elif _type._name == 'Dict':
-                        t = 'object'
-                    else:
-                        try:
-                            t = _type.__args__[0]
-                            t = t.__name__
-                        except (AttributeError, ValueError):
-                            t = 'object'
-                else:
-                    try:
-                        t = JSON_TYPES[_type]
-                    except KeyError:
-                        t = 'object'
-                cols[key] = {"name": key, "type": t}
-            doc = {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
-                "$id": f"/schemas/{table}",
-                "name": clsname,
-                "description": cls.__doc__.strip("\n").strip(),
-                "additionalProperties": False,
-                "table": table,
-                "schema": schema,
-                "type": "object",
-                "properties": cols,
-            }
-            encoder = cls.__encoder__(**kwargs)
-            result = encoder.dumps(doc, option=OPT_INDENT_2)
-        cls.__computed_model__ = result
-        return result
-
-    @classmethod
-    def sample(cls) -> dict:
-        """sample.
-
-        Get a dict (JSON) sample of this datamodel, based on default values.
-
-        Returns:
-            dict: _description_
-        """
-        columns = cls.get_columns().items()
-        _fields = {}
-        required = []
-        for name, f in columns:
-            if f.repr is False:
-                continue
-            _fields[name] = f.default
-            try:
-                if f.metadata["required"] is True:
-                    required.append(name)
-            except KeyError:
-                pass
-        return {
-            "properties": _fields,
-            "required": required
-        }
