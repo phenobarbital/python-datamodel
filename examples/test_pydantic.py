@@ -87,3 +87,34 @@ time = timeit.timeit(create_user2, number=1000)
 print(f"Execution time: {time:.6f} seconds")
 # runner.bench_func('datamodel', create_user2)
 print(user, user.friends)
+
+print('============= BaseModel With Threads =============')
+
+from datamodel import BaseModel, Field
+class NewUser3(BaseModel):
+    id: int
+    name: str = 'John Doe'
+    signup_ts: Optional[datetime] = None
+    friends: List[int] = Field(default_factory=list)
+
+    class Meta:
+        concurrent = True
+
+external_data = {'id': '123', 'signup_ts': '2017-06-01 12:22', 'friends': [1, '2', b'3']}
+user = NewUser3(**external_data)
+print(user)
+print(user.id)
+print(is_dataclass(user))
+print(type(user.signup_ts), user.signup_ts)
+
+def create_user3():
+    for i in range(10):
+        external_data = {'id': '123', 'signup_ts': '2017-06-01 12:22', 'friends': [1, '2', b'3']}
+        user = NewUser3(**external_data)
+
+
+print('Test with DataModel: ')
+time = timeit.timeit(create_user3, number=1000)
+print(f"Execution time: {time:.6f} seconds")
+# runner.bench_func('datamodel', create_user2)
+print(user, user.friends)

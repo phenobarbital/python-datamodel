@@ -3,71 +3,23 @@
 #
 from typing import get_args, get_origin, Union, Optional
 import typing
-from uuid import UUID
 import inspect
-from decimal import Decimal
 from libcpp cimport bool as bool_t
 from enum import Enum
 import pendulum
-from dataclasses import _MISSING_TYPE
-from collections.abc import Iterable
 import datetime
-from functools import partial
-import types
 from .types import uint64_min, uint64_max, Text
 from .abstract import ModelMeta
 from .fields import Field
+from .functions import (
+    is_iterable,
+    is_primitive,
+    is_dataclass,
+    is_function,
+    is_callable,
+    is_empty
+)
 
-cpdef bool_t is_iterable(object value):
-    if isinstance(value, Iterable) and not isinstance(value, (str, bytes)):
-        return True
-    return False
-
-cpdef bool_t is_primitive(object value):
-    """Returns True if value is a primitive type."""
-    return value in (
-        int,
-        float,
-        str,
-        UUID,
-        Decimal,
-        bool,
-        bytes,
-        datetime.date,
-        datetime.datetime,
-        datetime.time,
-        datetime.timedelta
-    )
-
-cpdef is_dataclass(object obj):
-    """Returns True if obj is a dataclass or an instance of a
-    dataclass."""
-    cls = obj if isinstance(obj, type) and not isinstance(obj, types.GenericAlias) else type(obj)
-    return hasattr(cls, '__dataclass_fields__')
-
-cdef bool_t is_function(object value):
-    return isinstance(value, (types.BuiltinFunctionType, types.FunctionType, partial))
-
-cpdef bool_t is_callable(object value):
-    if value is None or value == _MISSING_TYPE:
-        return False
-    if is_function(value):
-        return callable(value)
-    return False
-
-cpdef bool_t is_empty(object value):
-    cdef bool_t result = False
-    if value is None:
-        return True
-    if isinstance(value, _MISSING_TYPE) or value == _MISSING_TYPE:
-        result = True
-    elif isinstance(value, str) and value == '':
-        result = True
-    elif isinstance(value, (int, float)) and value == 0:
-        result = False
-    elif not value:
-        result = True
-    return result
 
 cpdef bool_t is_instanceof(object value, type annotated_type):
     if annotated_type.__module__ == 'typing':

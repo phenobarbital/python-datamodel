@@ -14,7 +14,7 @@ import pendulum
 from pendulum.parsing.exceptions import ParserError
 from uuid import UUID
 from cpython.ref cimport PyObject
-from .validation import is_dataclass, is_iterable
+from .functions import is_dataclass, is_iterable
 
 
 cdef str to_string(object obj):

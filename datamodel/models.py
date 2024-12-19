@@ -3,15 +3,16 @@ from typing import Any
 from enum import Enum, EnumMeta
 # Dataclass
 import inspect
-from dataclasses import asdict as as_dict
+from dataclasses import asdict as as_dict, dataclass, make_dataclass
 from operator import attrgetter
+from orjson import OPT_INDENT_2
 from datamodel.fields import fields
 from .abstract import ModelMeta, Meta
 from .fields import Field
 from .parsers.encoders import json_encoder
 from .converters import slugify_camelcase
 from .types import JSON_TYPES, Text
-from .validation import is_callable
+from .functions import is_callable
 
 
 def _get_type_info(_type, name, title):
@@ -560,6 +561,147 @@ class ModelMixin:
         if as_dict:
             return base_schema
         return json_encoder(base_schema)
+
+    def as_schema(self, top_level: bool = True) -> dict:
+        """as_schema.
+        Convert the Model instance to a JSON-LD schema representation.
+        Args:
+            top_level (bool, optional): If True, adds the @context to the schema.
+        Returns:
+            dict: JSON-LD schema representation of the Model instance.
+        """
+        data = {}
+        # If top_level, add @context
+        if top_level:
+            data["@context"] = "https://schema.org/"
+
+        # Determine the schema @type
+        schema_type = getattr(self.Meta, 'schema_type', self.__class__.__name__)
+        data["@type"] = schema_type
+
+        for field_name, field_obj in self.__columns__.items():
+            # Skip internal or error fields
+            if field_name.startswith('__') or field_name == '__errors__':
+                continue
+
+            value = getattr(self, field_name)
+            if isinstance(value, ModelMixin):
+                data[field_name] = value.as_schema(top_level=False)
+            else:
+                data[field_name] = value
+
+        return data
+
+    @classmethod
+    def make_model(cls, name: str, schema: str = "public", fields: list = None):
+        parent = inspect.getmro(cls)
+        obj = make_dataclass(name, fields, bases=(parent[0],))
+        m = Meta()
+        m.name = name
+        m.schema = schema
+        m.app_label = schema
+        obj.Meta = m
+        return obj
+
+    @classmethod
+    def from_json(cls, obj: str, **kwargs) -> dataclass:
+        try:
+            decoder = cls.__encoder__(**kwargs)
+            decoded = decoder.loads(obj)
+            return cls(**decoded)
+        except ValueError as e:
+            raise RuntimeError(
+                "DataModel: Invalid string (JSON) data for decoding: {e}"
+            ) from e
+
+    @classmethod
+    def from_dict(cls, obj: dict) -> dataclass:
+        try:
+            return cls(**obj)
+        except ValueError as e:
+            raise RuntimeError(
+                "DataModel: Invalid Dictionary data for decoding: {e}"
+            ) from e
+
+    @classmethod
+    def model(cls, dialect: str = "json", **kwargs) -> Any:
+        """model.
+
+        Return the json-version of current Model.
+        Returns:
+            str: string (json) version of model.
+        """
+        if hasattr(cls, '__computed_model__'):
+            return cls.__computed_model__
+        result = None
+        clsname = cls.__name__
+        schema = cls.Meta.schema
+        table = cls.Meta.name if cls.Meta.name else clsname.lower()
+        columns = cls.columns(cls).items()
+        if dialect == 'json':
+            cols = {}
+            for _, field in columns:
+                key = field.name
+                _type = field.type
+                if _type.__module__ == 'typing':
+                    # TODO: discover real value of typing
+                    if _type._name == 'List':
+                        t = 'array'
+                    elif _type._name == 'Dict':
+                        t = 'object'
+                    else:
+                        try:
+                            t = _type.__args__[0]
+                            t = t.__name__
+                        except (AttributeError, ValueError):
+                            t = 'object'
+                else:
+                    try:
+                        t = JSON_TYPES[_type]
+                    except KeyError:
+                        t = 'object'
+                cols[key] = {"name": key, "type": t}
+            doc = {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": f"/schemas/{table}",
+                "name": clsname,
+                "description": cls.__doc__.strip("\n").strip(),
+                "additionalProperties": False,
+                "table": table,
+                "schema": schema,
+                "type": "object",
+                "properties": cols,
+            }
+            encoder = cls.__encoder__(**kwargs)
+            result = encoder.dumps(doc, option=OPT_INDENT_2)
+        cls.__computed_model__ = result
+        return result
+
+    @classmethod
+    def sample(cls) -> dict:
+        """sample.
+
+        Get a dict (JSON) sample of this datamodel, based on default values.
+
+        Returns:
+            dict: _description_
+        """
+        columns = cls.get_columns().items()
+        _fields = {}
+        required = []
+        for name, f in columns:
+            if f.repr is False:
+                continue
+            _fields[name] = f.default
+            try:
+                if f.metadata["required"] is True:
+                    required.append(name)
+            except KeyError:
+                pass
+        return {
+            "properties": _fields,
+            "required": required
+        }
 
 
 class Model(ModelMixin, metaclass=ModelMeta):
