@@ -76,28 +76,34 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             object.__setattr__(self, "__valid__", True)
 
     def _handle_default_value(self, value, f, name) -> Any:
-        # Calculate default value
+        """Handle default value of fields."""
+        # If value is callable, try calling it directly
         if is_callable(value):
-            if value.__module__ != 'typing':
+            try:
+                new_val = value()
+            except TypeError:
                 try:
-                    new_val = value()
+                    new_val = f.default()
                 except TypeError:
-                    try:
-                        new_val = f.default()
-                    except TypeError:
-                        new_val = None
-                setattr(self, name, new_val)
-        elif is_callable(f.default) and value is None:
-            # Set the default value first
+                    new_val = None
+            setattr(self, name, new_val)
+            return new_val
+
+        # If f.default is callable and value is None
+        if is_callable(f.default) and value is None:
             try:
                 new_val = f.default()
-            except (AttributeError, RuntimeError):
+            except (AttributeError, RuntimeError, TypeError):
                 new_val = None
             setattr(self, name, new_val)
-            value = new_val  # Return the new value
-        elif not isinstance(f.default, _MISSING_TYPE) and value is None:
+            return new_val
+
+        # If there's a non-missing default and no value
+        if not isinstance(f.default, _MISSING_TYPE) and value is None:
             setattr(self, name, f.default)
-            value = f.default
+            return f.default
+
+        # Otherwise, return value as-is
         return value
 
     def _handle_dataclass_type(self, value, _type):
@@ -136,47 +142,44 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         _type = f.type
         _encoder = f.metadata.get('encoder')
         new_val = value
+
         if is_empty(value):
             new_val = f.default_factory if isinstance(
-                f.default, (_MISSING_TYPE)
-            ) else f.default
+                f.default, (_MISSING_TYPE)) else f.default
             setattr(self, name, new_val)
+            value = new_val
 
         if f.default is not None:
             value = self._handle_default_value(value, f, name)
 
-        if is_primitive(_type):
-            try:
-                if value is not None:
-                    new_val = parse_basic(f.type, value, _encoder)
+        # Use the precomputed field type category:
+        field_category = self.__field_types__.get(name, 'complex')
+        try:
+            if field_category == 'primitive':
+                # if value is not None:
+                new_val = parse_basic(_type, value, _encoder)
                 return self._validation_(name, new_val, f, _type)
-            except (TypeError, ValueError) as ex:
-                raise ValueError(
-                    f"Wrong Type for {f.name}: {f.type}, error: {ex}"
-                ) from ex
-        elif inspect.isclass(_type) and _type.__module__ == 'typing':
-            new_val = parse_type(_type, value, _encoder)
-            return self._validation_(name, new_val, f, _type)
-        elif isinstance(value, list) and hasattr(_type, '__args__'):
-            new_val = self._handle_list_of_dataclasses(value, _type)
-            return self._validation_(name, new_val, f, _type)
-        elif is_dataclass(_type):
-            new_val = self._handle_dataclass_type(value, _type)
-            return self._validation_(name, new_val, f, _type)
-        else:
-            try:
-                new_val = parse_type(f.type, value, _encoder)
-            except (TypeError, ValueError) as ex:
-                raise ValueError(
-                    f"Wrong Type for {f.name}: {f.type}, error: {ex}"
-                ) from ex
-            # Then validate the value
-            return self._validation_(name, new_val, f, _type)
+            elif field_category == 'dataclass':
+                new_val = self._handle_dataclass_type(value, _type)
+                return self._validation_(name, new_val, f, _type)
+            elif field_category == 'typing':
+                new_val = parse_type(_type, value, _encoder, field_category)
+                return self._validation_(name, new_val, f, _type)
+            elif isinstance(value, list) and hasattr(_type, '__args__'):
+                new_val = self._handle_list_of_dataclasses(value, _type)
+                return self._validation_(name, new_val, f, _type)
+            else:
+                new_val = parse_type(f.type, value, _encoder, field_category)
+                return self._validation_(name, new_val, f, _type)
+        except (TypeError, ValueError) as ex:
+            raise ValueError(
+                f"Wrong Type for {f.name}: {f.type}, error: {ex}"
+            ) from ex
 
     def _field_checks_(self, f: Field, name: str, value: Any) -> None:
         # Validate Primary Key
         try:
-            if f.metadata['primary'] is True:
+            if f.metadata.get('primary', False) is True:
                 if 'db_default' in f.metadata:
                     pass
                 else:
@@ -187,7 +190,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             pass
         # Validate Required
         try:
-            if f.metadata["required"] is True and self.Meta.strict is True:
+            if f.metadata.get('required', False) is True and self.Meta.strict is True:
                 if 'db_default' in f.metadata:
                     return
                 if value is not None:
@@ -199,7 +202,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             return
         # Nullable:
         try:
-            if f.metadata["nullable"] is False and self.Meta.strict is True:
+            if f.metadata.get('nullable', True) is False and self.Meta.strict is True:
                 raise ValueError(
                     f"::{self.modelName}:: *{name}* Cannot be null."
                 )
@@ -229,7 +232,8 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
                 raise
         else:
             # capturing other errors from validator:
-            return _validation(f, name, value, _type, val_type)
+            field_type = self.__field_types__.get(name, 'complex')
+            return _validation(f, name, value, _type, val_type, field_type)
 
     @classmethod
     def add_field(cls, name: str, value: Any = None) -> None:

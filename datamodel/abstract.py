@@ -106,6 +106,7 @@ class ModelMeta(type):
         cols = OrderedDict()
         strict = False
         cls.__field_types__ = {}
+        _types = {}
 
         if "__annotations__" in attrs:
             annotations = attrs.get('__annotations__', {})
@@ -117,7 +118,7 @@ class ModelMeta(type):
             @staticmethod
             def _initialize_fields(attrs, annotations, strict):
                 cols = OrderedDict()
-                _types = {}
+                _types_local = {}
                 for field, _type in annotations.items():
                     if isinstance(_type, Field):
                         _type = _type.type
@@ -132,24 +133,24 @@ class ModelMeta(type):
                     cols[field] = df
                     # check type of field:
                     if is_primitive(_type):
-                        _types[field] = 'primitive'
+                        _types_local[field] = 'primitive'
                     elif is_dataclass(_type):
-                        _types[field] = 'dataclass'
+                        _types_local[field] = 'dataclass'
+                    elif hasattr(_type, '__module__') and _type.__module__ == 'typing':  # noqa
+                        _types_local[field] = 'typing'
+                    elif isclass(_type):
+                        _types_local[field] = 'class'
                     else:
-                        # Additional checks for typing can be done here:
-                        if hasattr(_type, '__module__') and _type.__module__ == 'typing':  # noqa
-                            _types[field] = 'typing'
-                        elif isclass(_type):
-                            _types[field] = 'class'
-                        else:
-                            _types[field] = 'complex'
+                        _types_local[field] = 'complex'
                     # Assign the field object to the attrs so dataclass can pick it up
                     attrs[field] = df
-                return cols, _types
+                return cols, _types_local
 
             # Initialize the fields
             cols, _types = _initialize_fields(attrs, annotations, strict)
-            cls.__field_types__ = _types
+        else:
+            # if no __annotations__, cols is empty:
+            cols = OrderedDict()
 
         _columns = cols.keys()
         cls.__slots__ = tuple(_columns)
@@ -212,6 +213,7 @@ class ModelMeta(type):
         dc.__errors__ = None
         dc.__frozen__ = strict
         dc.__initialised__ = False
+        dc.__field_types__ = _types
         dc.modelName = dc.__name__
 
         # Override __setattr__ method
