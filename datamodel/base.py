@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import Any, Optional
 import inspect
 import logging
@@ -20,6 +21,9 @@ from .validation import (
 from .exceptions import ValidationError
 from .abstract import ModelMeta, Meta
 from .models import ModelMixin
+
+
+TYPE_CONVERTERS = {}  # Maps a type to a conversion callable
 
 
 class BaseModel(ModelMixin, metaclass=ModelMeta):
@@ -106,7 +110,12 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         # Otherwise, return value as-is
         return value
 
-    def _handle_dataclass_type(self, value, _type):
+    @classmethod
+    def register_converter(cls, target_type: Any, func: Callable, field_name: str = None):
+        key = (target_type, field_name) if field_name else target_type
+        TYPE_CONVERTERS[key] = func
+
+    def _handle_dataclass_type(self, name: str, value: Any, _type: Any):
         try:
             if hasattr(self.Meta, 'no_nesting'):
                 return value
@@ -116,21 +125,47 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
                 return _type(**value)
             if isinstance(value, list):
                 return _type(*value)
-            return value if isinstance(value, (int, str, UUID)) else _type(value)
+            else:
+                # If a converter exists for this type, use it:
+                key = (_type, name)
+                converter = TYPE_CONVERTERS.get(key) or TYPE_CONVERTERS.get(_type)
+                if converter:
+                    return converter(name, value, _type)
+                if getattr(self.Meta, 'as_objects', False) is True:
+                    return _type(**{name: value})
+                if isinstance(value, (int, str, UUID)):
+                    return value
+                if inspect.isclass(_type) and hasattr(_type, '__dataclass_fields__'):
+                    return _type(**{name: value})
+                else:
+                    return _type(value)
         except Exception as exc:
             raise ValueError(
                 f"Invalid value for {_type}: {value}, error: {exc}"
             )
 
-    def _handle_list_of_dataclasses(self, value, _type):
+    def _handle_list_of_dataclasses(self, name: str, value: Any, _type: Any):
+        """
+        _handle_list_of_dataclasses.
+
+        Process a list field that is annotated as List[SomeDataclass].
+        If there's a registered converter for the sub-dataclass, call it;
+        otherwise, build the sub-dataclass using default logic.
+        """
         try:
             sub_type = _type.__args__[0]
             if is_dataclass(sub_type):
-                return [
-                    sub_type(
-                        **item
-                    ) if isinstance(item, dict) else item for item in value
-                ]
+                key = (sub_type, name)
+                converter = TYPE_CONVERTERS.get(key) or TYPE_CONVERTERS.get(_type)
+                new_list = []
+                for item in value:
+                    if converter:
+                        new_list.append(converter(name, item, sub_type))
+                    elif isinstance(item, dict):
+                        new_list.append(sub_type(**item))
+                    else:
+                        new_list.append(item)
+                return new_list
         except AttributeError:
             pass
         return value
@@ -160,13 +195,13 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
                 new_val = parse_basic(_type, value, _encoder)
                 return self._validation_(name, new_val, f, _type)
             elif field_category == 'dataclass':
-                new_val = self._handle_dataclass_type(value, _type)
+                new_val = self._handle_dataclass_type(name, value, _type)
                 return self._validation_(name, new_val, f, _type)
             elif field_category == 'typing':
                 new_val = parse_type(_type, value, _encoder, field_category)
                 return self._validation_(name, new_val, f, _type)
             elif isinstance(value, list) and hasattr(_type, '__args__'):
-                new_val = self._handle_list_of_dataclasses(value, _type)
+                new_val = self._handle_list_of_dataclasses(name, value, _type)
                 return self._validation_(name, new_val, f, _type)
             else:
                 new_val = parse_type(f.type, value, _encoder, field_category)

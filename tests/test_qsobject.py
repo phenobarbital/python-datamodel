@@ -45,7 +45,6 @@ class QueryObject(ClassDict):
 
 def test_queryobject():
     qry = QueryObject(**data)
-    print('AQUI >> ', qry.fields)
     assert qry.fields == ["store_id", "postpaid_sales", "postpaid_trended", "apd", "postpaid_to_goal", "hours_worked", "hps", "hps_to_goal"]
     fields = qry.pop('fields')
     assert fields == ["store_id", "postpaid_sales", "postpaid_trended", "apd", "postpaid_to_goal", "hours_worked", "hps", "hps_to_goal"]

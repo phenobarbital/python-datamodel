@@ -79,19 +79,26 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
                 )
         elif hasattr(annotated_type, '__module__') and annotated_type.__module__ == 'typing':
             # TODO: validation of annotated types
-            pass
+            return errors
         elif type(annotated_type) is ModelMeta:
             # Check if there's a field in the annotated type that matches the name and type
+            if isinstance(value, annotated_type):
+                # if value is already a User, no further check needed for columns
+                return errors
             try:
                 field = annotated_type.get_column(name)
-                field_type = field.type
-                if field_type <> val_type:
+                ftype = field.type
+                if ftype <> val_type:
                     errors.append(
-                        _create_error(name, value, f'invalid type for {annotated_type}.{name}, expected {field_type}', val_type, annotated_type)
+                        _create_error(name, value, f'invalid type for {annotated_type}.{name}, expected {ftype}', val_type, annotated_type)
                     )
             except AttributeError as e:
                 errors.append(
                     _create_error(name, value, f'{annotated_type} has no column {name}', val_type, annotated_type, e)
+                )
+            except Exception as e:
+                errors.append(
+                    _create_error(name, value, f'Error validating {annotated_type}.{name}', val_type, annotated_type, e)
                 )
         elif is_optional_type(annotated_type):
             inner_types = get_args(annotated_type)
