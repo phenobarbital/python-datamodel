@@ -5,6 +5,7 @@ from typing import get_args, get_origin, Union, Optional
 from collections.abc import Iterable
 from libcpp cimport bool as bool_t
 from uuid import UUID
+import asyncpg.pgproto.pgproto as pgproto
 from decimal import Decimal
 import datetime
 import types
@@ -26,6 +27,7 @@ cpdef bool_t is_primitive(object value):
         float,
         str,
         UUID,
+        pgproto.UUID,
         Decimal,
         bool,
         bytes,

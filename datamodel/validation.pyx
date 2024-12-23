@@ -8,8 +8,10 @@ from libcpp cimport bool as bool_t
 from enum import Enum
 import pendulum
 import datetime
+import asyncpg.pgproto.pgproto as pgproto
 from .types import uint64_min, uint64_max, Text
 from .abstract import ModelMeta
+from uuid import UUID
 from .fields import Field
 from .functions import (
     is_iterable,
@@ -121,6 +123,11 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
                 error_msg = f"Value {value} is not a valid option for {annotated_type}. Valid options: {enum_values}"
                 errors.append(
                     _create_error(name, value, error_msg, val_type, annotated_type)
+                )
+        elif annotated_type is UUID:
+            if not isinstance(value, (UUID, pgproto.UUID)):
+                errors.append(
+                    _create_error(name, value, f'invalid type for {annotated_type}.{name}, expected {annotated_type}', val_type, annotated_type)
                 )
         elif val_type != annotated_type:
             instance = is_instanceof(value, annotated_type)

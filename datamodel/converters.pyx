@@ -13,6 +13,7 @@ from cpython cimport datetime
 import pendulum
 from pendulum.parsing.exceptions import ParserError
 from uuid import UUID
+import asyncpg.pgproto.pgproto as pgproto
 from cpython.ref cimport PyObject
 from .functions import is_dataclass, is_iterable, is_primitive
 
@@ -38,6 +39,9 @@ cdef str to_string(object obj):
 cdef object to_uuid(object obj):
     """Returns a UUID version of a str column.
     """
+    if isinstance(obj, pgproto.UUID):
+        # If it's asyncpg's UUID, convert by casting to string first
+        return UUID(str(obj))
     if isinstance(obj, UUID):
         # already an uuid
         return obj
@@ -333,6 +337,7 @@ cpdef object register_converter(object _type, object converter_func):
 cdef dict encoders = {
     str: to_string,
     UUID: to_uuid,
+    pgproto.UUID: to_uuid,
     bool: to_boolean,
     int: to_integer,
     float: to_float,
@@ -568,11 +573,12 @@ cpdef object parse_basic(object T, object data, object encoder = None):
     Parse a value to primitive types as str or int.
     --- (int, float, str, bool, bytes)
     """
+    if T == UUID or T == pgproto.UUID:
+        return to_uuid(data)
     if T == str:
         return str(data)
-    elif T == bytes:
+    if T == bytes:
         return bytes(data)
-
     # Using the encoders for basic types:
     try:
         return encoders[T](data)

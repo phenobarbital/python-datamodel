@@ -191,6 +191,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         field_category = self.__field_types__.get(name, 'complex')
         try:
             if field_category == 'primitive':
+                print('AQUI > ', _type, value, type(value))
                 # if value is not None:
                 new_val = parse_basic(_type, value, _encoder)
                 return self._validation_(name, new_val, f, _type)

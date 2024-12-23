@@ -1,8 +1,10 @@
 import uuid
 from typing import Union, List, Optional
 from dataclasses import dataclass, fields, is_dataclass, field
+import asyncpg.pgproto.pgproto as pgproto
 import orjson
 from datamodel import Field, BaseModel, Column
+from datamodel.exceptions import ValidationError
 
 
 def auto_uid():
@@ -68,7 +70,7 @@ def valid_zipcode(field, value):
     return value == 45510
 
 class Address(BaseModel):
-    id: uuid.UUID = field(default_factory=auto_uid)
+    id: uuid.UUID = Field(default_factory=auto_uid)
     street: str = Field(required=True)
     number: str = Field(factory=default_number)
     zipcode: int = Field(required=False, default=1010, validator=valid_zipcode)
@@ -132,6 +134,7 @@ class Actor(BaseModel):
 
 
 user = {
+    "userid": pgproto.UUID('f47ac10b-58cc-4372-a567-0e02b2c3d479'),
     "name": "Jesus Lara",
     "account": [
         {
@@ -148,5 +151,8 @@ user = {
         }
     ]
 }
-user = Actor(**user)
-print(user)
+try:
+    user = Actor(**user)
+    print(user)
+except ValidationError as e:
+    print(e.payload)
