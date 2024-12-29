@@ -599,7 +599,6 @@ class ModelMixin:
         m = Meta()
         m.name = name
         m.schema = schema
-        m.app_label = schema
         obj.Meta = m
         return obj
 

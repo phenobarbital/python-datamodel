@@ -1,18 +1,20 @@
 import logging
 from typing import Optional, Any, List, Dict
-from collections.abc import Callable
 from collections import OrderedDict
+from collections.abc import Callable
 import types
 from inspect import isclass
 from dataclasses import dataclass
+from typing_extensions import TypedDict
 from .parsers.json import JSONContent
+from .converters import parse_basic, parse_type
 from .fields import Field
 from .functions import (
     is_dataclass,
     is_primitive
 )
 
-class Meta:
+class Meta(TypedDict, total=False):
     """
     Metadata information about Model.
 
@@ -20,16 +22,14 @@ class Meta:
     name: str = "" name of the model
     description: str = "" description of the model
     schema: str = "" schema of the model (optional)
-    app_label: str = "" app label of the model (optional)
     frozen: bool = False if the model (dataclass) is read-only (frozen state)
     strict: bool = True if the model (dataclass) should raise an error on invalid data.
     remove_null: bool = True if the model should remove null values from the data.
-    concurrent: bool = True if processing fields should be called concurrently.
+    validate_assignment: bool = True if the model should validate during assignment.
     """
     name: str = ""
     description: str = ""
     schema: str = ""
-    app_label: str = ""
     frozen: bool = False
     strict: bool = True
     driver: str = None
@@ -38,8 +38,9 @@ class Meta:
     datasource: Optional[str] = None
     connection: Optional[Callable] = None
     remove_nulls: bool = False
-    endpoint: str = ""
-    concurrent: bool = False
+    endpoint: str
+    extra: str = 'forbid'  # could be 'allow', 'ignore', or 'forbid'
+    validate_assignment: bool = False
 
 
 def set_connection(cls, conn: Callable):
@@ -53,19 +54,43 @@ def _dc_method_setattr_(
 ) -> None:
     """
     _dc_method_setattr_.
-    Method for overwrite the "setattr" on Dataclasses.
-
+     - Method for overwrite the "setattr" on Dataclasses.
     """
     # Initialize __values__ if it doesn't exist
     if not hasattr(self, '__values__'):
         object.__setattr__(self, '__values__', {})
 
-    # Check if the attribute is a field
+    # If the attribute name is already a known field, proceed normally
     if name in self.__fields__:
         # Only store the initial value:
         if name not in self.__values__:
             # Store the initial value in __values__
             self.__values__[name] = value
+        if self.Meta.validate_assignment:
+            try:
+                # re-apply the parse/validation of this field:
+                field_category = self.__field_types__.get(name, 'complex')
+                field_obj = self.__columns__[name]
+                _type = field_obj.type
+                _encoder = field_obj.metadata.get('encoder')
+                if field_category == 'primitive':
+                    new_val = parse_basic(_type, value, _encoder)
+                elif field_category == 'typing':
+                    new_val = parse_type(_type, value, _encoder, field_category)
+                elif field_category in ('dataclass', 'class', ):
+                    new_val = value
+                else:
+                    new_val = parse_type(_type, value, _encoder, field_category)
+                # Assign the new value to the field
+                print('new_val > ', new_val)
+                value = new_val
+            except Exception as e:
+                # Raise or re-raise a TypeError or something meaningful
+                raise TypeError(
+                    f"Cannot assign {value!r} to field {name!r}: {e}"
+                ) from e
+        object.__setattr__(self, name, value)
+        return
 
     if self.Meta.frozen is True and name not in self.__fields__:
         raise TypeError(
@@ -73,6 +98,7 @@ def _dc_method_setattr_(
             "This DataClass is frozen (read-only class)"
         )
     else:
+        # try to dynamically add a field or store the attribute
         value = None if callable(value) else value
         object.__setattr__(self, name, value)
         if name == '__values__':
@@ -80,6 +106,16 @@ def _dc_method_setattr_(
         if name not in self.__fields__:
             if self.Meta.strict is True:
                 return False
+            # If it’s not a known field, consult self.Meta.extra
+            extra_policy = self.Meta.extra
+            if extra_policy == 'forbid':
+                raise TypeError(
+                    f"Field {name!r} is not allowed on {self.modelName}"
+                )
+
+            if extra_policy == 'ignore':
+                # do nothing, skip silently
+                return
             try:
                 # create a new Field on Model.
                 f = Field(required=False, default=value)

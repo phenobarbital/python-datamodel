@@ -35,7 +35,6 @@ class Reward(BaseModel):
         driver = "pg"
         name = "rewards"
         schema = "navigator"
-        app_label = "navigator"
         strict = True
 
 class Employee(BaseModel):

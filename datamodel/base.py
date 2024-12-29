@@ -8,7 +8,6 @@ from dataclasses import (
     _MISSING_TYPE
 )
 from uuid import UUID
-from concurrent.futures import ThreadPoolExecutor
 from .converters import parse_basic, parse_type
 from .fields import Field
 from .validation import (
@@ -42,30 +41,13 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         errors = {}
         columns = list(self.__columns__.items())
 
-        def process_field(item: tuple):
-            name, f = item
+        for name, f in columns:
             try:
                 value = getattr(self, name)
-                error = self._process_field_(name, value, f)
-                return name, error
-            except Exception as e:
-                # Capture the exception in an error dictionary
-                return name, {"error": str(e)}
-
-        if self.Meta.concurrent is True:
-            with ThreadPoolExecutor() as executor:
-                results = executor.map(process_field, columns)
-            for name, error in results:
-                if error:
+                if (error := self._process_field_(name, value, f)):
                     errors[name] = error
-        else:
-            for name, f in columns:
-                try:
-                    value = getattr(self, name)
-                    if (error := self._process_field_(name, value, f)):
-                        errors[name] = error
-                except RuntimeError as err:
-                    logging.exception(err)
+            except RuntimeError as err:
+                logging.exception(err)
 
         if errors:
             if self.Meta.strict is True:
@@ -111,7 +93,12 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         return value
 
     @classmethod
-    def register_converter(cls, target_type: Any, func: Callable, field_name: str = None):
+    def register_converter(
+        cls,
+        target_type: Any,
+        func: Callable,
+        field_name: str = None
+    ):
         key = (target_type, field_name) if field_name else target_type
         TYPE_CONVERTERS[key] = func
 
@@ -204,7 +191,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
                 new_val = self._handle_list_of_dataclasses(name, value, _type)
                 return self._validation_(name, new_val, f, _type)
             else:
-                new_val = parse_type(f.type, value, _encoder, field_category)
+                new_val = parse_type(_type, value, _encoder, field_category)
                 return self._validation_(name, new_val, f, _type)
         except (TypeError, ValueError) as ex:
             raise ValueError(

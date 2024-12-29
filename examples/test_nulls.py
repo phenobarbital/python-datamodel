@@ -47,7 +47,6 @@ class QueryModel(BaseModel):
         driver = 'pg'
         name = 'queries'
         schema = 'troc'
-        app_label = 'troc'
         strict = False
         frozen = False
         remove_nulls = True  # Auto-remove nullable (with null value) fields
