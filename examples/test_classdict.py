@@ -45,7 +45,7 @@ class QueryObject(ClassDict):
 
 qry = QueryObject(**data)
 print(qry)
-del qry.fields
+# del qry.fields
 # fields = qry.pop('fields')
 # print('FIELDS > ', fields)
 print('CHECK > ', qry.fields, qry.get('fields'))

@@ -2,13 +2,13 @@ from typing import Optional
 import timeit
 import pyperf
 from datamodel import Field
-# from datamodel.libs.mutables import ClassDict
-from datamodel.libs.mapping import ClassDict
+from datamodel.libs.mapping import ClassDict, ClassDictConfig
 
 
 class QueryObject(ClassDict):
     """Base Class for all options passed to Parsers.
     """
+    config = ClassDictConfig(parse_values=True)
     source: Optional[str]
     driver: Optional[str]
     conditions: Optional[dict] = Field(default={})

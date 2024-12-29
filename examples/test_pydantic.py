@@ -1,5 +1,4 @@
 from datetime import datetime
-import pyperf
 from typing import List, Optional
 from dataclasses import is_dataclass
 from pydantic import BaseModel
@@ -30,6 +29,32 @@ time = timeit.timeit(create_user, number=1000)
 print(f"Execution time: {time:.6f} seconds")
 
 # runner.bench_func('pydantic', create_user)
+
+print(' ============ ClassDict =============')
+from datamodel.libs.mapping import ClassDict
+# from datamodel.libs.mutables import ClassDict
+
+class User(ClassDict):
+    id: int
+    name: str = 'John Doe'
+    signup_ts: Optional[datetime] = None
+    friends: List[int] = []
+
+external_data = {'id': '123', 'signup_ts': '2017-06-01 12:22', 'friends': [1, '2', b'3']}
+user = User(**external_data)
+print(user)
+print(user.id)
+print(is_dataclass(user))
+print(type(user.signup_ts), user.signup_ts)
+
+def create_user():
+    for i in range(10):
+        external_data = {'id': '123', 'signup_ts': '2017-06-01 12:22', 'friends': [1, '2', b'3']}
+        user = User(**external_data)
+
+print('Test with ClassDict: ')
+time = timeit.timeit(create_user, number=1000)
+print(f"Execution ClassDict: {time:.6f} seconds")
 
 print('============= Model =============')
 # Basic Model:

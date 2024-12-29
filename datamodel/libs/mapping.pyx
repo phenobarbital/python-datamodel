@@ -6,16 +6,20 @@ from typing import Optional, Union, Any
 from datamodel import Field
 from collections.abc import Iterator, Iterable
 if sys.version_info < (3, 10):
-    from typing_extensions import ParamSpec
+    from typing_extensions import ParamSpec, TypedDict
 else:
-    from typing import ParamSpec
+    from typing import ParamSpec, TypedDict
+cimport cython
+from cython.parallel import prange
 
 
 P = ParamSpec("P")
 
 
 cdef class ClassDict(dict):
-
+    """
+    ClassDict is a dictionary that allows to access keys as attributes
+    """
     def __cinit__(self, *args, data: Optional[dict]=None, default: Optional[Union[list,dict]]=None, **kwargs: P.kwargs):
         self.mapping = {}
         self._columns = []

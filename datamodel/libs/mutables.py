@@ -1,6 +1,7 @@
 import sys
 from collections.abc import MutableMapping, Iterator, Iterable
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, Literal
+from typing_extensions import TypedDict
 from datamodel import Field
 
 if sys.version_info < (3, 10):
@@ -8,6 +9,17 @@ if sys.version_info < (3, 10):
 else:
     from typing import ParamSpec
 P = ParamSpec("P")
+
+
+class ClassDictConfig(TypedDict, total=False):
+    """
+    Configuration dictionary for ClassDict-based classes.
+    `total=False` means all keys are optional.
+    """
+    extra: Literal['allow', 'ignore', 'forbid']
+    validate_assignment: bool
+    parse_values: bool
+
 
 class ClassDict(dict, MutableMapping):
     """ClassDict.

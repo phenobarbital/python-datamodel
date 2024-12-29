@@ -3,8 +3,8 @@ import timeit
 import pyperf
 from datamodel import Field
 from datamodel.models import Model
-# from datamodel.libs.mapping import ClassDict
-from datamodel.libs.mutables import ClassDict
+from datamodel.libs.mapping import ClassDict
+# from datamodel.libs.mutables import ClassDict
 
 
 runner = pyperf.Runner()
