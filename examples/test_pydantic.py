@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 from typing import List, Optional
 from dataclasses import is_dataclass
 import timeit
@@ -115,13 +115,25 @@ print(f"Execution time: {time:.6f} seconds")
 
 print('============= BaseModel =============')
 
-from datamodel import BaseModel, Field
-
 external_user = {
     'id': '123',
     'signup_ts': '2017-06-01 12:22',
-    'friends': [1, '2', b'3']
+    'friends': [1, '2', b'3'],
+    'born': '23-10-1978',
+    "accounts": [
+        {
+            "provider": "twilio",
+            "address": "+34343434"
+        },
+        {
+            "provider": "email",
+            "address": "test@example.com"
+        }
+    ]
 }
+
+from datamodel import BaseModel, Field
+
 
 class Account(BaseModel):
     """
@@ -136,8 +148,9 @@ class NewUser(BaseModel):
     id: int
     name: str = 'John Doe'
     signup_ts: Optional[datetime] = None
+    born: Optional[date] = None
     friends: List[int] = Field(default_factory=list)
-    # accounts: List[Account] = Field(default_factory=list)
+    accounts: List[Account] = Field(default_factory=list)
 
 user = NewUser(**external_user)
 print(user)
@@ -163,6 +176,7 @@ print(user)
 print(user.id)
 print(is_dataclass(user))
 print(type(user.signup_ts), user.signup_ts)
+print(type(user.born), user.born)
 
 def create_user3():
     for i in range(10):
@@ -170,7 +184,7 @@ def create_user3():
 
 
 print('Test with DataModel: ')
-time = timeit.timeit(create_user3, number=10000)
+time = timeit.timeit(create_user3, number=1000)
 print(f"Execution time: {time:.6f} seconds")
 # runner.bench_func('datamodel', create_user2)
 print(user, user.friends)

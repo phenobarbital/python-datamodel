@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Any, List, Dict
+from typing import Optional, Any, List, Dict, get_args, get_origin
 from collections import OrderedDict
 from collections.abc import Callable
 import types
@@ -84,7 +84,6 @@ def _dc_method_setattr_(
                 else:
                     new_val = parse_type(_type, value, _encoder, field_category)
                 # Assign the new value to the field
-                print('new_val > ', new_val)
                 value = new_val
             except Exception as e:
                 # Raise or re-raise a TypeError or something meaningful
@@ -144,7 +143,9 @@ class ModelMeta(type):
         cols = OrderedDict()
         strict = False
         cls.__field_types__ = {}
+        cls.__typing_args__ = dict()
         _types = {}
+        _typing_args = {}
 
         if "__annotations__" in attrs:
             annotations = attrs.get('__annotations__', {})
@@ -157,6 +158,7 @@ class ModelMeta(type):
             def _initialize_fields(attrs, annotations, strict):
                 cols = OrderedDict()
                 _types_local = {}
+                _typing_args = {}
                 for field, _type in annotations.items():
                     if isinstance(_type, Field):
                         _type = _type.type
@@ -180,12 +182,17 @@ class ModelMeta(type):
                         _types_local[field] = 'class'
                     else:
                         _types_local[field] = 'complex'
+
+                    # Store them in a dict keyed by field name:
+                    origin = get_origin(_type)
+                    args = get_args(_type)
+                    _typing_args[field] = (origin, args)
                     # Assign the field object to the attrs so dataclass can pick it up
                     attrs[field] = df
-                return cols, _types_local
+                return cols, _types_local, _typing_args
 
             # Initialize the fields
-            cols, _types = _initialize_fields(attrs, annotations, strict)
+            cols, _types, _typing_args = _initialize_fields(attrs, annotations, strict)
         else:
             # if no __annotations__, cols is empty:
             cols = OrderedDict()
@@ -201,6 +208,7 @@ class ModelMeta(type):
         # Attach Meta class
         new_cls.Meta = attr_meta or getattr(new_cls, "Meta", Meta)
         new_cls.__dataclass_fields__ = cols
+        new_cls.__typing_args__ = _typing_args
         if not new_cls.Meta:
             new_cls.Meta = Meta
         new_cls.Meta.set_connection = types.MethodType(
@@ -252,6 +260,7 @@ class ModelMeta(type):
         dc.__frozen__ = strict
         dc.__initialised__ = False
         dc.__field_types__ = _types
+
         dc.modelName = dc.__name__
 
         # Override __setattr__ method

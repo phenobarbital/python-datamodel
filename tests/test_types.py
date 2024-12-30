@@ -1,5 +1,6 @@
 from typing import Optional, List, Union
 from datetime import datetime, date
+import uuid
 from dataclasses import dataclass, is_dataclass
 from datamodel import BaseModel, Field
 
@@ -8,6 +9,8 @@ class Address:
     street: str
     zipcode: int
 
+def auto_uuid(*args, **kwargs):
+    return uuid.uuid4()
 
 class Account(BaseModel):
     """
@@ -20,13 +23,14 @@ class Account(BaseModel):
 
 class User(BaseModel):
     id: int
+    uid: uuid.UUID = Field(primary_key=True, default=auto_uuid)
     name: str = 'John Doe'
     signup_ts: Optional[datetime] = None
     born: Optional[date] = None
     friends: List[int] = Field(default_factory=list)
     address: Optional[Address]
     accounts: List[Account]
-    ## check for error: ValueError: mutable default <class 'list'> for field friends is not allowed: use default_factory
+    created_at: datetime = Field(default=datetime.now)
 
 external_data = {
     'id': '123',
@@ -59,6 +63,7 @@ def test_userid():
     assert user.id == 123
     assert isinstance(user.id, int)
     assert user.name == 'John Doe'
+    assert isinstance(user.uid, uuid.UUID)
 
 def test_signup():
     assert str(user.signup_ts) == '2017-06-01 12:22:00'
@@ -91,3 +96,6 @@ def test_accounts():
             assert account.phone == "+343317871"
         if account.provider == 'jabber':
             assert account.address == "jesuslara@jesuslara.com"
+
+def test_created_at():
+    assert isinstance(user.created_at, datetime)

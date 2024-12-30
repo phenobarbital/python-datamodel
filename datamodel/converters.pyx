@@ -14,9 +14,12 @@ from uuid import UUID
 import asyncpg.pgproto.pgproto as pgproto
 from cpython.ref cimport PyObject
 from .functions import is_empty, is_dataclass, is_iterable, is_primitive
+from .validation import _validation
+
 
 # Maps a type to a conversion callable
 cdef dict TYPE_CONVERTERS = {}
+
 
 cpdef object register_converter(object _type, object converter_func):
     """register_converter.
@@ -98,7 +101,7 @@ cpdef datetime.date to_date(object obj):
         pass
     try:
         return pendulum.parse(obj, strict=False).date()
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, ParserError):
         raise ValueError(
             f"Can't convert invalid data *{obj}* to date"
         )
@@ -127,7 +130,7 @@ cpdef datetime.datetime to_datetime(object obj):
         pass
     try:
         return pendulum.parse(obj, strict=False)
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, ParserError):
         raise ValueError(
             f"Can't convert invalid data *{obj}* to datetime"
         )
@@ -360,7 +363,6 @@ cdef object _parse_dict_type(object T, object data, object encoder, object args)
     return new_dict
 
 cdef object _parse_list_type(object T, object data, object encoder, object args):
-    # cdef object arg_type = get_args(T)[0]
     cdef object arg_type = args[0]
     cdef list result = []
 
@@ -693,25 +695,31 @@ cdef object _parse_optional_union(object T, object data, object encoder, object 
         pass
     return data
 
-cpdef object parse_typing(object T, object data, object encoder=None, str field_type=None):
+cpdef object parse_typing(object T, object data, object encoder=None, str field_type=None, object typing_args=None):
     """
     Parse a value to a typing type.
     """
     # local cdef variables:
-    cdef object origin = get_origin(T)
-    cdef tuple args = get_args(T)
+    cdef object origin = None
+    cdef object args = None
     cdef object name = getattr(T, '_name', None)  # T._name or None if not present
     cdef object sub = None     # for subtypes, local cache
     cdef object result = None
 
+    if typing_args:
+        origin, targs = typing_args.get(name, (get_origin(T), get_args(T)))
+    else:
+        origin = get_origin(T)
+        targs = get_args(T)
+
     # Field type shortcuts
     if field_type == 'typing':
         # result = data
-        result = _parse_typing_type(T, name, data, encoder, origin, args)
+        result = _parse_typing_type(T, name, data, encoder, origin, targs)
     elif origin is dict and isinstance(data, dict):
-        result = _parse_dict_type(T, data, encoder, args)
+        result = _parse_dict_type(T, data, encoder, targs)
     elif origin is list:
-        result = _parse_list_type(T, data, encoder, args)
+        result = _parse_list_type(T, data, encoder, targs)
     elif origin is not None:
         # other advanced generics
         result = data
@@ -818,7 +826,6 @@ cpdef dict process_attributes(object obj, list columns):
 
     Process the attributes of a dataclass object.
     """
-    cdef dict errors = {}
     cdef object new_val
     cdef object _encoder = None
     cdef object _default = None
@@ -827,7 +834,9 @@ cpdef dict process_attributes(object obj, list columns):
     cdef bint as_objects = meta.as_objects
     cdef bint no_nesting = meta.no_nesting
     cdef dict field_types = obj.__field_types__
+    cdef dict typing_args = obj.__typing_args__
     cdef bint is_dc = False
+    cdef dict errors = {}
 
     for name, f in columns:
         try:
@@ -844,7 +853,6 @@ cpdef dict process_attributes(object obj, list columns):
                 setattr(obj, name, value)
             if _default is not None:
                 value = _handle_default_value(obj, name, value, _default)
-
             # Use the precomputed field type category:
             field_category = field_types.get(name, 'complex')
             try:
@@ -858,12 +866,15 @@ cpdef dict process_attributes(object obj, list columns):
                     if no_nesting is False:
                         value = _handle_dataclass_type(name, value, _type, as_objects)
                 elif field_category == 'typing':
-                    value = parse_typing(_type, value, _encoder, field_category)
+                    value = parse_typing(_type, value, _encoder, field_category, typing_args)
                 elif isinstance(value, list) and hasattr(_type, '__args__'):
                     _handle_list_of_dataclasses(name, value, _type)
                 else:
-                   value = parse_typing(_type, value, _encoder, field_category)
+                   value = parse_typing(_type, value, _encoder, field_category, typing_args)
                 setattr(obj, name, value)
+                # then, call the validation process:
+                if (error := _validation_(name, value, f, _type, meta, field_category)):
+                    errors[name] = error
             except (TypeError, ValueError, RuntimeError) as ex:
                 errors[name] = f"Wrong Type for {f.name}: {f.type}, error: {ex}"
                 continue
@@ -871,3 +882,62 @@ cpdef dict process_attributes(object obj, list columns):
             errors[name] = f"Error processing {name}: {e}"
             continue
     return errors
+
+
+cdef list _validation_(
+    str name,
+    object value,
+    object f,
+    object _type,
+    object meta,
+    str field_category
+):
+    """
+    _validation_.
+    TODO: cover validations as length, not_null, required, max, min, etc
+    """
+    val_type = type(value)
+    if val_type == type or value == _type or is_empty(value):
+        try:
+            _field_checks_(f, name, value, meta)
+            return []
+        except (ValueError, TypeError):
+            raise
+    else:
+        # capturing other errors from validator:
+        return _validation(f, name, value, _type, val_type, field_category)
+
+cdef object _field_checks_(object f, str name, object value, object meta):
+    # Validate Primary Key
+    cdef object metadata = f.metadata
+    try:
+        if metadata.get('primary', False) is True:
+            if 'db_default' in metadata:
+                pass
+            else:
+                raise ValueError(
+                    f":: Missing Primary Key *{name}*"
+                )
+    except KeyError:
+        pass
+    # Validate Required
+    try:
+        if metadata.get('required', False) is True and meta.strict is True:
+            if 'db_default' in metadata:
+                return
+            if value is not None:
+                return  # If default value is set, no need to raise an error
+            raise ValueError(
+                f":: Missing Required Field *{name}*"
+            )
+    except KeyError:
+        return
+    # Nullable:
+    try:
+        if metadata.get('nullable', True) is False and meta.strict is True:
+            raise ValueError(
+                f":: *{name}* Cannot be null."
+            )
+    except KeyError:
+        return
+    return

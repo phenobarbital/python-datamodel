@@ -8,10 +8,9 @@ from libcpp cimport bool as bool_t
 from enum import Enum
 import pendulum
 import datetime
+from uuid import UUID
 import asyncpg.pgproto.pgproto as pgproto
 from .types import uint64_min, uint64_max, Text
-from .abstract import ModelMeta
-from uuid import UUID
 from .fields import Field
 from .functions import (
     is_iterable,
@@ -70,7 +69,17 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
         # If field_type is known, short-circuit certain checks
         if field_type == 'primitive':
             # For primitives, just check if val_type matches annotated_type
-            if val_type != annotated_type:
+            if annotated_type == datetime.date:
+                if not (isinstance(value, datetime.date) or isinstance(value, pendulum.Date)):
+                    errors.append(
+                        _create_error(name, value, f'Invalid Date type, expected {annotated_type}', val_type, annotated_type)
+                    )
+            elif annotated_type == datetime.datetime:
+                if not (isinstance(value, datetime.datetime) or isinstance(value, pendulum.DateTime)):
+                    errors.append(
+                        _create_error(name, value, f'Invalid DateTime type, expected {annotated_type}', val_type, annotated_type)
+                    )
+            elif val_type != annotated_type:
                 errors.append(
                     _create_error(name, value, f'Invalid type, expected {annotated_type}', val_type, annotated_type)
                 )
@@ -82,7 +91,8 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
         elif hasattr(annotated_type, '__module__') and annotated_type.__module__ == 'typing':
             # TODO: validation of annotated types
             return errors
-        elif type(annotated_type) is ModelMeta:
+        # elif type(annotated_type) is ModelMeta:
+        elif type(annotated_type).__name__ == "ModelMeta":
             # Check if there's a field in the annotated type that matches the name and type
             if isinstance(value, annotated_type):
                 # if value is already a User, no further check needed for columns
