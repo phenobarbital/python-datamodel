@@ -6,11 +6,11 @@ from typing import Optional, Union, Any
 from datamodel import Field
 from collections.abc import Iterator, Iterable
 if sys.version_info < (3, 10):
-    from typing_extensions import ParamSpec, TypedDict
+    from typing_extensions import ParamSpec, TypedDict, get_type_hints
 else:
     from typing import ParamSpec, TypedDict
-cimport cython
-from cython.parallel import prange
+from ..converters import parse_basic, parse_type
+from ..functions import is_primitive
 
 
 P = ParamSpec("P")
@@ -33,18 +33,19 @@ cdef class ClassDict(dict):
                 self.mapping[key] = value
         else:
             for k, v in kwargs.items():
-                attr = getattr(self, k)
-                if isinstance(attr, Field):
+                attr = getattr(self, k, None)
+                if fn := getattr(attr, 'default', None):
                     try:
-                        fn = attr.default
                         if callable(fn):
                             v = fn(v)
-                            setattr(self, k, v)
                         else:
                             v = fn
-                            setattr(self, k, fn)
+                        setattr(self, k, v)
                     except (TypeError, KeyError):
                         pass
+                # elif _type := self.__annotations__.get(k, None):
+                #     if is_primitive(_type):
+                #         v = parse_basic(_type, v)
                 self.mapping[k] = v
         self._columns = list(self.mapping.keys())
 

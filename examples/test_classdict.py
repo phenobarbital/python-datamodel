@@ -1,6 +1,8 @@
 from typing import Optional
 from datamodel import Field
 from datamodel.libs.mapping import ClassDict
+from datetime import datetime
+
 
 data = {
     "fields": ["store_id", "postpaid_sales", "postpaid_trended", "apd", "postpaid_to_goal", "hours_worked", "hps", "hps_to_goal"],
@@ -41,10 +43,12 @@ class QueryObject(ClassDict):
     # Limiting Query:
     querylimit: Optional[int]
     query_raw: str
+    created_at: datetime
 
 
-qry = QueryObject(**data)
+qry = QueryObject(**data, created_at='2022-01-01 00:00:00')
 print(qry)
+print('Created > ', qry.created_at, type(qry.created_at))
 # del qry.fields
 # fields = qry.pop('fields')
 # print('FIELDS > ', fields)

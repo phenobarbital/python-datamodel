@@ -8,7 +8,7 @@ from dataclasses import (
     _MISSING_TYPE
 )
 from uuid import UUID
-from .converters import parse_basic, parse_type
+from .converters import process_attributes, parse_basic, parse_type, register_converter
 from .fields import Field
 from .validation import (
     _validation,
@@ -22,7 +22,7 @@ from .abstract import ModelMeta, Meta
 from .models import ModelMixin
 
 
-TYPE_CONVERTERS = {}  # Maps a type to a conversion callable
+TYPE_CONVERTERS = {}
 
 
 class BaseModel(ModelMixin, metaclass=ModelMeta):
@@ -30,7 +30,6 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
     BaseModel.
     Base Model for all DataModels.
     """
-    Meta = Meta
 
     def __post_init__(self) -> None:
         """
@@ -38,16 +37,17 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         Fill fields with function-factory or calling validations
         """
         # checking if an attribute is already a dataclass:
-        errors = {}
         columns = list(self.__columns__.items())
 
-        for name, f in columns:
-            try:
-                value = getattr(self, name)
-                if (error := self._process_field_(name, value, f)):
-                    errors[name] = error
-            except RuntimeError as err:
-                logging.exception(err)
+        errors = process_attributes(self, columns)
+        # errors = {}
+        # for name, f in columns:
+        #     try:
+        #         value = getattr(self, name)
+        #         if (error := self._process_field_(name, value, f)):
+        #             errors[name] = error
+        #     except RuntimeError as err:
+        #         logging.exception(err)
 
         if errors:
             if self.Meta.strict is True:
@@ -100,7 +100,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         field_name: str = None
     ):
         key = (target_type, field_name) if field_name else target_type
-        TYPE_CONVERTERS[key] = func
+        register_converter(key, func)
 
     def _handle_dataclass_type(self, name: str, value: Any, _type: Any):
         try:
@@ -180,19 +180,20 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             if field_category == 'primitive':
                 # if value is not None:
                 new_val = parse_basic(_type, value, _encoder)
-                return self._validation_(name, new_val, f, _type)
+                # return self._validation_(name, new_val, f, _type)
             elif field_category == 'dataclass':
                 new_val = self._handle_dataclass_type(name, value, _type)
-                return self._validation_(name, new_val, f, _type)
+                # return self._validation_(name, new_val, f, _type)
             elif field_category == 'typing':
                 new_val = parse_type(_type, value, _encoder, field_category)
-                return self._validation_(name, new_val, f, _type)
+                # return self._validation_(name, new_val, f, _type)
             elif isinstance(value, list) and hasattr(_type, '__args__'):
                 new_val = self._handle_list_of_dataclasses(name, value, _type)
-                return self._validation_(name, new_val, f, _type)
+                # return self._validation_(name, new_val, f, _type)
             else:
                 new_val = parse_type(_type, value, _encoder, field_category)
-                return self._validation_(name, new_val, f, _type)
+                # return self._validation_(name, new_val, f, _type)
+            setattr(self, name, new_val)
         except (TypeError, ValueError) as ex:
             raise ValueError(
                 f"Wrong Type for {f.name}: {f.type}, error: {ex}"

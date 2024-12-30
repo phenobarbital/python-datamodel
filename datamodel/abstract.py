@@ -41,6 +41,8 @@ class Meta(TypedDict, total=False):
     endpoint: str
     extra: str = 'forbid'  # could be 'allow', 'ignore', or 'forbid'
     validate_assignment: bool = False
+    as_objects: bool = False
+    no_nesting: bool = False
 
 
 def set_connection(cls, conn: Callable):

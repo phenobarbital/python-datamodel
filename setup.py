@@ -146,14 +146,14 @@ setup(
         "uvloop>=0.21.0",
         "asyncio==3.4.3",
         "faust-cchardet==2.1.19",
-        "ciso8601==2.3.1",
+        "ciso8601==2.3.2",
         "objectpath==0.6.1",
         "orjson==3.10.11",
         'typing_extensions>=4.9.0',
         "asyncpg>=0.29.0",
         "python-dateutil>=2.8.2",
-        "pendulum==3.0.0",
-        "python-slugify==8.0.1"
+        "python-slugify==8.0.1",
+        "pendulum==3.0.0"
     ],
     tests_require=[
         'pytest>=7.2.2',

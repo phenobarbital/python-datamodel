@@ -23,10 +23,11 @@ class User(BaseModel):
     id: int
     name: str = 'John Doe'
     signup_ts: Optional[datetime] = None
-    born: Optional[date] = None
+    born: date = None
     friends: List[int] = Field(default_factory=list)
     address: Optional[Address]
     accounts: List[Account]
+    created_at: datetime = Field(default=datetime.now)
 
 external_data = {
     'id': '123',
@@ -52,5 +53,6 @@ external_data = {
 try:
     user = User(**external_data)
     print('USER> ', user)
+    print('Types: ', type(user.created_at))
 except ValidationError as exc:
     print(exc.payload)
