@@ -22,17 +22,6 @@ print(a)
 print(fields(a))
 print('IS a Dataclass?: ', is_dataclass(a))
 
-# @dataclass(init=False, repr=True, eq=True, order=False, unsafe_hash=True, frozen=False)
-# class Point:
-#     x: int = Field(default=0, min=0, max=10)
-#     y: int = Field(default=0, min=0, max=10)
-#     c: float = Field(default=10, init=False)
-
-#     def __init__(self, **kwargs):
-#         for key, val in kwargs.items():
-#             setattr(self, key, val)
-
-
 class intSum(object):
     def get_coordinate(self):
         return (self.x, self.y)
@@ -127,7 +116,8 @@ class Actor(BaseModel):
     userid: uuid.UUID = Column(required=True, primary_key=True, default=auto_uuid)
     age: int = Column(default=def_age)
     name: str
-    account: Union[Account, List[Account]]
+    # account: Union[Account, List[Account]]
+    account: List[Account]
 
     def __str__(self) -> str:
         return f'<{self.name}: {self.userid}>'
@@ -138,21 +128,22 @@ user = {
     "name": "Jesus Lara",
     "account": [
         {
-        "provider": "twilio",
-        "phone": "+343317871"
+            "provider": "twilio",
+            "phone": "+343317871"
         },
         {
-        "provider": "email",
-        "address": "jesuslara@jesuslara.com"
+            "provider": "email",
+            "address": "jesuslara@jesuslara.com"
         },
         {
-        "provider": "jabber",
-        "address": "jesuslara@jesuslara.com"
+            "provider": "jabber",
+            "address": "jesuslara@jesuslara.com"
         }
     ]
 }
 try:
     user = Actor(**user)
     print(user)
+    print('Accounts: ', user.account)
 except ValidationError as e:
     print(e.payload)
