@@ -162,7 +162,8 @@ class Actor(BaseModel):
     userid: uuid.UUID = Column(required=True, primary_key=True, default=auto_uuid)
     age: int = Column(default=def_age)
     name: str
-    account: Union[Account, List[Account]]
+    # account: Union[Account, List[Account]]
+    account: List[Account]
 
     def __str__(self) -> str:
         return f'<{self.name}: {self.userid}>'
