@@ -174,13 +174,66 @@ class ModelMixin:
                 return obj.value
             return obj
 
-    def to_dict(self, remove_nulls: bool = False, convert_enums: bool = False):
+    def to_dict(
+        self,
+        remove_nulls: bool = False,
+        convert_enums: bool = False,
+        as_values: bool = False
+    ) -> dict[str, Any]:
+        if as_values:
+            return self.__collapse_as_values__(remove_nulls, convert_enums, as_values)
         d = as_dict(self, dict_factory=dict)
         if convert_enums:
             d = self.__convert_enums__(d)
         if self.Meta.remove_nulls is True or remove_nulls is True:
             return self.remove_nulls(d)
+        # 4) If as_values => convert sub-models to pk-value
         return d
+
+    def __collapse_as_values__(
+        self,
+        remove_nulls: bool = False,
+        convert_enums: bool = False,
+        as_values: bool = False
+    ) -> dict[str, Any]:
+        """Recursively converts any BaseModel instances to their primary key value."""
+        out = {}
+        fields = self.columns()
+        for name, field in fields.items():
+            # datatype = field.type
+            value = getattr(self, name)
+            if value is None and remove_nulls:
+                continue
+            if isinstance(value, ModelMixin):
+                if as_values:
+                    out[name] = getattr(value, name)
+                else:
+                    out[name] = value.__collapse_as_values__(
+                        remove_nulls=remove_nulls,
+                        convert_enums=convert_enums,
+                        as_values=as_values
+                    )
+            # if it's a list, might contain submodels or scalars
+            elif isinstance(value, list):
+                items_out = []
+                for item in value:
+                    if isinstance(item, ModelMixin):
+                        if as_values:
+                            items_out.append(getattr(item, name))
+                        else:
+                            items_out.append(item.__collapse_as_values__(
+                                remove_nulls=remove_nulls,
+                                convert_enums=convert_enums,
+                                as_values=as_values
+                            ))
+                    else:
+                        items_out.append(item)
+                out[name] = items_out
+            else:
+                out[name] = value
+        if convert_enums:
+            out = self.__convert_enums__(out)
+        return out
 
     def json(self, **kwargs):
         encoder = self.__encoder__(**kwargs)

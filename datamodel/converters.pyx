@@ -302,7 +302,7 @@ cdef object strtobool(str val):
         return False
     else:
         raise ValueError(
-            f"Invalid truth value for {val}"
+            f"Invalid truth value for **'{val}'**"
         )
 
 cpdef object to_boolean(object obj):
