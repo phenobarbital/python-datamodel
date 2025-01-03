@@ -67,17 +67,27 @@ cdef object to_uuid(object obj):
     except ValueError:
         return None
 
+
 cpdef str slugify_camelcase(str obj):
     """slugify_camelcase.
 
-    Converting a CamelCase String into a version.
+    Converting CamelCase into a spaced version, but don’t double-space
+    if the string already contains spaces or uppercase letters follow
+    existing spaces.
     """
+    if not obj:
+        return obj
+
     slugified = [obj[0]]
-    for c in obj[1:]:
-        if c.isupper():
+    for i in range(1, len(obj)):
+        c = obj[i]
+        # Condition: if c is uppercase AND the previous character isn't a space,
+        # insert a space before it.
+        if c.isupper() and not slugified[-1].isspace():
             slugified.append(' ')
         slugified.append(c)
     return ''.join(slugified)
+
 
 cpdef datetime.date to_date(object obj):
     """to_date.

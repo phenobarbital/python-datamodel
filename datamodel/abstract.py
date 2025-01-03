@@ -14,7 +14,7 @@ from .functions import (
     is_primitive
 )
 
-class Meta(TypedDict, total=False):
+class Meta:
     """
     Metadata information about Model.
 
