@@ -14,7 +14,11 @@ from .models import (
     Review,
     VideoObject,
     AdministrativeArea,
-    Audience
+    Audience,
+    Place,
+    QuantitativeValue,
+    MonetaryAmount,
+    JobPosting,
 )
 
 JSON_MODEL_MAP = {
@@ -33,5 +37,9 @@ JSON_MODEL_MAP = {
     "Review": Review,
     "VideoObject": VideoObject,
     "AdministrativeArea": AdministrativeArea,
-    "Audience": Audience
+    "Audience": Audience,
+    "Place": Place,
+    "QuantitativeValue": QuantitativeValue,
+    "MonetaryAmount": MonetaryAmount,
+    "JobPosting": JobPosting,
 }

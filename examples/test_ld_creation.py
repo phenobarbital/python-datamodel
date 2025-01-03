@@ -1,3 +1,6 @@
+
+from datamodel.jsonld.models import ImageObject
+
 data = """
 {
 		"@context": "http://schema.org",
@@ -255,3 +258,7 @@ data = """
 		}
 	}
 """  # noqa
+
+
+img = ImageObject(name="a Mexico Beach", url="mexico-beach.jpg", caption="Sunny, sandy beach.")
+print(img.to_html(top_level=True))

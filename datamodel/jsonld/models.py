@@ -1,6 +1,7 @@
 from typing import Any, List, Optional, Union
+from html import escape
 from datetime import datetime
-from ..base import BaseModel, Field
+from ..base import BaseModel, Field, register_renderer
 
 
 class URL(BaseModel):
@@ -120,6 +121,7 @@ class ImageObject(BaseModel):
     Corresponds to the JSON-LD "ImageObject" type.
     https://schema.org/ImageObject
     """
+    name: str
     url: str = Field(required=True)
     width: int = 0
     height: int = 0
@@ -362,3 +364,137 @@ class Audience(BaseModel):
 
     class Meta:
         schema_type: str = "Audience"
+
+
+class Place(BaseModel):
+    address: PostalAddress
+
+    class Meta:
+        schema_type = "Place"
+
+class QuantitativeValue(BaseModel):
+    value: float
+    unitText: str
+
+    class Meta:
+        schema_type = "QuantitativeValue"
+
+class MonetaryAmount(BaseModel):
+    currency: Union[str, float]
+    value: QuantitativeValue
+
+    class Meta:
+        schema_type = "MonetaryAmount"
+
+class JobPosting(BaseModel):
+    title: str
+    description: str
+    hiringOrganization: Organization
+    datePosted: str
+    validThrough: str
+    jobLocation: Optional[Place]
+    baseSalary: Optional[MonetaryAmount]
+    qualifications: str
+    skills: List[str]
+    responsibilities: str
+    educationRequirements: str
+    experienceRequirements: str
+
+    class Meta:
+        schema_type = "JobPosting"
+
+
+@register_renderer("ImageObject")
+def render_imageobject(model: "BaseModel", top_level: bool) -> str:
+    """
+    Render an ImageObject in a custom way:
+      <div typeof="ImageObject">
+        <h2 property="name">...</h2>
+        <img src="..." alt="..." property="contentUrl"/>
+        ...
+      </div>
+    """
+    # You can read fields from the model (like name, url, caption, etc.).
+    # If you used 'url' as the field that is the image's src, we can do:
+    name = getattr(model, "name", None)  # or None if not present
+    url = getattr(model, "url", None)
+    caption = getattr(model, "caption", None)
+    width = getattr(model, "width", None)
+    height = getattr(model, "height", None)
+
+    schema_type = getattr(model.Meta, 'schema_type', model.__class__.__name__)
+
+    container_open = ""
+    if top_level:
+        container_open = f'<div vocab="https://schema.org/" typeof="{escape(schema_type)}">'  # noqa
+    else:
+        # when nested, we might do property="image" or property=schema_type
+        container_open = f'<div property="{escape(schema_type)}" typeof="{escape(schema_type)}">'  # noqa
+
+    pieces = [container_open]
+
+    # Render name as <h2 property="name">Name</h2> if present
+    if name:
+        name_esc = escape(str(name))
+        pieces.append(f'<h2 property="name">{name_esc}</h2>')
+
+    # Now create an <img> that has property="contentUrl" or "url"
+    if url:
+        url_esc = escape(str(url))
+        caption_esc = escape(str(caption or ""))
+        # alt can come from caption
+        snippet = f'<img property="contentUrl" src="{url_esc}" alt="{caption_esc}"'
+        if width:
+            snippet += f' width="{escape(str(width))}"'
+        if height:
+            snippet += f' height="{escape(str(height))}"'
+        snippet += ' />'
+        pieces.append(snippet)
+
+    # If we have other fields not individually handled, we could do a fallback
+    # to the normal field iteration. But for brevity, let's omit that here.
+    # E.g. leftover = model.render_remaining_fields(…)
+    # pieces.append(leftover)
+
+    pieces.append('</div>')
+    return "\n".join(pieces)
+
+
+@register_renderer("GeoCoordinates")
+def render_geocoordinates(model: "BaseModel", top_level: bool) -> str:
+    """
+    Custom renderer for GeoCoordinates:
+      <div property="geo" typeof="GeoCoordinates">
+          <meta property="latitude" content="40.75"/>
+          <meta property="longitude" content="-73.98"/>
+          ...
+      </div>
+    """
+    lat = getattr(model, "latitude", None)
+    lng = getattr(model, "longitude", None)
+    elevation = getattr(model, "elevation", None)
+
+    schema_type = getattr(model.Meta, 'schema_type', model.__class__.__name__)
+    if top_level:
+        container_open = f'<div vocab="https://schema.org/" typeof="{escape(schema_type)}">'  # noqa
+    else:
+        container_open = f'<div property="{escape(schema_type)}" typeof="{escape(schema_type)}">'  # noqa
+
+    pieces = [container_open]
+
+    # For numeric fields, we might prefer <meta ... content="..."/>
+    if lat is not None:
+        pieces.append(
+            f'<meta property="latitude" content="{escape(str(lat))}" />'
+        )
+    if lng is not None:
+        pieces.append(
+            f'<meta property="longitude" content="{escape(str(lng))}" />'
+        )
+    if elevation is not None:
+        pieces.append(
+            f'<meta property="elevation" content="{escape(str(elevation))}" />'
+        )
+
+    pieces.append('</div>')
+    return "\n".join(pieces)
