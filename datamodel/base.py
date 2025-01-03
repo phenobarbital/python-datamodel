@@ -29,14 +29,6 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         columns = list(self.__columns__.items())
 
         errors = process_attributes(self, columns)
-        # errors = {}
-        # for name, f in columns:
-        #     try:
-        #         value = getattr(self, name)
-        #         if (error := self._process_field_(name, value, f)):
-        #             errors[name] = error
-        #     except RuntimeError as err:
-        #         logging.exception(err)
 
         if errors:
             if self.Meta.strict is True:

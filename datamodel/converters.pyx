@@ -574,13 +574,16 @@ cpdef object parse_basic(object T, object data, object encoder = None):
     if T == str:
         if isinstance(data, str):
             return data
-        return str(data)
+        elif data is not None:
+            return str(data)
     if T == int:
         if isinstance(data, int):
             return data
-        return int(data)
+        elif data is not None:
+            return int(data)
     if T == bytes:
-        return bytes(data)
+        if data is not None:
+            return bytes(data)
     if T == UUID or T == pgproto.UUID:
         return to_uuid(data)
     # Using the encoders for basic types:
