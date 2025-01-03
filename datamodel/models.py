@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any
+from typing import Any, Dict
 from enum import Enum, EnumMeta
 # Dataclass
 import inspect
@@ -701,6 +701,22 @@ class ModelMixin:
             "properties": _fields,
             "required": required
         }
+
+    @classmethod
+    def from_jsonld(cls, data: Dict[str, Any]) -> "ModelMixin":
+        """
+        Create a model instance from a JSON-LD dictionary.
+
+        Ignores @context and @type; attempts to parse all other top-level fields
+        into the model’s constructor. If the JSON-LD has nested objects that
+        correspond to other BaseModel fields, you may need additional logic
+        to instantiate sub-models.
+        """
+        if not isinstance(data, dict):
+            raise ValueError("JSON-LD input must be a dictionary.")
+        # If present, remove the JSON-LD keys that are not actual model fields
+        data.pop("@context", None)
+        data.pop("@type", None)
 
 
 class Model(ModelMixin, metaclass=ModelMeta):
