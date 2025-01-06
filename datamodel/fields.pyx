@@ -92,7 +92,8 @@ class Field(ff):
         'lt',
         'le',
         'ge',
-        'schema_extra'
+        'schema_extra',
+        'alias',
     )
 
     def __init__(
@@ -130,7 +131,8 @@ class Field(ff):
             "required": required,
             "nullable": nullable,
             "primary": self._primary,
-            "validator": validator
+            "validator": validator,
+            "alias": self._alias
         }
         _range = {}
         if min is not None:
@@ -192,6 +194,7 @@ class Field(ff):
             "Field("
             f"column={self.name!r}, "
             f"type={self.type!r}, "
+            f"alias={self._alias!r}, "
             f"default={self.default!r})"
         )
 
@@ -243,6 +246,7 @@ def Column(
     max: Union[int, float] = None,
     validator: Optional[Callable] = None,
     kw_only: bool = False,
+    alias: Optional[str] = None,
     **kwargs
 ):
     """
@@ -258,5 +262,6 @@ def Column(
         max=max,
         validator=validator,
         kw_only=kw_only,
+        alias=alias,
         **kwargs,
     )

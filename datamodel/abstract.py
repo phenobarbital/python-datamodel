@@ -56,7 +56,7 @@ def _dc_method_setattr_(
 ) -> None:
     """
     _dc_method_setattr_.
-     - Method for overwrite the "setattr" on Dataclasses.
+    - Method for overwrite the "setattr" on Dataclasses.
     """
     # Initialize __values__ if it doesn't exist
     if not hasattr(self, '__values__'):
@@ -138,14 +138,17 @@ class ModelMeta(type):
     __columns__: Dict
     __fields__: List
     __field_types__: List
+    __aliases__: Dict
 
     def __new__(cls, name, bases, attrs, **kwargs):  # noqa
         cols = OrderedDict()
         strict = False
         cls.__field_types__ = {}
-        cls.__typing_args__ = dict()
+        cls.__typing_args__ = {}
+        cls.__aliases__ = {}
         _types = {}
         _typing_args = {}
+        aliases = {}
 
         if "__annotations__" in attrs:
             annotations = attrs.get('__annotations__', {})
@@ -159,6 +162,7 @@ class ModelMeta(type):
                 cols = OrderedDict()
                 _types_local = {}
                 _typing_args = {}
+                aliases = {}
                 for field, _type in annotations.items():
                     if isinstance(_type, Field):
                         _type = _type.type
@@ -166,6 +170,9 @@ class ModelMeta(type):
                         field,
                         Field(type=_type, required=False, default=None)
                     )
+                    alias = df.metadata.get("alias", None)
+                    if alias:
+                        aliases[alias] = field
                     if not isinstance(df, Field):
                         df = Field(required=False, type=_type, default=df)
                     df.name = field
@@ -189,16 +196,17 @@ class ModelMeta(type):
                     _typing_args[field] = (origin, args)
                     # Assign the field object to the attrs so dataclass can pick it up
                     attrs[field] = df
-                return cols, _types_local, _typing_args
+                return cols, _types_local, _typing_args, aliases
 
             # Initialize the fields
-            cols, _types, _typing_args = _initialize_fields(attrs, annotations, strict)
+            cols, _types, _typing_args, aliases = _initialize_fields(attrs, annotations, strict)
         else:
             # if no __annotations__, cols is empty:
             cols = OrderedDict()
 
         _columns = cols.keys()
         cls.__slots__ = tuple(_columns)
+        cls.__aliases__ = aliases
 
         # Pop Meta before creating the class so we can assign it after
         attr_meta = attrs.pop("Meta", None)
@@ -272,3 +280,17 @@ class ModelMeta(type):
         cls.__initialised__ = True
         cls.__errors__ = None
         super().__init__(*args, **kwargs)
+
+    def __call__(cls, *args, **kwargs):
+        #    rename any kwargs that match an alias ONLY if there are aliases defined.
+        if cls.__aliases__:
+            new_kwargs = {}
+            for k, v in kwargs.items():
+                if k in cls.__aliases__:
+                    real_field = cls.__aliases__[k]
+                    new_kwargs[real_field] = v
+                else:
+                    new_kwargs[k] = v
+        else:
+            new_kwargs = kwargs
+        return super().__call__(*args, **new_kwargs)
