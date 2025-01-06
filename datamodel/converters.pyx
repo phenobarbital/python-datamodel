@@ -741,7 +741,13 @@ cpdef object parse_typing(object T, object data, object encoder=None, str field_
         result = _parse_builtin_type(T, data, encoder)
     return result
 
-cdef object _handle_dataclass_type(str name, object value, object _type, object as_objects = False):
+cdef object _handle_dataclass_type(
+    str name,
+    object value,
+    object _type,
+    object as_objects = False,
+    object parent = None
+):
     """
     _handle_dataclass_type.
 
@@ -763,7 +769,7 @@ cdef object _handle_dataclass_type(str name, object value, object _type, object 
         else:
             # If a converter exists for this type, use it:
             if converter:
-                return converter(name, value, _type)
+                return converter(name, value, _type, parent)
             if as_objects is True:
                 return _type(**{name: value})
             if isinstance(value, (int, str, UUID)):
@@ -777,7 +783,12 @@ cdef object _handle_dataclass_type(str name, object value, object _type, object 
             f"Invalid value for {_type}: {value}, error: {exc}"
         )
 
-cdef object _handle_list_of_dataclasses(str name, object value, object _type):
+cdef object _handle_list_of_dataclasses(
+    str name,
+    object value,
+    object _type,
+    object parent = None
+):
     """
     _handle_list_of_dataclasses.
 
@@ -793,7 +804,7 @@ cdef object _handle_list_of_dataclasses(str name, object value, object _type):
             new_list = []
             for item in value:
                 if converter:
-                    new_list.append(converter(name, item, sub_type))
+                    new_list.append(converter(name, item, sub_type, parent))
                 elif isinstance(item, dict):
                     new_list.append(sub_type(**item))
                 else:
@@ -877,11 +888,17 @@ cpdef dict process_attributes(object obj, list columns):
                     value = parse_basic(_type, value, _encoder)
                 elif field_category == 'dataclass':
                     if no_nesting is False:
-                        value = _handle_dataclass_type(name, value, _type, as_objects)
+                        if as_objects is True:
+                            value = _handle_dataclass_type(name, value, _type, as_objects, obj)
+                        else:
+                            value = _handle_dataclass_type(name, value, _type, as_objects, None)
                 elif field_category == 'typing':
                     value = parse_typing(_type, value, _encoder, field_category, typing_args)
                 elif isinstance(value, list) and hasattr(_type, '__args__'):
-                    _handle_list_of_dataclasses(name, value, _type)
+                    if as_objects is True:
+                        value = _handle_list_of_dataclasses(name, value, _type, obj)
+                    else:
+                        value = _handle_list_of_dataclasses(name, value, _type, None)
                 else:
                    value = parse_typing(_type, value, _encoder, field_category, typing_args)
                 setattr(obj, name, value)

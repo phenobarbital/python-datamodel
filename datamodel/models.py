@@ -250,6 +250,13 @@ class ModelMixin:
         """
         return bool(self.__valid__)
 
+    def get(self, key: str, default=None):
+        """
+        A dict-like get() method.
+        Returns the value of `self.key` if it exists, otherwise returns `default`.
+        """
+        return getattr(self, key) if hasattr(self, key) else default
+
     def _get_meta_value(self, key: str, fallback: Any = None, locale: Any = None):
         value = getattr(self.Meta, key, fallback)
         if locale is not None:

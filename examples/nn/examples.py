@@ -18,7 +18,8 @@ client_payload = """
         "client_id": 61,
         "client_name": "ASSEMBLY",
         "status": true,
-        "orgid": 71
+        "orgid": 71,
+        "org_name": "assembly"
     }
 }
 """
@@ -145,10 +146,19 @@ class Organization(BaseModel):
         name: str = 'organizations'
         strict: bool = True
 
-def create_organization(name: str, value: Any, target_type: Any):
-    print('Organization Target: ', target_type, value, name)
+def create_organization(
+    name: str,
+    value: Any,
+    target_type: Any,
+    parent_data: BaseModel
+) -> Organization:
+    print('Organization Target: ', target_type, value, name, parent_data)
+    org_name = None
+    if parent_data:
+        org_name = parent_data.get('org_name', None)
     args = {
         name: value,
+        "org_name": org_name,
         "status": True,
     }
     return target_type(**args)
@@ -160,10 +170,12 @@ class Client(BaseModel):
     client_name: str
     status: bool = Field(required=True, default=True)
     orgid: Organization = Field(required=False)
+    org_name: str
 
     class Meta:
         name: str = 'clients'
         strict: bool = True
+        as_objects: bool = True
 
 
 class Form(BaseModel):

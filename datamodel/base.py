@@ -42,9 +42,7 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         # checking if an attribute is already a dataclass:
         columns = list(self.__columns__.items())
 
-        errors = process_attributes(self, columns)
-
-        if errors:
+        if errors := process_attributes(self, columns):
             if self.Meta.strict is True:
                 raise ValidationError(
                     f"""{self.modelName}: There are errors in Model. \
@@ -109,11 +107,10 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             name (str): name of the field
             value (Any): value to be assigned.
         """
-        if name not in self.__columns__:
-            if name != '__errors__' and self.Meta.strict is False:
-                self.create_field(name, value)
-        else:
+        if name in self.__columns__:
             setattr(self, name, value)
+        elif name != '__errors__' and self.Meta.strict is False:
+            self.create_field(name, value)
 
     def get_errors(self):
         return self.__errors__
@@ -166,13 +163,12 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
                     if isinstance(item, BaseModel):
                         nested_html = item.to_html(False)
                         snippet = f'<div property="{escape(field_name)}">\n{nested_html}\n</div>'
-                        pieces.append(snippet)
                     else:
                         # If it's a simple scalar, just output a <span>
                         # e.g.: <span property="recipeIngredient">3 bananas</span>
                         val_escaped = escape(str(item))
                         snippet = f'<span property="{escape(field_name)}">{val_escaped}</span>'
-                        pieces.append(snippet)
+                    pieces.append(snippet)
             else:
                 # For simple scalars (str, int, etc.):
                 # We might choose <span> or <meta> based on type.
