@@ -43,6 +43,7 @@ class Meta:
     validate_assignment: bool = False
     as_objects: bool = False
     no_nesting: bool = False
+    alias_function: Optional[Callable] = None
 
 
 def set_connection(cls, conn: Callable):
@@ -283,6 +284,13 @@ class ModelMeta(type):
 
     def __call__(cls, *args, **kwargs):
         #    rename any kwargs that match an alias ONLY if there are aliases defined.
+        alias_func = getattr(cls.Meta, "alias_function", None)
+        if callable(alias_func):
+            new_kwargs = {}
+            for k, v in kwargs.items():
+                new_k = alias_func(k)
+                new_kwargs[new_k] = v
+            kwargs = new_kwargs
         if cls.__aliases__:
             new_kwargs = {}
             for k, v in kwargs.items():
@@ -291,6 +299,5 @@ class ModelMeta(type):
                     new_kwargs[real_field] = v
                 else:
                     new_kwargs[k] = v
-        else:
-            new_kwargs = kwargs
-        return super().__call__(*args, **new_kwargs)
+            kwargs = new_kwargs
+        return super().__call__(*args, **kwargs)

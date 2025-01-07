@@ -170,9 +170,7 @@ class ModelMixin:
                 key: self.__convert_enums__(value) for key, value in obj.items()
             }
         else:
-            if isinstance(obj, Enum):
-                return obj.value
-            return obj
+            return obj.value if isinstance(obj, Enum) else obj
 
     def to_dict(
         self,
@@ -185,7 +183,7 @@ class ModelMixin:
         d = as_dict(self, dict_factory=dict)
         if convert_enums:
             d = self.__convert_enums__(d)
-        if self.Meta.remove_nulls is True or remove_nulls is True:
+        if self.Meta.remove_nulls is True or remove_nulls:
             return self.remove_nulls(d)
         # 4) If as_values => convert sub-models to pk-value
         return d
