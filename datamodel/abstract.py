@@ -207,7 +207,6 @@ class ModelMeta(type):
 
         _columns = cols.keys()
         cls.__slots__ = tuple(_columns)
-        cls.__aliases__ = aliases
 
         # Pop Meta before creating the class so we can assign it after
         attr_meta = attrs.pop("Meta", None)
@@ -269,7 +268,7 @@ class ModelMeta(type):
         dc.__frozen__ = strict
         dc.__initialised__ = False
         dc.__field_types__ = _types
-
+        dc.__aliases__ = aliases
         dc.modelName = dc.__name__
 
         # Override __setattr__ method
