@@ -190,6 +190,13 @@ class Field(ff):
 
     @_recursive_repr
     def __repr__(self):
+        if self._alias is None:
+            return (
+                "Field("
+                f"column={self.name!r}, "
+                f"type={self.type!r}, "
+                f"default={self.default!r})"
+            )
         return (
             "Field("
             f"column={self.name!r}, "

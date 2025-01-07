@@ -170,9 +170,10 @@ class ModelMeta(type):
                         field,
                         Field(type=_type, required=False, default=None)
                     )
-                    alias = df.metadata.get("alias", None)
-                    if alias:
-                        aliases[alias] = field
+                    if df is not None and isinstance(df, Field):
+                        alias = df.metadata.get("alias", None)
+                        if alias:
+                            aliases[alias] = field
                     if not isinstance(df, Field):
                         df = Field(required=False, type=_type, default=df)
                     df.name = field
