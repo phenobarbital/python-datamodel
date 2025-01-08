@@ -640,6 +640,7 @@ cpdef object parse_typing(
     object encoder=None,
     str field_type=None,
     object typing_args=None,
+    dict typeinfo = None,
     object as_objects = False,
 ):
     """
@@ -652,7 +653,10 @@ cpdef object parse_typing(
     cdef object sub = None     # for subtypes, local cache
     cdef object result = None
 
-    if typing_args:
+    if typeinfo:
+        origin = typeinfo.get('origin')
+        targs = typeinfo.get('args')
+    elif typing_args:
         origin, targs = typing_args.get(name, (get_origin(T), get_args(T)))
     else:
         origin = get_origin(T)
@@ -837,8 +841,8 @@ cpdef dict process_attributes(object obj, list columns):
                         _encoder,
                         field_category,
                         typing_args,
-                        _typeinfo,
-                        as_objects
+                        typeinfo=_typeinfo,
+                        as_objects=as_objects
                     )
                 elif field_category == 'dataclass':
                     if no_nesting is False:
@@ -852,7 +856,15 @@ cpdef dict process_attributes(object obj, list columns):
                     else:
                         value = _handle_list_of_dataclasses(name, value, _type, None)
                 else:
-                    value = parse_typing(_type, value, _encoder, field_category, typing_args, as_objects)
+                    value = parse_typing(
+                        _type,
+                        value,
+                        _encoder,
+                        field_category,
+                        typing_args,
+                        typeinfo=_typeinfo,
+                        as_objects=as_objects
+                    )
                 setattr(obj, name, value)
                 # then, call the validation process:
                 if (error := _validation_(name, value, f, _type, meta, field_category)):
