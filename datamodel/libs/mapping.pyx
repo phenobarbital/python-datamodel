@@ -9,7 +9,7 @@ if sys.version_info < (3, 10):
     from typing_extensions import ParamSpec, TypedDict, get_type_hints
 else:
     from typing import ParamSpec, TypedDict
-from ..converters import parse_basic, parse_type
+from ..converters import parse_basic
 from ..functions import is_primitive
 
 
