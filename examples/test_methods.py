@@ -33,7 +33,7 @@ print('=== Nested DataClasses: ')
 
 
 class Foo(BaseModel):
-    value: Union[List[int], int]
+    value: Union[int, List[int]]
 
 
 class Bar(BaseModel):
@@ -48,3 +48,6 @@ assert instance.is_valid() or 'Not Valid'
 print('Valid: ', instance.is_valid())
 assert instance == Bar(foo=Foo(value=[1, 2]))
 print('EQ: ', instance == Bar(foo=Foo(value=[1, 2])))
+
+f1 = Foo(value=3)
+print('Foo > ', f1, 'Value: ', f1.value)

@@ -5,7 +5,7 @@ from datamodel import BaseModel
 
 
 class Foo(BaseModel):
-    value: Union[List[int], int]
+    value: Union[int, List[int]]
 
 
 class Bar(BaseModel):
@@ -22,6 +22,7 @@ def test_nested_dataclasses():
 
     ### check Foo value:
     assert instance.foo.value == [1, 2]
+    assert isinstance(instance.foo.value, list)
 
     # Assert that the instances are equal
     assert instance == Bar(foo=Foo(value=[1, 2]))

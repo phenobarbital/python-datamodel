@@ -376,8 +376,12 @@ cdef object _parse_list_type(object T, object data, object encoder, object args)
     cdef object arg_type = args[0]
     cdef list result = []
 
+    if data is None:
+        return []   # short-circuit
+
     if not isinstance(data, (list, tuple)):
         data = [data]
+        # raise ValueError(f"Expected list for {T} but got {type(data).__name__}")
 
     # If it's a dataclass
     if is_dataclass(arg_type):
@@ -420,7 +424,6 @@ cdef object _parse_builtin_type(object T, object data, object encoder):
             return conv(data)
         except KeyError:
             # attempt direct construction:
-            # if inspect.isclass(T):
             if isinstance(T, type):
                 try:
                     if isinstance(data, dict):
@@ -606,7 +609,15 @@ cpdef object parse_basic(object T, object data, object encoder = None):
                 f"Error parsing type {T}, {e}"
             )
 
-cdef object _parse_typing_type(object T, object name, object data, object encoder, object origin, object args):
+cdef object _parse_typing_type(
+    object T,
+    object name,
+    object data,
+    object encoder,
+    object origin,
+    object args,
+    object as_objects=False,
+):
     """
     Handle field_type='typing' scenario.
     """
@@ -629,7 +640,14 @@ cdef object _parse_typing_type(object T, object name, object data, object encode
 
     return data
 
-cdef object _parse_list_typing(tuple type_args, object data, object encoder, object origin, object args):
+cdef object _parse_list_typing(
+    tuple type_args,
+    object data,
+    object encoder,
+    object origin,
+    object args,
+    object as_objects=False
+):
     """
     Handle List[T] logic, trying to reduce overhead from repeated lookups.
     """
@@ -708,7 +726,43 @@ cdef object _parse_optional_union(object T, object data, object encoder, object 
         pass
     return data
 
-cpdef object parse_typing(object T, object data, object encoder=None, str field_type=None, object typing_args=None):
+cdef object _parse_union_type(
+    object T,
+    object name,
+    object data,
+    object encoder,
+    object origin,
+    object targs,
+    str field_type=None
+):
+    """
+    Attempt each type in the Union until one parses successfully
+    or raise an error if all fail.
+    """
+    cdef object errors = []
+    for arg_type in targs:
+        try:
+            if isinstance(data, list):
+                result = _parse_list_type(arg_type, data, encoder, targs)
+            else:
+                # fallback to builtin parse
+                result = parse_typing(arg_type, data, encoder, field_type=field_type)
+            return result
+        except Exception as exc:
+            errors.append(str(exc))
+
+    # If we get here, all union attempts failed
+    raise ValueError(f"Union parse failed for data={data}, errors={errors}")
+
+
+cpdef object parse_typing(
+    object T,
+    object data,
+    object encoder=None,
+    str field_type=None,
+    object typing_args=None,
+    object as_objects = False,
+):
     """
     Parse a value to a typing type.
     """
@@ -725,10 +779,17 @@ cpdef object parse_typing(object T, object data, object encoder=None, str field_
         origin = get_origin(T)
         targs = get_args(T)
 
+    if data is None:
+        return None
+
+    if origin is Union and isinstance(data, list):
+        return _parse_union_type(T, name, data, encoder, origin, targs, field_type)
+
+    if is_dataclass(T):
+        result = _handle_dataclass_type(name, data, T, as_objects)
     # Field type shortcuts
-    if field_type == 'typing':
-        # result = data
-        result = _parse_typing_type(T, name, data, encoder, origin, targs)
+    elif field_type == 'typing':
+        result = _parse_typing_type(T, name, data, encoder, origin, targs, as_objects)
     elif origin is dict and isinstance(data, dict):
         result = _parse_dict_type(T, data, encoder, targs)
     elif origin is list:
@@ -764,7 +825,7 @@ cdef object _handle_dataclass_type(
             return value
         if isinstance(value, dict):
             return _type(**value)
-        if isinstance(value, list):
+        if isinstance(value, (list, tuple)):
             return _type(*value)
         else:
             # If a converter exists for this type, use it:
@@ -871,7 +932,7 @@ cpdef dict process_attributes(object obj, list columns):
             _default = f.default
 
             # Check if object is empty
-            if is_empty(value):
+            if is_empty(value) and not isinstance(value, list):
                 value = f.default_factory if isinstance(
                 _default, (_MISSING_TYPE)) else _default
                 setattr(obj, name, value)
@@ -893,14 +954,14 @@ cpdef dict process_attributes(object obj, list columns):
                         else:
                             value = _handle_dataclass_type(name, value, _type, as_objects, None)
                 elif field_category == 'typing':
-                    value = parse_typing(_type, value, _encoder, field_category, typing_args)
+                    value = parse_typing(_type, value, _encoder, field_category, typing_args, as_objects)
                 elif isinstance(value, list) and hasattr(_type, '__args__'):
                     if as_objects is True:
                         value = _handle_list_of_dataclasses(name, value, _type, obj)
                     else:
                         value = _handle_list_of_dataclasses(name, value, _type, None)
                 else:
-                   value = parse_typing(_type, value, _encoder, field_category, typing_args)
+                    value = parse_typing(_type, value, _encoder, field_category, typing_args, as_objects)
                 setattr(obj, name, value)
                 # then, call the validation process:
                 if (error := _validation_(name, value, f, _type, meta, field_category)):
