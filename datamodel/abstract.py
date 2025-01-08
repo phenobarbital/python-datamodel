@@ -184,6 +184,7 @@ class ModelMeta(type):
                     # get_origin/get_args repeatedly:
                     origin = get_origin(_type)
                     args = get_args(_type)
+                    _default = df.default
                     _is_dc = is_dataclass(_type)
                     _is_prim = is_primitive(_type)
                     _is_typing = hasattr(_type, '__module__') and _type.__module__ == 'typing'
@@ -194,7 +195,8 @@ class ModelMeta(type):
                         "type_args": getattr(_type, '__args__', None),
                         "is_dataclass": _is_dc,
                         "is_primitive": _is_prim,
-                        "is_typing": _is_typing
+                        "is_typing": _is_typing,
+                        "default_callable": callable(_default)
                     }
 
                     # check type of field:

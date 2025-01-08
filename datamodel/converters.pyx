@@ -438,127 +438,6 @@ cdef object _parse_builtin_type(object T, object data, object encoder):
         except (TypeError, ValueError) as e:
             raise ValueError(f"Error type {T}: {e}") from e
 
-cpdef parse_type(object T, object data, object encoder = None, str field_type = None):
-    cdef object origin = get_origin(T)
-    cdef tuple args = None
-    cdef str type_name = getattr(T, '_name', None)
-    cdef object type_args = getattr(T, '__args__', None)
-
-    if field_type == 'typing':
-        args = None
-        try:
-            args = type_args
-        except AttributeError:
-            pass
-        if type_name == 'Dict' and isinstance(data, dict):
-            if args:
-                return {k: parse_type(type_args[1], v) for k, v in data.items()}
-        elif type_name == 'List':
-            if not isinstance(data, (list, tuple)):
-                data = [data]
-            arg_type = args[0]
-            if arg_type.__module__ == 'typing': # nested typing
-                try:
-                    t = arg_type.__args__[0]
-                    if is_dataclass(t):
-                        result = []
-                        for x in data:
-                            if isinstance(x, dict):
-                                result.append(t(**x))
-                            elif isinstance(x, (list, tuple)):
-                                result.append(t(*x))
-                            else:
-                                result.append(t())
-                        return result
-                    else:
-                        return data
-                except AttributeError:
-                    return data # data -as is-
-            elif is_dataclass(arg_type):
-                if isinstance(data, list):
-                    result = []
-                    for d in data:
-                        # is already a dataclass:
-                        if is_dataclass(d):
-                            result.append(d)
-                        elif isinstance(d, list):
-                            result.append(arg_type(*d))
-                        elif isinstance(d, dict):
-                            result.append(arg_type(**d))
-                        else:
-                            result.append(arg_type(d))
-                return result
-            else:
-                result = []
-                if is_iterable(data):
-                    for item in data:
-                        # escalar value:
-                        converted_item = parse_type(arg_type, item, encoder)
-                        result.append(converted_item)
-                    return result
-                return data
-        elif type_name is None or type_name in ('Optional', 'Union'):
-            # origin = get_origin(T)
-            args = get_args(T)
-            # Handling Optional types
-            if origin == Union and type(None) in args:
-                if data is None:
-                    return None
-                else:
-                    non_none_arg = args[0] if args[1] is type(None) else args[1]
-                    return parse_type(non_none_arg, data, encoder)
-            try:
-                t = args[0]
-                if is_dataclass(t):
-                    if isinstance(data, dict):
-                        data = t(**data)
-                    elif isinstance(data, (list, tuple)):
-                        data = t(*data)
-                    else:
-                        ## is already a dataclass, returning
-                        return data
-                elif callable(t):
-                    if t.__module__ == 'typing': # nested typing
-                        # there is also a nested typing:
-                        if t._name == 'List' and isinstance(data, list):
-                            arg = t.__args__[0]
-                            if is_dataclass(arg):
-                                result = []
-                                for x in data:
-                                    if isinstance(x, dict):
-                                        result.append(arg(**x))
-                                    else:
-                                        result.append(arg(*x))
-                                return result
-                        return data
-                    else:
-                        try:
-                            if t == str:
-                                return data
-                            fn = encoders[t]
-                            try:
-                                if data is not None:
-                                    data = fn(data)
-                            except TypeError as ex:
-                                pass
-                            except (ValueError, RuntimeError) as exc:
-                                raise ValueError(
-                                    f"Model: Error parsing {T}, {exc}"
-                                )
-                        except KeyError:
-                            pass
-                return data
-            except KeyError:
-                pass
-    elif origin is dict and isinstance(data, dict):
-        return _parse_dict_type(T, data, encoder, args)
-    elif origin is list:
-        return _parse_list_type(T, data, encoder, args)
-    elif origin is not None:
-        # Other typing constructs can be handled here
-        return data
-    else:
-        return _parse_builtin_type(T, data, encoder)
 
 cdef bint is_callable(object value) nogil:
     """
@@ -875,7 +754,7 @@ cdef object _handle_list_of_dataclasses(
         pass
     return value
 
-cdef object _handle_default_value(object obj, str name, object value, object default_func):
+cdef object _handle_default_value(object obj, str name, object value, object default_func, object default_is_callable):
     """Handle default value of fields."""
     # If value is callable, try calling it directly
     if is_callable(value):
@@ -890,7 +769,7 @@ cdef object _handle_default_value(object obj, str name, object value, object def
         return new_val
 
     # If f.default is callable and value is None
-    if is_callable(default_func) and value is None:
+    if default_is_callable and value is None:
         try:
             new_val = default_func()
         except (AttributeError, RuntimeError, TypeError):
@@ -922,6 +801,7 @@ cpdef dict process_attributes(object obj, list columns):
     cdef dict typing_args = obj.__typing_args__
     cdef bint is_dc = False
     cdef dict errors = {}
+    cdef dict _typeinfo = {}
 
     for name, f in columns:
         try:
@@ -930,6 +810,9 @@ cpdef dict process_attributes(object obj, list columns):
             _type = f.type
             _encoder = metadata.get('encoder')
             _default = f.default
+            _typeinfo = getattr(f, '_typeinfo_', {})
+            is_dc = _typeinfo.get('is_dataclass', False)
+            _default_callable = _typeinfo.get('default_callable', False)
 
             # Check if object is empty
             if is_empty(value) and not isinstance(value, list):
@@ -937,7 +820,7 @@ cpdef dict process_attributes(object obj, list columns):
                 _default, (_MISSING_TYPE)) else _default
                 setattr(obj, name, value)
             if _default is not None:
-                value = _handle_default_value(obj, name, value, _default)
+                value = _handle_default_value(obj, name, value, _default, _default_callable)
             # Use the precomputed field type category:
             field_category = field_types.get(name, 'complex')
             try:
@@ -947,14 +830,22 @@ cpdef dict process_attributes(object obj, list columns):
                     if isinstance(value, int) and _type == int:
                         continue  # short-circuit
                     value = parse_basic(_type, value, _encoder)
+                elif field_category == 'typing':
+                    value = parse_typing(
+                        _type,
+                        value,
+                        _encoder,
+                        field_category,
+                        typing_args,
+                        _typeinfo,
+                        as_objects
+                    )
                 elif field_category == 'dataclass':
                     if no_nesting is False:
                         if as_objects is True:
                             value = _handle_dataclass_type(name, value, _type, as_objects, obj)
                         else:
                             value = _handle_dataclass_type(name, value, _type, as_objects, None)
-                elif field_category == 'typing':
-                    value = parse_typing(_type, value, _encoder, field_category, typing_args, as_objects)
                 elif isinstance(value, list) and hasattr(_type, '__args__'):
                     if as_objects is True:
                         value = _handle_list_of_dataclasses(name, value, _type, obj)
@@ -1032,3 +923,126 @@ cdef object _field_checks_(object f, str name, object value, object meta):
     except KeyError:
         return
     return
+
+
+cpdef parse_type(object T, object data, object encoder = None, str field_type = None):
+    cdef object origin = get_origin(T)
+    cdef tuple args = None
+    cdef str type_name = getattr(T, '_name', None)
+    cdef object type_args = getattr(T, '__args__', None)
+
+    if field_type == 'typing':
+        args = None
+        try:
+            args = type_args
+        except AttributeError:
+            pass
+        if type_name == 'Dict' and isinstance(data, dict):
+            if args:
+                return {k: parse_type(type_args[1], v) for k, v in data.items()}
+        elif type_name == 'List':
+            if not isinstance(data, (list, tuple)):
+                data = [data]
+            arg_type = args[0]
+            if arg_type.__module__ == 'typing': # nested typing
+                try:
+                    t = arg_type.__args__[0]
+                    if is_dataclass(t):
+                        result = []
+                        for x in data:
+                            if isinstance(x, dict):
+                                result.append(t(**x))
+                            elif isinstance(x, (list, tuple)):
+                                result.append(t(*x))
+                            else:
+                                result.append(t())
+                        return result
+                    else:
+                        return data
+                except AttributeError:
+                    return data # data -as is-
+            elif is_dataclass(arg_type):
+                if isinstance(data, list):
+                    result = []
+                    for d in data:
+                        # is already a dataclass:
+                        if is_dataclass(d):
+                            result.append(d)
+                        elif isinstance(d, list):
+                            result.append(arg_type(*d))
+                        elif isinstance(d, dict):
+                            result.append(arg_type(**d))
+                        else:
+                            result.append(arg_type(d))
+                return result
+            else:
+                result = []
+                if is_iterable(data):
+                    for item in data:
+                        # escalar value:
+                        converted_item = parse_type(arg_type, item, encoder)
+                        result.append(converted_item)
+                    return result
+                return data
+        elif type_name is None or type_name in ('Optional', 'Union'):
+            # origin = get_origin(T)
+            args = get_args(T)
+            # Handling Optional types
+            if origin == Union and type(None) in args:
+                if data is None:
+                    return None
+                else:
+                    non_none_arg = args[0] if args[1] is type(None) else args[1]
+                    return parse_type(non_none_arg, data, encoder)
+            try:
+                t = args[0]
+                if is_dataclass(t):
+                    if isinstance(data, dict):
+                        data = t(**data)
+                    elif isinstance(data, (list, tuple)):
+                        data = t(*data)
+                    else:
+                        ## is already a dataclass, returning
+                        return data
+                elif callable(t):
+                    if t.__module__ == 'typing': # nested typing
+                        # there is also a nested typing:
+                        if t._name == 'List' and isinstance(data, list):
+                            arg = t.__args__[0]
+                            if is_dataclass(arg):
+                                result = []
+                                for x in data:
+                                    if isinstance(x, dict):
+                                        result.append(arg(**x))
+                                    else:
+                                        result.append(arg(*x))
+                                return result
+                        return data
+                    else:
+                        try:
+                            if t == str:
+                                return data
+                            fn = encoders[t]
+                            try:
+                                if data is not None:
+                                    data = fn(data)
+                            except TypeError as ex:
+                                pass
+                            except (ValueError, RuntimeError) as exc:
+                                raise ValueError(
+                                    f"Model: Error parsing {T}, {exc}"
+                                )
+                        except KeyError:
+                            pass
+                return data
+            except KeyError:
+                pass
+    elif origin is dict and isinstance(data, dict):
+        return _parse_dict_type(T, data, encoder, args)
+    elif origin is list:
+        return _parse_list_type(T, data, encoder, args)
+    elif origin is not None:
+        # Other typing constructs can be handled here
+        return data
+    else:
+        return _parse_builtin_type(T, data, encoder)
