@@ -73,7 +73,7 @@ class Field(ff):
         'description',
         'default',
         'default_factory',
-        '_typeinfo',
+        '_typeinfo_',
         'repr',
         'hash',
         'init',
@@ -113,7 +113,7 @@ class Field(ff):
     ):
         self.name = None
         self.type = None
-        self._typeinfo = {}
+        self._typeinfo_ = {}
         self.compare = kwargs.pop("compare", True)
         self.init = kwargs.pop("init", True)
         self.repr = kwargs.pop("repr", True)

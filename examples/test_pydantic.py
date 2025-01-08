@@ -184,7 +184,7 @@ def create_user3():
 
 
 print('Test with DataModel: ')
-time = timeit.timeit(create_user3, number=1000)
+time = timeit.timeit(create_user3, number=1)
 print(f"Execution time: {time:.6f} seconds")
 # runner.bench_func('datamodel', create_user2)
 print(user, user.friends)

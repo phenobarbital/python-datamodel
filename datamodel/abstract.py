@@ -179,25 +179,42 @@ class ModelMeta(type):
                         df = Field(required=False, type=_type, default=df)
                     df.name = field
                     df.type = _type
-                    cols[field] = df
-                    # check type of field:
-                    if is_primitive(_type):
-                        _types_local[field] = 'primitive'
-                    elif is_dataclass(_type):
-                        _types_local[field] = 'dataclass'
-                    elif hasattr(_type, '__module__') and _type.__module__ == 'typing':  # noqa
-                        _types_local[field] = 'typing'
-                    elif isclass(_type):
-                        _types_local[field] = 'class'
-                    else:
-                        _types_local[field] = 'complex'
 
-                    # Store them in a dict keyed by field name:
+                    # Cache reflection info so we DON’T need to call
+                    # get_origin/get_args repeatedly:
                     origin = get_origin(_type)
                     args = get_args(_type)
+                    _is_dc = is_dataclass(_type)
+                    _is_prim = is_primitive(_type)
+                    _is_typing = hasattr(_type, '__module__') and _type.__module__ == 'typing'
+
+                    df._typeinfo_ = {
+                        "origin": origin,
+                        "args": args,
+                        "type_args": getattr(_type, '__args__', None),
+                        "is_dataclass": _is_dc,
+                        "is_primitive": _is_prim,
+                        "is_typing": _is_typing
+                    }
+
+                    # check type of field:
+                    if _is_prim:
+                        _type_category = 'primitive'
+                    elif _is_dc:
+                        _type_category = 'dataclass'
+                    elif _is_typing:  # noqa
+                        _type_category = 'typing'
+                    elif isclass(_type):
+                        _type_category = 'class'
+                    else:
+                        _type_category = 'complex'
+                    _types_local[field] = _type_category
+
+                    # Store them in a dict keyed by field name:
                     _typing_args[field] = (origin, args)
                     # Assign the field object to the attrs so dataclass can pick it up
                     attrs[field] = df
+                    cols[field] = df
                 return cols, _types_local, _typing_args, aliases
 
             # Initialize the fields
@@ -270,6 +287,7 @@ class ModelMeta(type):
         dc.__initialised__ = False
         dc.__field_types__ = _types
         dc.__aliases__ = aliases
+        dc.__typing_args__ = _typing_args
         dc.modelName = dc.__name__
 
         # Override __setattr__ method
