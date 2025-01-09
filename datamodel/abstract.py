@@ -5,7 +5,6 @@ from collections.abc import Callable
 import types
 from inspect import isclass
 from dataclasses import dataclass
-from typing_extensions import TypedDict
 from .parsers.json import JSONContent
 from .converters import parse_basic, parse_type
 from .fields import Field
@@ -79,11 +78,11 @@ def _dc_method_setattr_(
                 if field_category == 'primitive':
                     new_val = parse_basic(_type, value, _encoder)
                 elif field_category == 'typing':
-                    new_val = parse_type(_type, value, _encoder, field_category)
+                    new_val = parse_type(field_obj, _type, value, _encoder)
                 elif field_category in ('dataclass', 'class', ):
                     new_val = value
                 else:
-                    new_val = parse_type(_type, value, _encoder, field_category)
+                    new_val = parse_type(field_obj, _type, value, _encoder)
                 # Assign the new value to the field
                 value = new_val
             except Exception as e:
@@ -189,13 +188,15 @@ class ModelMeta(type):
                     _is_prim = is_primitive(_type)
                     _is_typing = hasattr(_type, '__module__') and _type.__module__ == 'typing'
 
+                    # Store the type info in the field object:
+                    df.is_dc = _is_dc
+                    df.is_primitive = _is_prim
+                    df.is_typing = _is_typing
+                    df.origin = origin
+                    df.args = args
+                    df.type_args = getattr(_type, '__args__', None)
+
                     df._typeinfo_ = {
-                        "origin": origin,
-                        "args": args,
-                        "type_args": getattr(_type, '__args__', None),
-                        "is_dataclass": _is_dc,
-                        "is_primitive": _is_prim,
-                        "is_typing": _is_typing,
                         "default_callable": callable(_default)
                     }
 
@@ -211,6 +212,7 @@ class ModelMeta(type):
                     else:
                         _type_category = 'complex'
                     _types_local[field] = _type_category
+                    df._type_category = _type_category
 
                     # Store them in a dict keyed by field name:
                     _typing_args[field] = (origin, args)
@@ -220,7 +222,9 @@ class ModelMeta(type):
                 return cols, _types_local, _typing_args, aliases
 
             # Initialize the fields
-            cols, _types, _typing_args, aliases = _initialize_fields(attrs, annotations, strict)
+            cols, _types, _typing_args, aliases = _initialize_fields(
+                attrs, annotations, strict
+            )
         else:
             # if no __annotations__, cols is empty:
             cols = OrderedDict()

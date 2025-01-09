@@ -67,9 +67,17 @@ class Field(ff):
     Field.
     description: Extending Field definition from Dataclass Field to DataModel.
     """
+
     __slots__ = (
+        'is_dc',
+        'is_primitive',
+        'is_typing',
+        'origin',
+        'args',
+        'type_args',
         'name',
         'type',
+        '_type_category',
         'description',
         'default',
         'default_factory',
@@ -114,6 +122,13 @@ class Field(ff):
         self.name = None
         self.type = None
         self._typeinfo_ = {}
+        self._type_category = 'complex'
+        self.is_dc: bool = False
+        self.is_primitive: bool = False
+        self.is_typing: bool = False
+        self.type_args: Any = None
+        self.origin: Any = None
+        self.args: Any = None
         self.compare = kwargs.pop("compare", True)
         self.init = kwargs.pop("init", True)
         self.repr = kwargs.pop("repr", True)
@@ -240,6 +255,10 @@ class Field(ff):
                 return DB_TYPES[self.type]
             except KeyError:
                 return 'varchar'
+
+    @property
+    def typeinfo(self) -> dict:
+        return self._typeinfo_
 
     @property
     def primary_key(self):
