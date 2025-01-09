@@ -68,7 +68,10 @@ class Employee(BaseModel):
 
 class BadgeAssign(BaseModel):
     reward_id: Reward = Field(
-        required=True, fk='reward_id|reward', api='rewards', label="Badge"
+        required=True,
+        fk='reward_id|reward',
+        api='rewards',
+        label="Badge"
     )
     reward: str = Field(repr=False)
     receiver_email: Employee = Field(
@@ -81,7 +84,8 @@ class BadgeAssign(BaseModel):
             "url": "api/v1/adp_employees",
             "key": "job_code",
             "value": "job_code_title"
-        }
+        },
+        default="Job Code"
     )
     # receiver_user: User = Field(
     #     required=True,
@@ -105,5 +109,6 @@ class BadgeAssign(BaseModel):
         strict = True
 
 schema = BadgeAssign.schema(as_dict=False)
+print('\n================================')
 print(schema)
 # pp.pprint(schema)

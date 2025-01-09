@@ -3,7 +3,7 @@ from typing import Any, Dict
 from enum import Enum, EnumMeta
 # Dataclass
 import inspect
-from dataclasses import asdict as as_dict, dataclass, make_dataclass
+from dataclasses import asdict as as_dict, dataclass, make_dataclass, _MISSING_TYPE
 from operator import attrgetter
 from orjson import OPT_INDENT_2
 from datamodel.fields import fields
@@ -427,9 +427,8 @@ class ModelMixin:
             'label', 'validator', 'encoder', 'decoder',
             'default_factory', 'type'
         ]
-        _meta = {k: v for k, v in _metadata.items() if k not in _rejected}
 
-        if _meta:
+        if _meta := {k: v for k, v in _metadata.items() if k not in _rejected}:
             field_schema["attrs"] = {
                 **field_schema["attrs"],
                 **_meta
@@ -447,11 +446,9 @@ class ModelMixin:
     ):
         """Handle default values, secret fields, and min/max constraints."""
         if field.default:
-            d = field.default
-            if is_callable(d):
-                field_schema['default'] = f"fn:{d!r}"
-            else:
-                field_schema['default'] = f"{d!s}"
+            if not isinstance(field.default, _MISSING_TYPE) and not callable(field.default):
+                d = field.default
+                field_schema['default'] = f"fn:{d!r}" if is_callable(d) else f"{d!s}"
 
         if secret is not None:
             field_schema['secret'] = secret
@@ -565,8 +562,8 @@ class ModelMixin:
         Args:
             as_dict (bool, optional): If True,
                 returns the schema as a Python dictionary.
-                                      If False,
-                returns the schema as a JSON-encoded string. Defaults to False.
+                If False, returns the schema as a JSON-encoded string.
+                Defaults to False.
             locale (Any, optional):
                 The locale to use for internationalization of schema
                 elements like descriptions and labels. Defaults to None.
@@ -616,9 +613,7 @@ class ModelMixin:
         # Cache the computed schema for subsequent calls
         cls.__computed_schema__ = base_schema
 
-        if as_dict:
-            return base_schema
-        return json_encoder(base_schema)
+        return base_schema if as_dict else json_encoder(base_schema)
 
     def as_schema(self, top_level: bool = True) -> dict:
         """as_schema.
@@ -693,7 +688,7 @@ class ModelMixin:
         result = None
         clsname = cls.__name__
         schema = cls.Meta.schema
-        table = cls.Meta.name if cls.Meta.name else clsname.lower()
+        table = cls.Meta.name or clsname.lower()
         columns = cls.columns(cls).items()
         if dialect == 'json':
             cols = {}
