@@ -103,6 +103,7 @@ class Field(ff):
         'ge',
         'schema_extra',
         'alias',
+        '_encoder_fn'
     )
 
     def __init__(
@@ -125,6 +126,7 @@ class Field(ff):
         self._type_category = 'complex'
         self.is_dc: bool = False
         self.is_primitive: bool = False
+        self._encoder_fn: Optional[callable] = None
         self.is_typing: bool = False
         self.type_args: Any = None
         self.origin: Any = None

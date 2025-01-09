@@ -6,7 +6,7 @@ import types
 from inspect import isclass
 from dataclasses import dataclass
 from .parsers.json import JSONContent
-from .converters import parse_basic, parse_type
+from .converters import encoders, parse_basic, parse_type
 from .fields import Field
 from .functions import (
     is_dataclass,
@@ -178,6 +178,7 @@ class ModelMeta(type):
                         df = Field(required=False, type=_type, default=df)
                     df.name = field
                     df.type = _type
+                    df._encoder_fn = encoders.get(_type, None)
 
                     # Cache reflection info so we DON’T need to call
                     # get_origin/get_args repeatedly:

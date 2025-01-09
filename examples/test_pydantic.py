@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from typing import List, Optional
+from typing import List, Optional, Dict, Union
 from dataclasses import is_dataclass
 import timeit
 from pydantic import BaseModel
@@ -18,7 +18,11 @@ external_user = {
             "provider": "email",
             "address": "test@example.com"
         }
-    ]
+    ],
+    "attributes": {
+        "age": 23,
+        "height": 1.78
+    }
 }
 
 print('============= PYDANTIC =============')
@@ -37,6 +41,7 @@ class User(BaseModel):
     signup_ts: Optional[datetime] = None
     friends: List[int] = []
     accounts: List[Account] = []
+    attributes: Dict[str, Union[int, float]] = {}
 
 user = User(**external_user)
 print(user)
@@ -98,6 +103,7 @@ class User(Model):
     signup_ts: Optional[datetime] = None
     friends: List[int] = Field(default_factory=list)
     accounts: List[Account] = Field(default_factory=list)
+    attributes: Dict[str, Union[int, float]] = Field(default_factory=dict)
 
 user = User(**external_user)
 print(user)
@@ -119,7 +125,7 @@ external_user = {
     'id': '123',
     'signup_ts': '2017-06-01 12:22',
     'friends': [1, '2', b'3'],
-    'born': '23-10-1978',
+    'born': '1978-10-23',
     "accounts": [
         {
             "provider": "twilio",
@@ -129,7 +135,11 @@ external_user = {
             "provider": "email",
             "address": "test@example.com"
         }
-    ]
+    ],
+    "attributes": {
+        "age": 23,
+        "height": 1.78
+    }
 }
 
 from datamodel import BaseModel, Field
@@ -151,6 +161,7 @@ class NewUser(BaseModel):
     born: Optional[date] = None
     friends: List[int] = Field(default_factory=list)
     accounts: List[Account] = Field(default_factory=list)
+    attributes: Dict[str, Union[int, float]] = Field(default_factory=dict)
 
 user = NewUser(**external_user)
 print(user)
