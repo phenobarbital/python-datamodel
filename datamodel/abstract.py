@@ -5,9 +5,8 @@ from collections.abc import Callable
 import types
 from inspect import isclass
 from dataclasses import dataclass
-from typing_extensions import TypedDict
 from .parsers.json import JSONContent
-from .converters import parse_basic, parse_type
+from .converters import encoders, parse_basic, parse_type
 from .fields import Field
 from .functions import (
     is_dataclass,
@@ -79,11 +78,11 @@ def _dc_method_setattr_(
                 if field_category == 'primitive':
                     new_val = parse_basic(_type, value, _encoder)
                 elif field_category == 'typing':
-                    new_val = parse_type(_type, value, _encoder, field_category)
+                    new_val = parse_type(field_obj, _type, value, _encoder)
                 elif field_category in ('dataclass', 'class', ):
                     new_val = value
                 else:
-                    new_val = parse_type(_type, value, _encoder, field_category)
+                    new_val = parse_type(field_obj, _type, value, _encoder)
                 # Assign the new value to the field
                 value = new_val
             except Exception as e:
@@ -179,29 +178,54 @@ class ModelMeta(type):
                         df = Field(required=False, type=_type, default=df)
                     df.name = field
                     df.type = _type
-                    cols[field] = df
-                    # check type of field:
-                    if is_primitive(_type):
-                        _types_local[field] = 'primitive'
-                    elif is_dataclass(_type):
-                        _types_local[field] = 'dataclass'
-                    elif hasattr(_type, '__module__') and _type.__module__ == 'typing':  # noqa
-                        _types_local[field] = 'typing'
-                    elif isclass(_type):
-                        _types_local[field] = 'class'
-                    else:
-                        _types_local[field] = 'complex'
+                    df._encoder_fn = encoders.get(_type, None)
 
-                    # Store them in a dict keyed by field name:
+                    # Cache reflection info so we DON’T need to call
+                    # get_origin/get_args repeatedly:
                     origin = get_origin(_type)
                     args = get_args(_type)
+                    _default = df.default
+                    _is_dc = is_dataclass(_type)
+                    _is_prim = is_primitive(_type)
+                    _is_typing = hasattr(_type, '__module__') and _type.__module__ == 'typing'
+
+                    # Store the type info in the field object:
+                    df.is_dc = _is_dc
+                    df.is_primitive = _is_prim
+                    df.is_typing = _is_typing
+                    df.origin = origin
+                    df.args = args
+                    df.type_args = getattr(_type, '__args__', None)
+
+                    df._typeinfo_ = {
+                        "default_callable": callable(_default)
+                    }
+
+                    # check type of field:
+                    if _is_prim:
+                        _type_category = 'primitive'
+                    elif _is_dc:
+                        _type_category = 'dataclass'
+                    elif _is_typing:  # noqa
+                        _type_category = 'typing'
+                    elif isclass(_type):
+                        _type_category = 'class'
+                    else:
+                        _type_category = 'complex'
+                    _types_local[field] = _type_category
+                    df._type_category = _type_category
+
+                    # Store them in a dict keyed by field name:
                     _typing_args[field] = (origin, args)
                     # Assign the field object to the attrs so dataclass can pick it up
                     attrs[field] = df
+                    cols[field] = df
                 return cols, _types_local, _typing_args, aliases
 
             # Initialize the fields
-            cols, _types, _typing_args, aliases = _initialize_fields(attrs, annotations, strict)
+            cols, _types, _typing_args, aliases = _initialize_fields(
+                attrs, annotations, strict
+            )
         else:
             # if no __annotations__, cols is empty:
             cols = OrderedDict()
@@ -270,6 +294,7 @@ class ModelMeta(type):
         dc.__initialised__ = False
         dc.__field_types__ = _types
         dc.__aliases__ = aliases
+        dc.__typing_args__ = _typing_args
         dc.modelName = dc.__name__
 
         # Override __setattr__ method

@@ -149,19 +149,16 @@ class Organization(BaseModel):
 def create_organization(
     name: str,
     value: Any,
-    target_type: Any,
+    obj: Any,
     parent_data: BaseModel
 ) -> Organization:
-    print('Organization Target: ', target_type, value, name, parent_data)
-    org_name = None
-    if parent_data:
-        org_name = parent_data.get('org_name', None)
+    org_name = parent_data.get('org_name', None) if parent_data else None
     args = {
         name: value,
         "org_name": org_name,
         "status": True,
     }
-    return target_type(**args)
+    return obj(**args)
 
 BaseModel.register_converter(Organization, create_organization, 'orgid')
 

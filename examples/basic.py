@@ -69,7 +69,19 @@ class Address(BaseModel):
     rect: List[int] = Field(factory=default_rect)
     prueba: str = Field(required=False)
 
-addr = Address(street="Beato Juan de Avila", location=(18.1, 22.1), zipcode=45510, box=[(2, 10), (4, 8)], rect=[1, 2, 3, 4])
+try:
+    addr = Address(
+        street="Beato Juan de Avila",
+        location=(18.1, 22.1),
+        zipcode=45510,
+        box=[(2, 10), (4, 8)],
+        rect=[1, 2, 3, 4]
+    )
+except ValidationError as e:
+    print('==')
+    print(e.payload)
+    print('==')
+
 print(addr)
 print('IS a Dataclass?: ', is_dataclass(addr))
 

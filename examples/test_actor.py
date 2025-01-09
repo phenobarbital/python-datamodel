@@ -1,13 +1,36 @@
 import uuid
 from typing import List, Union
 from datamodel import BaseModel, Field, Column
+from datamodel.exceptions import ValidationError
 
 DEFAULT_RECIPIENT = {
     "name": "Jesus Lara",
     "account": {
         "address": "jesuslarag@gmail.com",
-        "phone": "+34692817379"
+        "phone": "+347777777"
     }
+}
+
+DEFAULT_MULTIPLE_ACCOUNTS = {
+    "name": "Jesus Lara",
+    "account": [
+        {
+            "provider": "email",
+            "address": "jesuslarag@gmail.com"
+        },
+        {
+            "provider": "sms",
+            "phone": "+347777777"
+        },
+        {
+            "provider": "whatsapp",
+            "phone": "+347777777"
+        },
+        {
+            "provider": "teams",
+            "phone": "jlara@teams.com"
+        }
+    ]
 }
 
 def auto_uuid(*args, **kwargs):
@@ -37,6 +60,17 @@ class Actor(BaseModel):
     def __str__(self) -> str:
         return f'<{self.name}: {self.userid}>'
 
-recipient = Actor(**DEFAULT_RECIPIENT)
-print(recipient)
-print(recipient.account)
+
+def create_actor(payload):
+    try:
+        recipient = Actor(**payload)
+        print(recipient)
+        print('Account: ', recipient.account)
+    except ValidationError as e:
+        print(f"Validation Error: {e.payload}")
+        return
+
+
+if __name__ == "__main__":
+    create_actor(DEFAULT_RECIPIENT)
+    create_actor(DEFAULT_MULTIPLE_ACCOUNTS)

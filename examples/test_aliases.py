@@ -14,7 +14,6 @@ class Store(BaseModel):
         alias_function = to_snakecase
 
 
-
 class ExampleModel(BaseModel):
     # Here, our Python fields are declared in PascalCase.
     StoreId: int = Field(primary_key=True)
