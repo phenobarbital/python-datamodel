@@ -178,7 +178,10 @@ class ModelMeta(type):
                         df = Field(required=False, type=_type, default=df)
                     df.name = field
                     df.type = _type
-                    df._encoder_fn = encoders.get(_type, None)
+                    try:
+                        df._encoder_fn = encoders[_type]
+                    except (TypeError, KeyError):
+                        df._encoder_fn = None
 
                     # Cache reflection info so we DON’T need to call
                     # get_origin/get_args repeatedly:
