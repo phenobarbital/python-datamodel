@@ -156,7 +156,7 @@ class ModelMixin:
         elif isinstance(obj, dict):
             return {
                 key: self.remove_nulls(value) for key, value in obj.items()
-                if value is not None
+                if value is not None and value != {}
             }
         else:
             return obj
