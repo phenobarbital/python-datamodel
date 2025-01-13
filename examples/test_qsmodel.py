@@ -1,13 +1,15 @@
-from typing import Optional
+from typing import List, Optional
 from datetime import datetime
 from datamodel import BaseModel, Field
+from datamodel.exceptions import ValidationError
+
 
 data = {
     'query_slug': 'walmart_mtd_postpaid_to_goal',
     'description': 'walmart_mtd_postpaid_to_goal',
     'conditions': {'filterdate': 'POSTPAID_DATE', 'store_tier': 'null', 'launch_group': 'null'},
     'cond_definition': {'filterdate': 'date', 'store_tier': 'string', 'launch_group': 'string'},
-    'fields': [], 'ordering': [],
+    'fields': ["client_id", "client_name"], 'ordering': [],
     'h_filtering': False,
     'query_raw': 'SELECT {fields}\nFROM walmart.postpaid_metrics({filterdate}, {launch_group}, {store_tier})\n{where_cond}',
     'is_raw': False,
@@ -37,14 +39,14 @@ class QueryModel(BaseModel):
     conditions: Optional[dict] = Field(required=False, db_type='jsonb', default_factory=dict)
     cond_definition: Optional[dict] = Field(required=False, db_type='jsonb', default_factory=dict)
     ## filter and grouping options
-    fields: Optional[list] = Field(required=False, db_type='array')
+    fields: Optional[List[str]] = Field(required=False, db_type='array', default_factory=list)
     filtering: Optional[dict] = Field(required=False, db_type='jsonb', default_factory=dict)
-    ordering: Optional[list] = Field(required=False, db_type='array')
-    grouping: Optional[list] = Field(required=False, db_type='array')
+    ordering: Optional[List[str]] = Field(required=False, db_type='array')
+    grouping: Optional[List[str]] = Field(required=False, db_type='array')
     qry_options: Optional[dict] = Field(required=False, db_type='jsonb')
     h_filtering: bool = Field(required=False, default=False, comment="filtering based on Hierarchical rules.")
     ### Query Information:
-    query_raw: str =  Field(required=False)
+    query_raw: str = Field(required=False)
     is_raw: bool = Field(required=False, default=False)
     is_cached: bool = Field(required=False, default=True)
     provider: str = Field(required=False, default='db')
@@ -63,16 +65,16 @@ class QueryModel(BaseModel):
     # Creation Information:
     created_at: datetime = Field(
         required=False,
-        default=datetime.now(),
+        default=datetime.now,
         db_default='now()'
     )
-    created_by: int = Field(required=False) # TODO: validation for valid user
+    created_by: int = Field(required=False)  # TODO: validation for valid user
     updated_at: datetime = Field(
         required=False,
-        default=datetime.now(),
+        default=datetime.now,
         encoder=rigth_now
     )
-    updated_by: int = Field(required=False) # TODO: validation for valid user
+    updated_by: int = Field(required=False)  # TODO: validation for valid user
 
     class Meta:
         driver = 'pg'
@@ -80,8 +82,11 @@ class QueryModel(BaseModel):
         schema = 'public'
         strict = True
         frozen = False
-        remove_nulls = True # Auto-remove nullable (with null value) fields
+        remove_nulls = True  # Auto-remove nullable (with null value) fields
 
 
-slug = QueryModel(**data)
-print(slug)
+try:
+    slug = QueryModel(**data)
+    print(slug)
+except ValidationError as e:
+    print(e.payload)

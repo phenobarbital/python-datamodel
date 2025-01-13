@@ -15,6 +15,7 @@ import asyncpg.pgproto.pgproto as pgproto
 from cpython.ref cimport PyObject
 from .functions import is_empty, is_dataclass, is_iterable, is_primitive
 from .validation import _validation
+from .fields import Field
 
 
 # Maps a type to a conversion callable
@@ -445,6 +446,22 @@ cdef object _parse_dict_type(
         new_dict[k] = parse_typing(field, val_type, v, encoder, False)
     return new_dict
 
+cdef object _unwrap_optional(object T):
+    """
+    If T is a Union that includes NoneType (i.e. Optional[T]),
+    return the non-None type, else T unchanged.
+    """
+    cdef object orig = get_origin(T)
+    cdef tuple args = None
+    cdef list non_none = []
+    if orig is Union:
+        args = get_args(T)
+        # If exactly one type is not NoneType, return it.
+        non_none = [a for a in args if a is not type(None)]
+        if len(non_none) == 1:
+            return non_none[0]
+    return T, args
+
 cdef object _parse_list_type(
     object field,
     object T,
@@ -722,8 +739,33 @@ cdef object _parse_union_type(
     """
     Attempt each type in the Union until one parses successfully
     or raise an error if all fail.
+    If T is Optional[...] (i.e. a Union with NoneType), unwrap it.
     """
     cdef object errors = []
+    cdef object non_none_arg = None
+    cdef tuple inner_targs = None
+    cdef bint is_typing = False
+    # If the union includes NoneType, unwrap it and use only the non-None type.
+    if origin == Union and type(None) in targs:
+        for arg in targs:
+            if arg is not type(None):
+                non_none_arg = arg
+                break
+        is_typing = hasattr(non_none_arg, '__module__') and non_none_arg.__module__ == 'typing'
+        if non_none_arg is not None and is_typing is True:
+            # Invoke the parse_typing_type
+            field.args = get_args(non_none_arg)
+            field.origin = get_origin(non_none_arg)
+            if isinstance(data, list):
+                return parse_typing(
+                    field,
+                    non_none_arg,
+                    data,
+                    encoder,
+                    False
+                )
+        else:
+            pass
     for arg_type in targs:
         try:
             if isinstance(data, list):
