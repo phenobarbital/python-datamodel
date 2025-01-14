@@ -33,27 +33,24 @@ class Employee(BaseModel):
 
 def test_valid_employee_basic():
     """Test that an Employee can be created with BasicUser as its user_class."""
-    user = BasicUser(username="user", email="email")
-    emp = Employee(user_class=user)
+    emp = Employee(user_class=BasicUser)
     # Verify that the field user_class was correctly set to BasicUser
-    assert isinstance(emp.user_class, BasicUser)
+    assert emp.user_class is BasicUser
 
 def test_valid_employee_pro():
     """Test that an Employee can be created with ProUser as its user_class."""
-    user = ProUser(username="user", email="email")
-    emp = Employee(user_class=user)
-    assert isinstance(emp.user_class, ProUser)
+    emp = Employee(user_class=ProUser)
+    assert emp.user_class is ProUser
 
 def test_invalid_employee_team():
     """Test that assigning a type not allowed (TeamUser) raises a validation error."""
     with pytest.raises(ValidationError) as excinfo:
-        user = User(username="user", email="email")
-        Employee(user_class=user)
+        Employee(user_class=User)
     errors = excinfo.value.payload
     # Check that the error mentions the 'user_class' field and the allowed types.
     assert "user_class" in errors
     error_message = errors["user_class"][0]["error"]
-    assert "subclass" in error_message
+    assert "type" in error_message
 
 # For manual testing when running this file directly:
 if __name__ == "__main__":

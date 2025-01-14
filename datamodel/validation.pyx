@@ -44,6 +44,8 @@ cpdef bool_t is_optional_type(object annotated_type):
     return False
 
 cpdef list _validation(object F, str name, object value, object annotated_type, object val_type, str field_type):
+    cdef bint _valid = False
+
     if not annotated_type:
         annotated_type = F.type
     elif isinstance(annotated_type, Field):
@@ -51,6 +53,11 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
     errors = []
 
     # first: calling (if exists) custom validator:
+    # print('VALIDATION F ', F)
+    # print('VALIDATION NAME ', name)
+    # print('VALIDATION VALUE ', value)
+    # print('VALIDATION ANNOTATED TYPE ', annotated_type)
+
     fn = F.metadata.get('validator', None)
     if fn is not None and callable(fn):
         try:
@@ -104,16 +111,21 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
                 errors.append(
                     f"Field '{name}': expected an awaitable, but got {type(value)}."
                 )
+        elif field_type == 'type':
+            if not isinstance(value, type):
+                errors.append(
+                    _create_error(name, value, f'Invalid type for {annotated_type}.{name}, expected a type', val_type, annotated_type)
+                )
+            inner_types = get_args(F.args[0])
+            for allowed in inner_types:
+                if value is allowed:
+                    break
+            else:
+                expected = ', '.join([str(t) for t in F.args])
+                errors.append(
+                    _create_error(name, value, f'Invalid type for {annotated_type}.{name}, expected a type of {expected}', val_type, annotated_type)
+                )
         elif field_type == 'typing' or hasattr(annotated_type, '__module__') and annotated_type.__module__ == 'typing':
-            if F.origin is type:
-                for allowed in F.args:
-                    if isinstance(value, allowed):
-                        break
-                else:
-                    expected = ', '.join([str(t) for t in F.args])
-                    errors.append(
-                        _create_error(name, value, f'Invalid type for {annotated_type}.{name}, expected a subclass of {expected}', val_type, annotated_type)
-                    )
             if F.origin is tuple:
                 # Check if we are in the homogeneous case: Tuple[T, ...]
                 if len(F.args) == 2 and F.args[1] is Ellipsis:
@@ -148,15 +160,19 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
                 # Otherwise check that value is an instance of at least one inner type:
                 for t in inner_types:
                     base_type = get_origin(t) or t
-                    if not isinstance(value, base_type):
-                        errors.append(
-                            _create_error(
-                                name,
-                                value,
-                                f"Invalid type for Optional field; expected one of {inner_types}",
-                                val_type, annotated_type
-                            )
+                    if isinstance(value, base_type):
+                        _valid = True
+                        break
+                if not _valid:
+                    errors.append(
+                        _create_error(
+                            name,
+                            value,
+                            f'Invalid type for {annotated_type}.{name}, expected a type of {inner_types!s}',
+                            val_type,
+                            annotated_type
                         )
+                    )
             return errors
         # elif type(annotated_type) is ModelMeta:
         elif type(annotated_type).__name__ == "ModelMeta":

@@ -23,19 +23,14 @@ class Employee(BaseModel):
 
 
 try:
-    # This should raise a ValidationError because the type hint
-    # specifies that user_class must be a type (class), not an instance.
-    user = BasicUser(username="user", email="email")
-    employee = Employee(user_class=user)
+    employee = Employee(user_class=BasicUser)
     print(employee)
 except ValidationError as e:
     print(e.payload)
 
 try:
     # This should raise a ValidationError because the type hint
-    # specifies that user_class must be a type (class), not an instance.
-    user = User(username="user", email="email")
-    employee = Employee(user_class=user)
+    employee = Employee(user_class=User)
     print(employee)
 except ValidationError as e:
     print(e.payload)

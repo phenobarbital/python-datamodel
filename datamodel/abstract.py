@@ -210,7 +210,7 @@ class ModelMeta(type):
                     if _is_prim:
                         _type_category = 'primitive'
                     elif origin == type:
-                        _type_category = 'typing'
+                        _type_category = 'type'
                     elif _is_dc:
                         _type_category = 'dataclass'
                     elif _is_typing:  # noqa
