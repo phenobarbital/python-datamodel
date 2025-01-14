@@ -586,6 +586,12 @@ cdef object _parse_typing_type(
     """
     cdef tuple type_args = getattr(T, '__args__', ())
 
+    # print('FIELD > ', field)
+    # print('T > ', T)
+    # print('NAME > ', name)
+    # print('DATA > ', data)
+    # print('TYPE > ', type_args)
+
     if field.origin in {dict, Mapping} or name in {'Dict', 'Mapping'}:
         if isinstance(data, dict):
             if type_args:
