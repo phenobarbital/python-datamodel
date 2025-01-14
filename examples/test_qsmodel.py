@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Mapping, Sequence, Callable, Tuple, Union
 from datetime import datetime
 from datamodel import BaseModel, Field
 from datamodel.exceptions import ValidationError
@@ -9,8 +9,11 @@ data = {
     'description': 'walmart_mtd_postpaid_to_goal',
     'conditions': {'filterdate': 'POSTPAID_DATE', 'store_tier': 'null', 'launch_group': 'null'},
     'cond_definition': {'filterdate': 'date', 'store_tier': 'string', 'launch_group': 'string'},
+    'attributes': {"example": "value"},
     'fields': ["client_id", "client_name"], 'ordering': [],
     'h_filtering': False,
+    'directives': ('23.1', 12.8),
+    'supported': ('1.0', 2.0, '3.0'),
     'query_raw': 'SELECT {fields}\nFROM walmart.postpaid_metrics({filterdate}, {launch_group}, {store_tier})\n{where_cond}',
     'is_raw': False,
     'is_cached': True,
@@ -22,7 +25,11 @@ data = {
     'program_id': 3,
     'program_slug': 'walmart', 'dwh': False, 'dwh_scheduler': {},
     'created_at': datetime(2022, 11, 18, 1, 10, 8, 872163),
-    'updated_at': datetime(2023, 4, 18, 1, 38, 44, 466221)
+    'updated_at': datetime(2023, 4, 18, 1, 38, 44, 466221),
+    'host_info': ('host', 4568.1),
+    'created_by': (1, 33),
+    "example": {"a": "hello", "b": 123},
+    "more_nested": {"a": "hello", "b": 123}
 }
 
 def rigth_now(obj) -> datetime:
@@ -57,24 +64,29 @@ class QueryModel(BaseModel):
     ## Program Information:
     program_id: int = Field(required=True, default=1)
     program_slug: str = Field(required=True, default='default')
+    directives: Tuple[float, float] = Field(required=False)
+    supported: Tuple[float, ...] = Field(required=False)
     # DWH information
     dwh: bool = Field(required=True, default=False)
     dwh_driver: str = Field(required=False, default=None)
     dwh_info: Optional[dict] = Field(required=False, db_type='jsonb')
     dwh_scheduler: Optional[dict] = Field(required=False, db_type='jsonb')
+    host_info: Tuple[str, int] = Field(required=True)
     # Creation Information:
     created_at: datetime = Field(
         required=False,
         default=datetime.now,
         db_default='now()'
     )
-    created_by: int = Field(required=False)  # TODO: validation for valid user
+    created_by: tuple[int, str] = Field(required=False)  # TODO: validation for valid user
     updated_at: datetime = Field(
         required=False,
         default=datetime.now,
         encoder=rigth_now
     )
     updated_by: int = Field(required=False)  # TODO: validation for valid user
+    example: Mapping[str, str | int] = Field(required=False)
+    more_nested: Mapping[str, Union[str, str]] = Field(required=False)
 
     class Meta:
         driver = 'pg'
