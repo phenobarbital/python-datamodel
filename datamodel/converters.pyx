@@ -1202,15 +1202,20 @@ cpdef parse_type(object field, object T, object data, object encoder = None):
                     return result
                 return data
         elif type_name is None or type_name in ('Optional', 'Union'):
-            # origin = get_origin(T)
             args = get_args(T)
             # Handling Optional types
             if origin == Union and type(None) in args:
                 if data is None:
                     return None
-                else:
-                    non_none_arg = args[0] if args[1] is type(None) else args[1]
-                    return parse_type(field, non_none_arg, data, encoder)
+                # Determine the non-None type.
+                non_none_arg = args[0] if args[1] is type(None) else args[1]
+                # If the non-None type is exactly dict, return the dict as is.
+                if non_none_arg is dict:
+                    return data
+                # Otherwise, recursively parse using the non-None type.
+                field.args = args
+                field.origin = get_origin(non_none_arg)
+                return parse_type(field, non_none_arg, data, encoder)
             try:
                 t = args[0]
                 if is_dataclass(t):
