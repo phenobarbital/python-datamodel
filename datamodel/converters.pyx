@@ -1034,6 +1034,8 @@ cpdef dict process_attributes(object obj, list columns):
                     if isinstance(value, int) and _type == int:
                         continue  # short-circuit
                     value = parse_basic(_type, value, _encoder)
+                elif field_category == 'type':
+                    pass
                 elif field_category == 'typing':
                     value = parse_typing(
                         f,
