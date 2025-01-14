@@ -2,7 +2,9 @@
 # Copyright (C) 2018-present Jesus Lara
 #
 from typing import get_args, get_origin, Union, Optional
+from collections.abc import Callable, Awaitable
 import typing
+import asyncio
 import inspect
 from libcpp cimport bool as bool_t
 from enum import Enum
@@ -50,6 +52,7 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
 
     print(' ::: F ', F, name, value)
     print(' BASE ', F.origin, F.args, field_type)
+    print('THIS > ', F.origin is Callable)
     # first: calling (if exists) custom validator:
     fn = F.metadata.get('validator', None)
     if fn is not None and callable(fn):
@@ -89,9 +92,22 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
                 errors.append(
                     _create_error(name, value, f'invalid type for {annotated_type}.{name}, expected {annotated_type}', val_type, annotated_type)
                 )
+        elif F.origin is Callable:
+            if not is_callable(value):
+                errors.append(
+                    _create_error(name, value, f'Invalid function type, expected {annotated_type}', val_type, annotated_type)
+                )
+        elif F.origin is Awaitable:
+            if asyncio.iscoroutinefunction(value):
+                errors.append(
+                    f"Field '{name}': provided coroutine function is not awaitable; call it to obtain a coroutine object."
+                )
+            # Otherwise, check if it is awaitable
+            elif not hasattr(value, '__await__'):
+                errors.append(
+                    f"Field '{name}': expected an awaitable, but got {type(value)}."
+                )
         elif field_type == 'typing' or hasattr(annotated_type, '__module__') and annotated_type.__module__ == 'typing':
-            print('ORIGIN > ', F.origin)
-            print('ENTERING HERE > ', value, annotated_type)
             if F.origin is tuple:
                 # Check if we are in the homogeneous case: Tuple[T, ...]
                 if len(F.args) == 2 and F.args[1] is Ellipsis:
