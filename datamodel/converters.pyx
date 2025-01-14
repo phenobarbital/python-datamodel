@@ -3,6 +3,7 @@
 #
 import re
 from typing import get_args, get_origin, Union, Optional, List
+from collections.abc import Sequence, Mapping, Callable, Awaitable
 from dataclasses import _MISSING_TYPE, _FIELDS, fields
 import ciso8601
 import orjson
@@ -446,22 +447,6 @@ cdef object _parse_dict_type(
         new_dict[k] = parse_typing(field, val_type, v, encoder, False)
     return new_dict
 
-cdef object _unwrap_optional(object T):
-    """
-    If T is a Union that includes NoneType (i.e. Optional[T]),
-    return the non-None type, else T unchanged.
-    """
-    cdef object orig = get_origin(T)
-    cdef tuple args = None
-    cdef list non_none = []
-    if orig is Union:
-        args = get_args(T)
-        # If exactly one type is not NoneType, return it.
-        non_none = [a for a in args if a is not type(None)]
-        if len(non_none) == 1:
-            return non_none[0]
-    return T, args
-
 cdef object _parse_list_type(
     object field,
     object T,
@@ -601,13 +586,36 @@ cdef object _parse_typing_type(
     """
     cdef tuple type_args = getattr(T, '__args__', ())
 
-    if name == 'Dict' and isinstance(data, dict):
-        if type_args:
-            # e.g. Dict[K, V]
-            return {k: _parse_type(field, type_args[1], v, None, False) for k, v in data.items()}
-        return data
+    print('FIELD > ', field, field.origin)
+    print('T > ', T)
+    print('NAME > ', name)
+    print('DATA > ', data)
+    print('Type Args > ', type_args)
 
-    if name == 'List':
+    if field.origin in {dict, Mapping} or name in {'Dict', 'Mapping'}:
+        if isinstance(data, dict):
+            if type_args:
+                # e.g. Dict[K, V]
+                return {k: _parse_type(field, type_args[1], v, None, False) for k, v in data.items()}
+            return data
+
+    if name == 'Tuple' or field.origin == tuple:
+        if isinstance(data, (list, tuple)):
+            if len(data) == len(type_args):
+                return tuple(
+                    _parse_type(field, typ, datum, encoder, False)
+                    for typ, datum in zip(type_args, data)
+                )
+            else:
+                if len(type_args) == 2 and type_args[1] is Ellipsis:
+                    # e.g. Tuple[str, ...]
+                    return tuple(
+                        _parse_type(field, type_args[0], datum, None, False)
+                        for datum in data
+                    )
+        return tuple(data)
+
+    if name in {'List', 'Sequence'} or field.origin in {list, Sequence}:
         if not isinstance(data, (list, tuple)):
             data = [data]
         return _parse_list_typing(
