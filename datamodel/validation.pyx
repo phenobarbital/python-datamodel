@@ -50,9 +50,6 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
         annotated_type = annotated_type.type
     errors = []
 
-    print(' ::: F ', F, name, value)
-    print(' BASE ', F.origin, F.args, field_type)
-    print('THIS > ', F.origin is Callable)
     # first: calling (if exists) custom validator:
     fn = F.metadata.get('validator', None)
     if fn is not None and callable(fn):
@@ -108,6 +105,15 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
                     f"Field '{name}': expected an awaitable, but got {type(value)}."
                 )
         elif field_type == 'typing' or hasattr(annotated_type, '__module__') and annotated_type.__module__ == 'typing':
+            if F.origin is type:
+                for allowed in F.args:
+                    if isinstance(value, allowed):
+                        break
+                else:
+                    expected = ', '.join([str(t) for t in F.args])
+                    errors.append(
+                        _create_error(name, value, f'Invalid type for {annotated_type}.{name}, expected a subclass of {expected}', val_type, annotated_type)
+                    )
             if F.origin is tuple:
                 # Check if we are in the homogeneous case: Tuple[T, ...]
                 if len(F.args) == 2 and F.args[1] is Ellipsis:

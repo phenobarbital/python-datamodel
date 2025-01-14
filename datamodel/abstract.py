@@ -209,6 +209,8 @@ class ModelMeta(type):
                     # check type of field:
                     if _is_prim:
                         _type_category = 'primitive'
+                    elif origin == type:
+                        _type_category = 'typing'
                     elif _is_dc:
                         _type_category = 'dataclass'
                     elif _is_typing:  # noqa
