@@ -2,7 +2,9 @@
 # Copyright (C) 2018-present Jesus Lara
 #
 from typing import get_args, get_origin, Union, Optional
+from collections.abc import Callable, Awaitable
 import typing
+import asyncio
 import inspect
 from libcpp cimport bool as bool_t
 from enum import Enum
@@ -50,20 +52,19 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
 
     # first: calling (if exists) custom validator:
     fn = F.metadata.get('validator', None)
-    if fn is not None:
-        if is_callable(fn):
-            try:
-                result = fn(F, value)
-                if not result:
-                    error_msg = f"Validator {fn!r} Failed: {result}"
-                    errors.append(
-                        _create_error(name, value, error_msg, val_type, annotated_type)
-                    )
-            except (ValueError, AttributeError, TypeError) as e:
+    if fn is not None and callable(fn):
+        try:
+            result = fn(F, value)
+            if not result:
                 error_msg = f"Validator {fn!r} Failed: {result}"
                 errors.append(
-                    _create_error(name, value, error_msg, val_type, annotated_type, e)
+                    _create_error(name, value, error_msg, val_type, annotated_type)
                 )
+        except (ValueError, AttributeError, TypeError) as e:
+            error_msg = f"Validator {fn!r} Failed: {result}"
+            errors.append(
+                _create_error(name, value, error_msg, val_type, annotated_type, e)
+            )
     # check: data type hint
     try:
         # If field_type is known, short-circuit certain checks
@@ -88,8 +89,74 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
                 errors.append(
                     _create_error(name, value, f'invalid type for {annotated_type}.{name}, expected {annotated_type}', val_type, annotated_type)
                 )
-        elif hasattr(annotated_type, '__module__') and annotated_type.__module__ == 'typing':
-            # TODO: validation of annotated types
+        elif F.origin is Callable:
+            if not is_callable(value):
+                errors.append(
+                    _create_error(name, value, f'Invalid function type, expected {annotated_type}', val_type, annotated_type)
+                )
+        elif F.origin is Awaitable:
+            if asyncio.iscoroutinefunction(value):
+                errors.append(
+                    f"Field '{name}': provided coroutine function is not awaitable; call it to obtain a coroutine object."
+                )
+            # Otherwise, check if it is awaitable
+            elif not hasattr(value, '__await__'):
+                errors.append(
+                    f"Field '{name}': expected an awaitable, but got {type(value)}."
+                )
+        elif field_type == 'typing' or hasattr(annotated_type, '__module__') and annotated_type.__module__ == 'typing':
+            if F.origin is type:
+                for allowed in F.args:
+                    if isinstance(value, allowed):
+                        break
+                else:
+                    expected = ', '.join([str(t) for t in F.args])
+                    errors.append(
+                        _create_error(name, value, f'Invalid type for {annotated_type}.{name}, expected a subclass of {expected}', val_type, annotated_type)
+                    )
+            if F.origin is tuple:
+                # Check if we are in the homogeneous case: Tuple[T, ...]
+                if len(F.args) == 2 and F.args[1] is Ellipsis:
+                    for i, elem in enumerate(value):
+                        if not isinstance(elem, F.args[0]):
+                            errors.append(
+                                _create_error(f"{name}[{i}]", elem,
+                                    f"Invalid type at index {i}: expected {F.args[0]}",
+                                    type(elem), F.args[0])
+                            )
+                else:
+                    if len(value) != len(F.args):
+                        errors.append(
+                            _create_error(name, value,
+                                f"Invalid number of elements: expected {len(F.args)}, got {len(value)}",
+                                len(value), len(F.args))
+                        )
+                    else:
+                        for i, elem in enumerate(value):
+                            if not isinstance(elem, F.args[i]):
+                                errors.append(
+                                    _create_error(f"{name}[{i}]", elem,
+                                        f"Invalid type at index {i}: expected {F.args[i]}",
+                                        type(elem), F.args[i])
+                                )
+            # Handle Optional Types:
+            elif F.origin is Union and type(None) in F.args:
+                inner_types = [t for t in F.args if t is not type(None)]
+                # If value is None then that is valid:
+                if value is None:
+                    return errors
+                # Otherwise check that value is an instance of at least one inner type:
+                for t in inner_types:
+                    base_type = get_origin(t) or t
+                    if not isinstance(value, base_type):
+                        errors.append(
+                            _create_error(
+                                name,
+                                value,
+                                f"Invalid type for Optional field; expected one of {inner_types}",
+                                val_type, annotated_type
+                            )
+                        )
             return errors
         # elif type(annotated_type) is ModelMeta:
         elif type(annotated_type).__name__ == "ModelMeta":

@@ -1,5 +1,6 @@
 import logging
 from typing import Optional, Any, List, Dict, get_args, get_origin
+from types import GenericAlias
 from collections import OrderedDict
 from collections.abc import Callable
 import types
@@ -190,7 +191,8 @@ class ModelMeta(type):
                     _default = df.default
                     _is_dc = is_dataclass(_type)
                     _is_prim = is_primitive(_type)
-                    _is_typing = hasattr(_type, '__module__') and _type.__module__ == 'typing'
+                    _is_alias = isinstance(_type, GenericAlias)
+                    _is_typing = hasattr(_type, '__module__') and _type.__module__ == 'typing'  # noqa
 
                     # Store the type info in the field object:
                     df.is_dc = _is_dc
@@ -207,12 +209,16 @@ class ModelMeta(type):
                     # check type of field:
                     if _is_prim:
                         _type_category = 'primitive'
+                    elif origin == type:
+                        _type_category = 'typing'
                     elif _is_dc:
                         _type_category = 'dataclass'
                     elif _is_typing:  # noqa
                         _type_category = 'typing'
                     elif isclass(_type):
                         _type_category = 'class'
+                    elif _is_alias:
+                        _type_category = 'typing'
                     else:
                         _type_category = 'complex'
                     _types_local[field] = _type_category
