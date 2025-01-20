@@ -5,10 +5,14 @@
 JSON Encoder, Decoder.
 """
 import uuid
+from pathlib import PosixPath, PurePath, Path
+from datetime import datetime
 from asyncpg.pgproto import pgproto
+from psycopg2 import Binary
 from dataclasses import _MISSING_TYPE, MISSING
 from typing import Any, Union
 from decimal import Decimal
+from enum import Enum, EnumType
 from ..exceptions cimport ParserError
 from ..fields import Field
 import orjson
@@ -18,9 +22,6 @@ cdef class JSONContent:
     """
     Basic Encoder using orjson
     """
-    # def __init__(self, **kwargs):
-    #     # eventually take into consideration when serializing
-    #     self.options = kwargs
     def __call__(self, object obj, **kwargs):
         return self.encode(obj, **kwargs)
 
@@ -29,12 +30,19 @@ cdef class JSONContent:
             return float(obj)
         elif hasattr(obj, "isoformat"):
             return obj.isoformat()
+        elif isinstance(obj, datetime):
+            return str(obj)
         elif isinstance(obj, pgproto.UUID):
             return str(obj)
         elif isinstance(obj, uuid.UUID):
             return obj
+        elif isinstance(obj, (PosixPath, PurePath, Path)):
+            return str(obj)
         elif hasattr(obj, "hex"):
-            return obj.hex
+            if isinstance(obj, bytes):
+                return obj.hex()
+            else:
+                return obj.hex
         elif hasattr(obj, 'lower'): # asyncPg Range:
             up = obj.upper
             if isinstance(up, int):
@@ -46,9 +54,20 @@ cdef class JSONContent:
             return None
         elif obj is MISSING:
             return None
+        elif isinstance(obj, (Enum, EnumType)):
+            if obj is None:
+                return None
+            if hasattr(obj, 'value'):
+                return obj.value
+            else:
+                return obj.name
+        elif isinstance(obj, Binary):  # Handle bytea column from PostgreSQL
+            return str(obj)  # Convert Binary object to string
         elif isinstance(obj, Field):
             return obj.to_dict()
-        raise TypeError(f"{obj!r} is not JSON serializable")
+        raise TypeError(
+            f'{obj!r} of Type {type(obj)} is not JSON serializable'
+        )
 
     def encode(self, object obj, **kwargs) -> str:
         # decode back to str, as orjson returns bytes
@@ -96,3 +115,15 @@ cpdef str json_encoder(object obj):
 
 cpdef object json_decoder(object obj):
     return JSONContent().loads(obj)
+
+
+cdef class BaseEncoder:
+    """
+    Encoder replacement for json.dumps but using orjson
+    """
+    def __init__(self, *args, **kwargs):
+        # Filter/adapt JSON arguments to ORJSON ones
+        rjargs = ()
+        rjkwargs = {}
+        encoder = JSONContent(*rjargs, **rjkwargs)
+        self.encode = encoder.__call__
