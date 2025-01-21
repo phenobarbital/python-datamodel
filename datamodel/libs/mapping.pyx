@@ -8,7 +8,6 @@ if sys.version_info < (3, 10):
     from typing_extensions import ParamSpec, TypedDict, get_type_hints
 else:
     from typing import ParamSpec, TypedDict
-from ..fields import Field
 
 
 P = ParamSpec("P")
