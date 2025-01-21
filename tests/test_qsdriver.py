@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import List, Optional, Union
 from dataclasses import InitVar
 from datetime import datetime
 from pathlib import Path
@@ -72,7 +72,7 @@ class jdbcDriver(BaseDriver):
     password: str = Field(required=False, default=None, repr=False)
     database: str = Field(required=True)
     dsn_format: str = Field(required=False, default=None)
-    jar: Union[list, str] = Field(required=True)
+    jar: List[Path] = Field(required=True)
     classpath: Path = Field(required=False)
     required_properties: Optional[Union[list, tuple]] = Field(
         repr=False, default=jdbc_properties(), default_factory=tuple
@@ -82,6 +82,8 @@ class jdbcDriver(BaseDriver):
         # If jar is a string, convert it to a list with one Path element.
         if isinstance(self.jar, str):
             self.jar = [Path(self.jar)]
+        elif isinstance(self.jar, list):
+            self.jar = [Path(p) if isinstance(p, str) else p for p in self.jar]
         # If jar is set and classpath is missing, assume classpath is the dirname of the first jar.
         if self.jar and not self.classpath:
             self.classpath = self.jar[0].parent
@@ -175,7 +177,7 @@ def test_jdbcdriver_missing_required():
         "jar": "/tmp/ojdbc8/",
         "classpath": "/tmp/ojdbc8/ojdbc8-"
     }
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValueError):
         jdbcDriver(**payload)
 
 if __name__ == "__main__":

@@ -96,6 +96,7 @@ class SimpleSupportTicket(BaseModel):
         strict: bool = True
         extra: str = "forbid"
         title: str = "Support Ticket"
+        as_objects: bool = True
         settings: dict = {
             "showSubmit": True,
             "SubmitLabel": "Create Ticket",
@@ -192,12 +193,16 @@ def test_support_ticket_missing_required_field(sample_catalog):
         "email": "missingtitle@example.com",
         "service_catalog": sample_catalog
     }
-    with pytest.raises(ValidationError) as excinfo:
+    with pytest.raises(ValueError) as excinfo:
         SimpleSupportTicket(**data)
 
     # We can inspect the excinfo if needed,
-    # but just verifying that ValidationError was raised is enough.
-    assert "title" in excinfo.value.payload, "Missing 'title' in the payload"
+    # but just verifying that ValueError was raised is enough.
+    assert isinstance(excinfo.value, ValueError)
+    assert "title" in str(excinfo.value)
+
+
+
 
 
 def test_support_ticket_schema_generation():

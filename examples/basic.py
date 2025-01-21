@@ -127,8 +127,7 @@ class Actor(BaseModel):
     """
     userid: uuid.UUID = Column(required=True, primary_key=True, default=auto_uuid)
     age: int = Column(default=def_age)
-    name: str
-    # account: Union[Account, List[Account]]
+    name: str = Column(required=True)
     account: List[Account]
 
     def __str__(self) -> str:

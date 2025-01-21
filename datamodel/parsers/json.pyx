@@ -61,6 +61,8 @@ cdef class JSONContent:
                 return obj.value
             else:
                 return obj.name
+        elif isinstance(obj, type) and issubclass(obj, Enum):
+            return [{'value': e.value, 'name': e.name} for e in obj]
         elif isinstance(obj, Binary):  # Handle bytea column from PostgreSQL
             return str(obj)  # Convert Binary object to string
         elif isinstance(obj, Field):

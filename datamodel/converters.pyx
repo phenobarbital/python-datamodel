@@ -372,7 +372,7 @@ cpdef object to_boolean(object obj):
     Convert and returns any object value to boolean version.
     """
     if obj is None:
-        return False
+        return None
     if isinstance(obj, bool):
         return obj
     if isinstance(obj, (bytes, bytearray)):
@@ -526,8 +526,12 @@ cdef object _parse_builtin_type(object field, object T, object data, object enco
                 except (TypeError, ValueError):
                     pass
             return data
-        except (TypeError, ValueError) as e:
-            raise ValueError(f"Error type {T}: {e}") from e
+        except (TypeError) as e:
+            raise TypeError(f"Error type {T}: {e}") from e
+        except (ValueError) as e:
+            raise ValueError(
+                f"Error parsing type {T}: {e}"
+            ) from e
 
 
 cpdef object parse_basic(object T, object data, object encoder = None):
@@ -551,14 +555,19 @@ cpdef object parse_basic(object T, object data, object encoder = None):
             return bytes(data)
     if T == UUID or T == pgproto.UUID:
         return to_uuid(data)
+    if T == bool:
+        if isinstance(data, bool):
+            return data
     # Using the encoders for basic types:
     try:
         return encoders[T](data)
     except KeyError:
         pass
-    except (TypeError, ValueError) as e:
+    except TypeError as e:
+        raise TypeError(f"Error type {T}: {e}") from e
+    except ValueError as e:
         raise ValueError(
-            f"Encoder Error {T}: {e}"
+            f"Error parsing type {T}: {e}"
         ) from e
 
     # function encoder:
@@ -566,6 +575,10 @@ cpdef object parse_basic(object T, object data, object encoder = None):
         # using a function encoder:
         try:
             return encoder(data)
+        except TypeError as e:
+            raise TypeError(
+                f"Error type {T}: {e}"
+            ) from e
         except ValueError as e:
             raise ValueError(
                 f"Error parsing type {T}, {e}"
@@ -707,6 +720,7 @@ cdef object _parse_optional_union(
     """
     cdef object non_none_arg
     cdef object t = args[0] if args else None
+    cdef bint matched = False
 
     # e.g. Optional[T] is Union[T, NoneType]
     if origin == Union and type(None) in args:
@@ -720,6 +734,14 @@ cdef object _parse_optional_union(
             encoder=encoder,
             as_objects=False
         )
+    args = tuple(t for t in args if t is not type(None))
+    for t in args:
+        # let's validate all types on Union to be matched with Type of data
+        if isinstance(data, t):
+            matched = True
+            break
+    if not matched:
+        raise ValueError(f"Invalid type for *{field.name}* with {type(data)}, expected {T}")
     try:
         if is_dataclass(t):
             if isinstance(data, dict):
@@ -903,24 +925,47 @@ cdef object _handle_dataclass_type(
     cdef tuple key = (_type, name)
     cdef object converter = TYPE_CONVERTERS.get(key) or TYPE_CONVERTERS.get(_type)
     cdef bint is_dc = field.is_dc if field else is_dataclass(_type)
+    cdef object field_metadata = field.metadata if field else {}
+    cdef str alias = field_metadata.get('alias')
 
     try:
         if value is None or is_dataclass(value):
             return value
         if isinstance(value, dict):
-            return _type(**value)
+            try:
+                return _type(**value)
+            except TypeError:
+                # Ensure keys are strings
+                value = {str(k): v for k, v in value.items()}
+                return _type(**value)
+            except ValueError:
+                # replace in "value" dictionary the current "name" for "alias"
+                if alias:
+                    value = value.copy()
+                    value[alias] = value.pop(name, None)
+                return _type(**value)
+            except Exception as exc:
+                raise ValueError(
+                    f"Invalid value for {name}:{_type} == {value}, error: {exc}"
+                )
         if isinstance(value, (list, tuple)):
             return _type(*value)
         else:
             # If a converter exists for this type, use it:
             if converter:
                 return converter(name, value, _type, parent)
-            if as_objects is True:
-                return _type(**{name: value})
+            if as_objects:
+                # If alias exists, adjust the key passed to the dataclass
+                if not alias:
+                    alias = name
+                # convert the list to the dataclass
+                return _type(**{alias: value})
             if isinstance(value, (int, str, UUID)):
                 return value
             if is_dc:
-                return _type(**{name: value})
+                if not alias:
+                    alias = name
+                return _type(**{alias: value})
             else:
                 return _type(value)
     except Exception as exc:
@@ -1023,23 +1068,27 @@ cpdef dict process_attributes(object obj, list columns):
             typeinfo = f.typeinfo
             is_dc = f.is_dc
             _default_callable = typeinfo.get('default_callable', False)
+            # Use the precomputed field type category:
+            field_category = f._type_category
 
             # Check if object is empty
             if is_empty(value) and not isinstance(value, list):
-                value = f.default_factory if isinstance(
-                _default, (_MISSING_TYPE)) else _default
+                if _type == str and value is not "":
+                    value = f.default_factory if isinstance(_default, (_MISSING_TYPE)) else _default
                 setattr(obj, name, value)
             if _default is not None:
                 value = _handle_default_value(obj, name, value, _default, _default_callable)
-            # Use the precomputed field type category:
-            field_category = f._type_category
             try:
                 if field_category == 'primitive':
                     if isinstance(value, str) and _type == str:
                         continue  # short-circuit
                     if isinstance(value, int) and _type == int:
                         continue  # short-circuit
-                    value = parse_basic(_type, value, _encoder)
+                    try:
+                        value = parse_basic(_type, value, _encoder)
+                    except ValueError as e:
+                        errors[name] = f"Error parsing {name}: {e}"
+                        continue
                 elif field_category == 'type':
                     pass
                 elif field_category == 'typing':
@@ -1071,12 +1120,22 @@ cpdef dict process_attributes(object obj, list columns):
                     )
                 setattr(obj, name, value)
                 # then, call the validation process:
-                if (error := _validation_(name, value, f, _type, meta, field_category)):
+                if (error := _validation_(name, value, f, _type, meta, field_category, as_objects)):
                     errors[name] = error
-            except (TypeError, ValueError, RuntimeError) as ex:
+            except ValueError as ex:
+                if meta.strict is True:
+                    raise
+                else:
+                    errors[name] = f"Wrong Value for {f.name}: {f.type}, error: {ex}"
+                    continue
+                raise
+            except (TypeError, RuntimeError) as ex:
                 errors[name] = f"Wrong Type for {f.name}: {f.type}, error: {ex}"
                 continue
-        except (TypeError, ValueError, RuntimeError) as e:
+        except ValueError as e:
+            if meta.strict is True:
+                raise
+        except (TypeError, RuntimeError) as e:
             errors[name] = f"Error processing {name}: {e}"
             continue
     return errors
@@ -1088,7 +1147,8 @@ cdef list _validation_(
     object f,
     object _type,
     object meta,
-    str field_category
+    str field_category,
+    bint as_objects = False
 ):
     """
     _validation_.
@@ -1103,7 +1163,7 @@ cdef list _validation_(
             raise
     else:
         # capturing other errors from validator:
-        return _validation(f, name, value, _type, val_type, field_category)
+        return _validation(f, name, value, _type, val_type, field_category, as_objects)
 
 cdef object _field_checks_(object f, str name, object value, object meta):
     # Validate Primary Key
@@ -1128,6 +1188,8 @@ cdef object _field_checks_(object f, str name, object value, object meta):
             raise ValueError(
                 f":: Missing Required Field *{name}*"
             )
+    except ValueError:
+        raise
     except KeyError:
         return
     # Nullable:
@@ -1136,6 +1198,8 @@ cdef object _field_checks_(object f, str name, object value, object meta):
             raise ValueError(
                 f":: *{name}* Cannot be null."
             )
+    except ValueError:
+        raise
     except KeyError:
         return
     return

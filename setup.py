@@ -99,7 +99,19 @@ extensions = [
         sources=['datamodel/libs/mapping.pyx'],
         extra_compile_args=COMPILE_ARGS,
         language="c"
-    )
+    ),
+    Extension(
+        name='datamodel.typedefs.singleton',
+        sources=['datamodel/typedefs/singleton.pyx'],
+        extra_compile_args=COMPILE_ARGS,
+        language="c"
+    ),
+    Extension(
+        name='datamodel.typedefs.types',
+        sources=['datamodel/typedefs/types.pyx'],
+        extra_compile_args=COMPILE_ARGS,
+        language="c"
+    ),
 ]
 
 setup(
