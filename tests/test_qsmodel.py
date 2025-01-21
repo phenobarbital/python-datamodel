@@ -183,10 +183,10 @@ def test_query_model_success(sample_data):
 
 
 def test_query_model_missing_required_field(sample_data):
-    """Test that missing a required field (e.g. 'query_slug') raises a ValidationError."""
+    """Test that missing a required field (e.g. 'query_slug') raises a ValueError."""
     payload = sample_data.copy()
     payload.pop('query_slug')
-    with pytest.raises(ValidationError) as excinfo:
+    with pytest.raises(ValueError) as excinfo:
         QueryModel(**payload)
     # Optionally, check that the error payload mentions the missing 'query_slug'
     assert 'query_slug' in str(excinfo.value)

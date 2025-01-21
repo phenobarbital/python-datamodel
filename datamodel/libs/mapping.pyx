@@ -3,14 +3,12 @@
 #
 import sys
 from typing import Optional, Union, Any
-from datamodel import Field
 from collections.abc import Iterator, Iterable
 if sys.version_info < (3, 10):
     from typing_extensions import ParamSpec, TypedDict, get_type_hints
 else:
     from typing import ParamSpec, TypedDict
-from ..converters import parse_basic
-from ..functions import is_primitive
+from ..fields import Field
 
 
 P = ParamSpec("P")
@@ -20,7 +18,13 @@ cdef class ClassDict(dict):
     """
     ClassDict is a dictionary that allows to access keys as attributes
     """
-    def __cinit__(self, *args, data: Optional[dict]=None, default: Optional[Union[list,dict]]=None, **kwargs: P.kwargs):
+    def __cinit__(
+        self,
+        *args: P.args,
+        data: Optional[dict]=None,
+        default: Optional[Union[list,dict]]=None,
+        **kwargs: P.kwargs
+    ):
         self.mapping = {}
         self._columns = []
         self.default = default
@@ -43,9 +47,6 @@ cdef class ClassDict(dict):
                         setattr(self, k, v)
                     except (TypeError, KeyError):
                         pass
-                # elif _type := self.__annotations__.get(k, None):
-                #     if is_primitive(_type):
-                #         v = parse_basic(_type, v)
                 self.mapping[k] = v
         self._columns = list(self.mapping.keys())
 

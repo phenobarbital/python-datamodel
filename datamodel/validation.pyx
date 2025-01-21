@@ -43,8 +43,27 @@ cpdef bool_t is_optional_type(object annotated_type):
         return type(None) in get_args(annotated_type)
     return False
 
-cpdef list _validation(object F, str name, object value, object annotated_type, object val_type, str field_type):
+cdef object get_primary_key_field(object annotated_type, str name, object field_meta):
+    for f in annotated_type.__dataclass_fields__.values():
+        if name == f.name:
+            return f
+        if field_meta.get('alias') == f.name:
+            return f
+        if f.metadata.get('primary_key', False):
+            return f
+    return None
+
+cpdef list _validation(
+    object F,
+    str name,
+    object value,
+    object annotated_type,
+    object val_type,
+    str field_type,
+    bint as_objects=False
+):
     cdef bint _valid = False
+    cdef object field_meta = F.metadata
 
     if not annotated_type:
         annotated_type = F.type
@@ -177,24 +196,44 @@ cpdef list _validation(object F, str name, object value, object annotated_type, 
         # elif type(annotated_type) is ModelMeta:
         elif type(annotated_type).__name__ == "ModelMeta":
             # Check if there's a field in the annotated type that matches the name and type
-            if isinstance(value, annotated_type):
-                # if value is already a User, no further check needed for columns
-                return errors
-            try:
-                field = annotated_type.get_column(name)
-                ftype = field.type
-                if ftype <> val_type:
+            if as_objects:
+                if isinstance(value, annotated_type):
+                    # if value is already a User, no further check needed for columns
+                    return errors
+                try:
+                    field = annotated_type.get_column(name)
+                    ftype = field.type
+                    if ftype <> val_type:
+                        errors.append(
+                            _create_error(name, value, f'invalid type for {annotated_type}.{name}, expected {ftype}', val_type, annotated_type)
+                        )
+                except AttributeError as e:
                     errors.append(
-                        _create_error(name, value, f'invalid type for {annotated_type}.{name}, expected {ftype}', val_type, annotated_type)
+                        _create_error(name, value, f'{annotated_type} has no column {name}', val_type, annotated_type, e)
                     )
-            except AttributeError as e:
-                errors.append(
-                    _create_error(name, value, f'{annotated_type} has no column {name}', val_type, annotated_type, e)
-                )
-            except Exception as e:
-                errors.append(
-                    _create_error(name, value, f'Error validating {annotated_type}.{name}', val_type, annotated_type, e)
-                )
+                except Exception as e:
+                    errors.append(
+                        _create_error(name, value, f'Error validating {annotated_type}.{name}', val_type, annotated_type, e)
+                    )
+            else:
+                # Validate primary key
+                pk_field = get_primary_key_field(annotated_type, name, field_meta)
+                if pk_field:
+                    pk_type = pk_field.type
+                    if not isinstance(value, pk_type):
+                        errors.append(
+                            _create_error(
+                                name,
+                                value,
+                                f"Invalid type for {annotated_type}.{pk_field.name}, expected {pk_type}",
+                                val_type,
+                                pk_type
+                            )
+                        )
+                else:
+                    errors.append(
+                        _create_error(name, value, f"{annotated_type} has no field called {name}", val_type, annotated_type)
+                    )
         elif is_optional_type(annotated_type):
             inner_types = get_args(annotated_type)
             for t in inner_types:

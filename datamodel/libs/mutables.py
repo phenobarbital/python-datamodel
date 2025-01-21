@@ -26,20 +26,20 @@ class ClassDict(dict, MutableMapping):
 
     Mapping that works like both a simple Dictionary or a Mutable Object.
     """
-    def __init__(self, *args: P.args, data: Optional[Union[tuple, dict]] = None, default: Any = None, **kwargs: P.kwargs):
+    def __init__(self, *args: P.args, data: Optional[Union[tuple, dict]] = None, default: Any = None, **kwargs: P.kwargs):  # noqa
         self._columns: list = []
         self.mapping = {}
         self.default = default
         self.mapping.update(*args, **kwargs)
         self.update(data, **kwargs)
 
-    def update(self, items: Optional[Iterable] = None, **kwargs): # pylint: disable=W0221
+    def update(self, items: Optional[Iterable] = None, **kwargs): # pylint: disable=W0221 # noqa
         if isinstance(items, dict):
             for key, value in items.items():
                 # self.mapping[key] = value
                 self.mapping[key] = value
         else:
-            for k,v in kwargs.items():
+            for k, v in kwargs.items():
                 attr = getattr(self, k)
                 if isinstance(attr, Field):
                     try:
@@ -66,7 +66,7 @@ class ClassDict(dict, MutableMapping):
 
     def set(self, key, value) -> None:
         self.mapping[key] = value
-        if not key in self._columns:
+        if key not in self._columns:
             self._columns.append(key)
 
     ### Section: Simple magic methods
@@ -96,7 +96,7 @@ class ClassDict(dict, MutableMapping):
 
     def __setitem__(self, key, value):
         self.mapping[key] = value
-        if not key in self._columns:
+        if key not in self._columns:
             self._columns.append(key)
 
     def __getitem__(self, key: Union[str, int]) -> Any:
@@ -124,5 +124,4 @@ class ClassDict(dict, MutableMapping):
             ) from ex
 
     def __iter__(self) -> Iterator:
-        for value in self.mapping:
-            yield value
+        yield from self.mapping

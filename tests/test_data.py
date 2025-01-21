@@ -30,6 +30,10 @@ class User(BaseModel):
     accounts: List[Account]
     created_at: datetime = Field(default=datetime.now)
 
+    class Meta:
+        as_objects = True
+        strict = True
+
 @pytest.fixture
 def external_data():
     """Fixture providing the external data to be used in multiple tests."""
@@ -100,7 +104,7 @@ def test_user_model_validation_error():
         'friends': 'not a list',  # also invalid type
         "accounts": []
     }
-    with pytest.raises(ValidationError) as excinfo:
+    with pytest.raises(ValueError) as excinfo:
         User(**invalid_data)
-    # We expect ValidationError, now we can inspect `excinfo.value.payload` if needed.
-    assert "id" in str(excinfo.value.payload)
+    # We expect ValueError, now we can inspect `excinfo.value` if needed.
+    assert "id" in str(excinfo.value)

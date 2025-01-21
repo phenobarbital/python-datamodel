@@ -10,7 +10,7 @@ class ZammadCatalog(BaseModel):
         required=False,
         db_default="auto"
     )
-    catalog_name: str = Field(required=True)
+    catalog_name: str = Field(required=False)
     service_catalog: str = Field(required=True)
     service_name: str = Field(required=False)
     type: str = Field(required=False)
@@ -77,6 +77,12 @@ class AbstractTicket(BaseModel):
         ui_widget="dropzone",
         # default_factory=list
     )
+
+    class Meta:
+        strict: bool = True
+        extra: str = "forbid"
+        title: str = "Support Ticket"
+        as_objects: bool = True
 
 
 def create_ticket():
