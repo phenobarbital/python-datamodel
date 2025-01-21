@@ -147,6 +147,17 @@ setup(
     author_email=__author_email__,
     packages=find_packages(exclude=["contrib", "docs", "tests", "examples"]),
     include_package_data=True,
+    package_data={
+        "datamodel.fields": ["*.pyx"],
+        "datamodel.converters": ["*.pyx"],
+        "datamodel.validation": ["*.pyx"],
+        "datamodel.exceptions": ["*.pxd", "*.pyx"],
+        "datamodel.functions": ["*.pxd", "*.pyx"],
+        "datamodel.libs.mapping": ["*.pxd", "*.pyx"],
+        "datamodel.typedefs.singleton": ["*.pxd", "*.pyx"],
+        "datamodel.typedefs.types": ["*.pxd", "*.pyx"],
+        "datamodel.parsers.json": ["*.pyx"],
+    },
     license=__license__,
     setup_requires=[
         'setuptools==74.0.0',
