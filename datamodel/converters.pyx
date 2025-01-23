@@ -2,7 +2,7 @@
 # Copyright (C) 2018-present Jesus Lara
 #
 import re
-from typing import get_args, get_origin, Union, Optional, List
+from typing import get_args, get_origin, Union, Optional, List, NewType
 from collections.abc import Sequence, Mapping, Callable, Awaitable
 from dataclasses import _MISSING_TYPE, _FIELDS, fields
 import ciso8601
@@ -1081,6 +1081,9 @@ cpdef dict process_attributes(object obj, list columns):
             is_dc = f.is_dc
             _default_callable = typeinfo.get('default_callable', False)
 
+            if isinstance(_type, NewType):
+                # change type if is a NewType object.
+                _type = _type.__supertype__
 
             # Check if object is empty
             if is_empty(value) and not isinstance(value, list):
@@ -1222,6 +1225,10 @@ cpdef parse_type(object field, object T, object data, object encoder = None):
     cdef str type_name = getattr(T, '_name', None)
     cdef object type_args = getattr(T, '__args__', None)
     cdef dict typeinfo = getattr(T, '_typeinfo_', None)
+
+    if isinstance(T, NewType):
+        # change type if is a NewType object.
+        T = T.__supertype__
 
     # Check if the data is already of the correct type
     if isinstance(data, T):
