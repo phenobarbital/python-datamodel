@@ -1223,15 +1223,16 @@ cpdef parse_type(object field, object T, object data, object encoder = None):
     cdef object type_args = getattr(T, '__args__', None)
     cdef dict typeinfo = getattr(T, '_typeinfo_', None)
 
+    # Check if the data is already of the correct type
+    if isinstance(data, T):
+        return data
+
     if field._type_category == 'typing':
-        args = None
-        try:
-            args = type_args
-        except AttributeError:
-            pass
+        args = type_args or ()
         if type_name == 'Dict' and isinstance(data, dict):
             if args:
                 return {k: parse_type(field, type_args[1], v) for k, v in data.items()}
+
         elif type_name == 'List':
             if not isinstance(data, (list, tuple)):
                 data = [data]
@@ -1284,6 +1285,13 @@ cpdef parse_type(object field, object T, object data, object encoder = None):
                     return None
                 # Determine the non-None type.
                 non_none_arg = args[0] if args[1] is type(None) else args[1]
+                if non_none_arg == list:
+                    field.args = args
+                    field.origin = get_origin(non_none_arg)
+                    if isinstance(data, (list, str, dict)):
+                        return _parse_builtin_type(field, non_none_arg, data, encoder)
+                    else:
+                        raise ValueError(f"Unsupported type for List in Optional: {type(data)}")
                 # If the non-None type is exactly dict, return the dict as is.
                 if non_none_arg is dict:
                     return data
