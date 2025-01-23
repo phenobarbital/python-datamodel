@@ -1,11 +1,11 @@
 import logging
-from typing import Optional, Any, List, Dict, get_args, get_origin
+from typing import Optional, Any, List, Dict, get_args, get_origin, ClassVar
 from types import GenericAlias
 from collections import OrderedDict
 from collections.abc import Callable
 import types
 from inspect import isclass
-from dataclasses import dataclass
+from dataclasses import dataclass, InitVar
 from .parsers.json import JSONContent
 from .converters import encoders, parse_basic, parse_type
 from .fields import Field
@@ -165,6 +165,27 @@ class ModelMeta(type):
                 _typing_args = {}
                 aliases = {}
                 for field, _type in annotations.items():
+                    if isinstance(_type, InitVar) or _type == InitVar:
+                        # Skip InitVar fields;
+                        # they should not be part of the dataclass instance
+                        continue
+                    origin = get_origin(_type)
+                    if origin is ClassVar:
+                        continue
+
+                    # Check if the field's default value is a descriptor
+                    default_value = attrs.get(field, None)
+                    is_descriptor = any(
+                        hasattr(default_value, method)
+                        for method in ("__get__", "__set__", "__delete__")
+                    )
+                    if is_descriptor:
+                        # Handle descriptor field
+                        default_value._type_category = 'descriptor'
+                        cols[field] = default_value
+                        _types_local[field] = 'descriptor'
+                        continue
+
                     if isinstance(_type, Field):
                         _type = _type.type
                     df = attrs.get(
@@ -186,7 +207,6 @@ class ModelMeta(type):
 
                     # Cache reflection info so we DON’T need to call
                     # get_origin/get_args repeatedly:
-                    origin = get_origin(_type)
                     args = get_args(_type)
                     _default = df.default
                     _is_dc = is_dataclass(_type)

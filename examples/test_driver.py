@@ -25,7 +25,8 @@ class BaseDriver(BaseModel):
     dsn: str = Field(default=None)
     dsn_format: str = Field(required=False, default=None, repr=False)
     user: InitVar = Field(default='')
-    username: str = Field(default='')
+    username: InitVar = ''
+    hostname: InitVar = ''
     password: str = Field(required=False, default=None, repr=False, is_secret=True)
     auth: dict = Field(required=False, default_factory=dict)
     required_properties: Optional[tuple] = Field(
@@ -34,7 +35,7 @@ class BaseDriver(BaseModel):
         default_factory=tuple
     )
 
-    def __post_init__(self, user, **kwargs) -> None:  # pylint: disable=W0613,W0221
+    def __post_init__(self, user, username, hostname, **kwargs) -> None:  # pylint: disable=W0613,W0221
         if not self.name:
             self.name = self.driver
         if user:
@@ -184,7 +185,8 @@ try:
         driver='asyncdb',
         user='admin',
         password='admin',
-        name='asyncdb_test'
+        name='asyncdb_test',
+        hostname=''
     )
     print('BASE DRIVER > ', base_driver)
 except ValidationError as e:
