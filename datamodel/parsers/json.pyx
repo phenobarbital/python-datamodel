@@ -9,7 +9,7 @@ from pathlib import PosixPath, PurePath, Path
 from datetime import datetime
 from asyncpg.pgproto import pgproto
 from psycopg2 import Binary
-from dataclasses import _MISSING_TYPE, MISSING
+from dataclasses import _MISSING_TYPE, MISSING, InitVar
 from typing import Any, Union
 from decimal import Decimal
 from enum import Enum, EnumType
@@ -67,6 +67,9 @@ cdef class JSONContent:
             return str(obj)  # Convert Binary object to string
         elif isinstance(obj, Field):
             return obj.to_dict()
+        elif isinstance(obj, InitVar):
+            # Handle InitVar explicitly
+            return None
         raise TypeError(
             f'{obj!r} of Type {type(obj)} is not JSON serializable'
         )

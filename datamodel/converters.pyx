@@ -1061,15 +1061,26 @@ cpdef dict process_attributes(object obj, list columns):
     for name, f in columns:
         try:
             value = getattr(obj, name)
-            metadata = f.metadata
+            # Use the precomputed field type category:
+            field_category = f._type_category
+
+            if field_category == 'descriptor':
+                # Handle descriptor-specific logic
+                try:
+                    value = f.__get__(obj, type(obj))  # Get the descriptor value
+                    setattr(obj, name, value)
+                except Exception as e:
+                    errors[name] = f"Descriptor error in {name}: {e}"
+                continue
+
+            metadata = getattr(f, "metadata", {})
             _type = f.type
             _encoder = metadata.get('encoder')
             _default = f.default
             typeinfo = f.typeinfo
             is_dc = f.is_dc
             _default_callable = typeinfo.get('default_callable', False)
-            # Use the precomputed field type category:
-            field_category = f._type_category
+
 
             # Check if object is empty
             if is_empty(value) and not isinstance(value, list):
