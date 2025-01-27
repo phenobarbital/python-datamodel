@@ -1,0 +1,13 @@
+[package]
+name = "rst_converters"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "rst_converters"  # Must match the `#[pymodule]` name in lib.rs
+crate-type = ["cdylib"]  # For Python interop
+
+[dependencies]
+pyo3 = { version = "0.18", features = ["extension-module"] }
+chrono = "0.4"
+speedate = "0.3.0"

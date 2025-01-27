@@ -49,7 +49,7 @@ with open(version, 'r', encoding='utf-8') as meta:
                     __author_email__ = v.s
 
 
-COMPILE_ARGS = ["-O2"]
+COMPILE_ARGS = ["-O3"]
 
 extensions = [
     Extension(
@@ -185,7 +185,11 @@ setup(
         'pytest-assume==2.4.3'
     ],
     test_suite='tests',
-    ext_modules=cythonize(extensions),
+    ext_modules=cythonize(
+        extensions,
+        compiler_directives={"language_level": "3"},
+        annotate=True
+    ),
     project_urls={  # Optional
         "Source": "https://github.com/phenobarbital/datamodel",
         "Funding": "https://paypal.me/phenobarbital",

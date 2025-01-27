@@ -168,6 +168,7 @@ print(user)
 print(user.id)
 print(is_dataclass(user))
 print(type(user.signup_ts), user.signup_ts)
+print(type(user.born), user.born)
 
 def create_user2():
     for i in range(10):
