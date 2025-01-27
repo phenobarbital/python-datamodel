@@ -5,6 +5,7 @@ use pyo3::wrap_pyfunction;
 use pyo3::types::{PyDate, PyDateTime};
 use chrono::{Datelike, Timelike, NaiveDate, NaiveDateTime, DateTime, Utc};
 use speedate::Date as SpeeDate;
+use speedate::DateTime as SpeeDateTime;
 // use speedate::{Date, DateTime, ParseError};
 
 /// Converts a string representation of truth to a boolean.
@@ -63,7 +64,8 @@ fn to_boolean(_py: Python, obj: Option<&PyAny>) -> PyResult<Option<bool>> {
     }
 }
 
-fn from_timestamp(py: Python, timestamp: f64) -> PyResult<PyObject> {
+#[pyfunction]
+fn to_timestamp(py: Python, timestamp: f64) -> PyResult<PyObject> {
     let seconds = timestamp.floor() as i64;
     let microseconds = (timestamp.fract() * 1_000_000.0).round() as u32;
     let naive_dt = NaiveDateTime::from_timestamp(seconds, microseconds);
@@ -75,7 +77,7 @@ fn from_timestamp(py: Python, timestamp: f64) -> PyResult<PyObject> {
         naive_dt.time().hour() as u8,
         naive_dt.time().minute() as u8,
         naive_dt.time().second() as u8,
-        naive_dt.timestamp_subsec_micros() as u32,
+        naive_dt.and_utc().timestamp_subsec_micros() as u32,
         None,
     )?
     .into_py(py))
@@ -91,19 +93,30 @@ fn from_timestamp(py: Python, timestamp: f64) -> PyResult<PyObject> {
 /// * `Err(PyValueError)` if no format matches.
 #[pyfunction]
 fn to_date(py: Python, input: &str, custom_format: Option<&str>) -> PyResult<Py<PyDate>> {
-    // // First, try parsing as an ISO 8601 datetime.
-    if let Ok(datetime) = NaiveDateTime::parse_from_str(input, "%Y-%m-%dT%H:%M:%S%.f") {
-        let date = datetime.date();
-        return Ok(PyDate::new(py, date.year(), date.month() as u8, date.day() as u8)?.into_py(py));
+    if input.trim().is_empty() {
+        return Err(PyValueError::new_err("Input string is empty"));
+    }
+
+    // Use speedate for ISO 8601 parsing
+    if let Ok(parsed_date) = SpeeDate::parse_str(input) {
+        return Ok(PyDate::new(
+            py,
+            parsed_date.year as i32,
+            parsed_date.month,
+            parsed_date.day,
+        )?
+        .into_py(py));
     }
 
     // Define custom formats to try, including the optional format.
     let formats = vec![
         "%Y-%m-%d",             // ISO 8601 date
+        "%m/%d/%Y",             // Month/day/year
+        "%m-%d-%Y",             // Month-day-year
         "%d-%m-%Y",             // Custom format
         "%Y/%m/%d",             // Slash-separated date
+        "%Y-%m-%dT%H:%M:%S%.f", // ISO 8601 datetime
         "%Y-%m-%d %H:%M:%S",    // ISO 8601 with time
-        "%m/%d/%Y",             // Month/day/year
         "%d/%m/%Y",             // Day/month/year
         "%d.%m.%Y",             // Day.month.year
         custom_format.unwrap_or_default(),
@@ -111,23 +124,13 @@ fn to_date(py: Python, input: &str, custom_format: Option<&str>) -> PyResult<Py<
 
     // Try parsing as ISO 8601 date only.
     for &fmt in &formats {
-        if let Ok(date) = NaiveDate::parse_from_str(input, "%Y-%m-%d") {
+        if let Ok(date) = NaiveDate::parse_from_str(input, fmt) {
             return Ok(PyDate::new(py, date.year(), date.month() as u8, date.day() as u8)?.into_py(py));
         }
         if let Ok(date) = NaiveDate::parse_from_str(input, fmt) {
             // Convert NaiveDate to PyDate
             return Ok(PyDate::new(py, date.year(), date.month() as u8, date.day() as u8)?.into_py(py));
         }
-    }
-
-    // Try converting using `speedate`
-    if let Ok(parsed_date) = SpeeDate::parse_str(input) {
-        return Ok(PyDate::new(
-            py,
-            parsed_date.year as i32,
-            parsed_date.month,
-            parsed_date.day,
-        )?.into_py(py));
     }
 
     // If all attempts fail, raise a ValueError.
@@ -138,10 +141,26 @@ fn to_date(py: Python, input: &str, custom_format: Option<&str>) -> PyResult<Py<
 }
 
 #[pyfunction]
-fn to_datetime(py: Python, input: &str, optional_format: Option<&str>) -> PyResult<Py<PyDateTime>> {
+fn to_datetime(py: Python, input: &str, custom_format: Option<&str>) -> PyResult<Py<PyDateTime>> {
 
     if input.trim().is_empty() {
         return Err(PyValueError::new_err("Input string is empty"));
+    }
+
+    // Attempt parsing using Speedate
+    if let Ok(parsed_datetime) = SpeeDateTime::parse_str(input) {
+        return Ok(PyDateTime::new(
+            py,
+            parsed_datetime.date.year as i32,
+            parsed_datetime.date.month,
+            parsed_datetime.date.day,
+            parsed_datetime.time.hour,
+            parsed_datetime.time.minute,
+            parsed_datetime.time.second,
+            parsed_datetime.time.microsecond,
+            None,
+        )?
+        .into_py(py));
     }
 
     // Try parsing as ISO 8601 datetime with timezone.
@@ -164,20 +183,18 @@ fn to_datetime(py: Python, input: &str, optional_format: Option<&str>) -> PyResu
     }
 
     // Define custom formats to try, including the optional format.
-    let mut formats = vec![
-        "%Y-%m-%d %H:%M:%S",    // ISO 8601 with time
-        "%Y-%m-%d %H:%M:%S%.f", // ISO 8601 with fractional seconds
+    let formats = vec![
         "%Y-%m-%d",             // ISO 8601 date
+        "%m/%d/%Y",             // Month/day/year
+        "%m-%d-%Y",             // Month-day-year
         "%d-%m-%Y",             // Custom format
         "%Y/%m/%d",             // Slash-separated date
-        "%d/%m/%Y %H:%M:%S",    // Custom format with time
-        "%d/%m/%Y %H:%M:%S%.f", // Custom format with fractional seconds
+        "%Y-%m-%dT%H:%M:%S%.f", // ISO 8601 datetime
+        "%Y-%m-%d %H:%M:%S",    // ISO 8601 with time
+        "%d/%m/%Y",             // Day/month/year
+        "%d.%m.%Y",             // Day.month.year
+        custom_format.unwrap_or_default(),
     ];
-
-    // Add the optional format to the list of formats, if provided.
-    if let Some(fmt) = optional_format {
-        formats.push(fmt);
-    }
 
     // Attempt parsing with each format.
     for &fmt in &formats {
@@ -203,5 +220,6 @@ fn rst_converters(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(to_boolean, m)?)?;
     m.add_function(wrap_pyfunction!(to_date, m)?)?;
     m.add_function(wrap_pyfunction!(to_datetime, m)?)?;
+    m.add_function(wrap_pyfunction!(to_timestamp, m)?)?;
     Ok(())
 }

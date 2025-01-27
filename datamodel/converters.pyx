@@ -17,9 +17,8 @@ from cpython.ref cimport PyObject
 from .functions import is_empty, is_dataclass, is_iterable, is_primitive
 from .validation import _validation
 from .fields import Field
-# New converters:
-from rst_converters import to_date as todate
-from rst_converters import to_datetime as todatetime
+# New converter:
+import rst_converters as rc
 
 
 # Maps a type to a conversion callable
@@ -117,21 +116,31 @@ cpdef datetime.date to_date(object obj):
     """
     if obj is None:
         return None
+    elif obj == _MISSING_TYPE:
+        return None
     if isinstance(obj, datetime.date):
         return obj
     elif isinstance(obj, (datetime.datetime, datetime.timedelta)):
         return obj.date()
     if isinstance(obj, (bytes, bytearray)):
         obj = obj.decode("ascii")
-    try:
-        return todate(obj)
-    except ValueError:
-        pass
+    # Handle Unix epoch via Rust's `to_timestamp`
+    if isinstance(obj, (int, float)):
+        try:
+            return rc.to_timestamp(obj).date()
+        except ValueError:
+            pass
+    # Fallback to Cython-native ciso8601 parsing
     try:
         return ciso8601.parse_datetime(obj).date()
     except ValueError:
         pass
-    # Last resort:
+    # using rust todate function
+    try:
+        return rc.to_date(obj)
+    except ValueError:
+        pass
+    # Last resort: parse manually
         try:
             year, month, day, hour, minute = ts_parse_datetime(obj)
             return datetime.date(year=year, month=month, day=day)
@@ -182,14 +191,20 @@ cpdef datetime.datetime to_datetime(object obj):
     """
     if obj is None:
         return None
-    if isinstance(obj, datetime.datetime):
-        return obj
     elif obj == _MISSING_TYPE:
         return None
+    if isinstance(obj, datetime.datetime):
+        return obj
     if isinstance(obj, (bytes, bytearray)):
         obj = obj.decode("ascii")
+    # Handle Unix epoch via Rust's `to_timestamp`
+    if isinstance(obj, (int, float)):
+        try:
+            return rc.to_timestamp(obj)
+        except ValueError:
+            pass
     try:
-        return todatetime(obj)
+        return rc.to_datetime(obj)
     except ValueError:
         pass
     try:
