@@ -1,8 +1,29 @@
 import timeit
+from datetime import datetime
 from datamodel.converters import to_boolean, to_date
+from datamodel import Model, BaseModel, Field
 import rst_converters
 import random
 
+
+def test_datamodel():
+    class User(Model):
+        id: int
+        name: str = 'John Doe'
+        signup_ts: datetime
+    # Using the DataModel defined above
+
+    def test_model():
+        user = User(id=1, name="Alice", signup_ts=datetime.now())
+        results = rst_converters.parse_datamodel(user)
+
+    print('Test with Rust: ')
+    time = timeit.timeit(test_model, number=10000)
+    print(f"Execution time: {time:.6f} seconds")
+
+    # user = User(id="1", name="Alice", signup_ts=datetime.now())
+    # results = rst_converters.validate_datamodel(user)
+    # print(results)
 
 def test_dates():
     def test_date():
@@ -96,4 +117,5 @@ def test_booleans():
 
 if __name__ == '__main__':
     # test_booleans()
-    test_dates()
+    # test_dates()
+    test_datamodel()
