@@ -1,12 +1,17 @@
 use pyo3::prelude::*;
 use pyo3::exceptions::PyValueError;
-use pyo3::types::PyAny;
+use pyo3::exceptions::PyTypeError;
 use pyo3::wrap_pyfunction;
-use pyo3::types::{PyDate, PyDateTime};
+use pyo3::types::PyType;
+use pyo3::types::{PyDate, PyDateTime, PyAny, PyDict};
+// use pyo3::PyTypeInfo;
 use chrono::{Datelike, Timelike, NaiveDate, NaiveDateTime, DateTime, Utc};
 use speedate::Date as SpeeDate;
 use speedate::DateTime as SpeeDateTime;
 // use speedate::{Date, DateTime, ParseError};
+// use rayon::prelude::*;
+// use std::collections::HashMap;
+
 
 /// Converts a string representation of truth to a boolean.
 ///
@@ -68,19 +73,25 @@ fn to_boolean(_py: Python, obj: Option<&PyAny>) -> PyResult<Option<bool>> {
 fn to_timestamp(py: Python, timestamp: f64) -> PyResult<PyObject> {
     let seconds = timestamp.floor() as i64;
     let microseconds = (timestamp.fract() * 1_000_000.0).round() as u32;
-    let naive_dt = NaiveDateTime::from_timestamp(seconds, microseconds);
-    Ok(PyDateTime::new(
-        py,
-        naive_dt.date().year(),
-        naive_dt.date().month() as u8,
-        naive_dt.date().day() as u8,
-        naive_dt.time().hour() as u8,
-        naive_dt.time().minute() as u8,
-        naive_dt.time().second() as u8,
-        naive_dt.and_utc().timestamp_subsec_micros() as u32,
-        None,
-    )?
-    .into_py(py))
+    // let naive_dt = NaiveDateTime::from_timestamp_opt(seconds, microseconds);
+    let datetime = DateTime::<Utc>::from_timestamp(seconds, microseconds);
+    if let Some(dt) = datetime {
+        let naive_dt: NaiveDateTime = dt.naive_utc();
+        Ok(PyDateTime::new(
+            py,
+            naive_dt.date().year(),
+            naive_dt.date().month() as u8,
+            naive_dt.date().day() as u8,
+            naive_dt.time().hour() as u8,
+            naive_dt.time().minute() as u8,
+            naive_dt.time().second() as u8,
+            naive_dt.and_utc().timestamp_subsec_micros() as u32,
+            None,
+        )?
+        .into_py(py))
+    } else {
+        return Err(PyValueError::new_err("Invalid timestamp"));
+    }
 }
 
 /// Parses a string into a `NaiveDate` using multiple formats.
@@ -212,6 +223,81 @@ fn to_datetime(py: Python, input: &str, custom_format: Option<&str>) -> PyResult
     )))
 }
 
+#[pyfunction]
+fn validate_datamodel(py: Python<'_>, dataclass_instance: PyObject) -> PyResult<Vec<(String, bool)>> {
+    // Get the class of the instance
+    let dataclass: &PyType = dataclass_instance.as_ref(py).get_type();
+
+    // Get the __dataclass_fields__ attribute from the class
+    let fields_dict: &PyDict = dataclass.getattr("__dataclass_fields__")?.downcast::<PyDict>()?;
+
+    // Validate each field in the main thread
+    let results: Vec<(String, bool)> = fields_dict
+        .items()
+        .iter()
+        .map(|item| {
+            let (key, field) = item.extract::<(String, &PyAny)>().unwrap();
+
+            // Extract information from the dataclass.Field object
+            let field_type = field.getattr("type").unwrap().to_object(py);
+            let value = dataclass_instance.getattr(py, key.as_str()).unwrap();
+
+            let is_valid = match validate_field(py, &field_type, &value) {
+                Ok(result) => result,
+                Err(e) => {
+                    eprintln!("Validation error for field {}: {}", key, e);
+                    false
+                }
+            };
+            (key.to_string(), is_valid)
+        })
+        .collect();
+
+    Ok(results)
+}
+
+fn validate_field(py: Python<'_>, field_type: &PyObject, value: &PyObject) -> PyResult<bool> {
+    // Check if it's a primitive type
+    if let Ok(type_) = field_type.extract::<&PyType>(py) {
+        let type_name = type_.name()?;
+        println!("field: {:?}", type_name);
+        match type_name {
+            "str" => {
+                return Ok(value.extract::<&str>(py).is_ok());
+            }
+            "int" => {
+                return Ok(value.extract::<i64>(py).is_ok());
+            }
+            "float" => {
+                return Ok(value.extract::<f64>(py).is_ok());
+            }
+            "bool" => {
+                return Ok(value.extract::<bool>(py).is_ok());
+            }
+            "datetime" => {
+                return Ok(value.extract::<&PyDateTime>(py).is_ok());
+            }
+            "date" => {
+                return Ok(value.extract::<&PyDate>(py).is_ok());
+            }
+            _ => {
+                // Not a primitive type, you can either skip validation or return an error
+                // eprintln!("Skipping validation for non-primitive type: {}", type_name);
+                // Ok(true) // Option 1: Skip validation
+                return Err(PyTypeError::new_err(format!(
+                    "Validation for type {} is not implemented yet.",
+                    type_name
+                ))); // Option 2: Return an error
+            }
+        }
+    } else {
+        // Handle the case where field_type is not a PyType (e.g., it's a generic type)
+        eprintln!("Field type is not a PyType: {:?}", field_type);
+        return Err(PyTypeError::new_err(
+            "Field type is not a PyType, cannot validate.",
+        ));
+    }
+}
 
 /// Python module declaration
 #[pymodule]
@@ -221,5 +307,6 @@ fn rst_converters(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(to_date, m)?)?;
     m.add_function(wrap_pyfunction!(to_datetime, m)?)?;
     m.add_function(wrap_pyfunction!(to_timestamp, m)?)?;
+    m.add_function(wrap_pyfunction!(validate_datamodel, m)?)?;
     Ok(())
 }

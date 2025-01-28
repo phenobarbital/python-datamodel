@@ -2,6 +2,10 @@
 name = "rst_converters"
 version = "0.1.0"
 edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+description = "Parallel DataModel validator using Rust"
+license = "BSD-3-Clause"
+repository = "https://github.com/phenobarbital/python-datamodel"
 
 [lib]
 name = "rst_converters"  # Must match the `#[pymodule]` name in lib.rs
@@ -11,3 +15,4 @@ crate-type = ["cdylib"]  # For Python interop
 pyo3 = { version = "0.18", features = ["extension-module"] }
 chrono = "0.4"
 speedate = "0.3.0"
+rayon = "1.5.3"
