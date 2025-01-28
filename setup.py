@@ -10,6 +10,7 @@ from os import path
 
 from Cython.Build import cythonize
 from setuptools import Extension, find_packages, setup
+from setuptools_rust import RustExtension
 
 
 def get_path(filename):
@@ -162,7 +163,9 @@ setup(
     setup_requires=[
         'setuptools==74.0.0',
         'Cython==3.0.11',
-        'wheel==0.44.0'
+        'wheel==0.44.0',
+        'pip==25.0',
+        'setuptools-rust==1.10.2',
     ],
     install_requires=[
         "numpy>=1.26.4",

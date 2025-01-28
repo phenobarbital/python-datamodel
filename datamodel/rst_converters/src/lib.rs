@@ -56,8 +56,7 @@ fn to_boolean(_py: Python, obj: Option<&PyAny>) -> PyResult<Option<bool>> {
             } else if let Ok(s) = val.extract::<String>() {
                 Ok(Some(strtobool(&s)?))
             } else if val.is_callable() {
-                let result = val.call0();
-                match result {
+                match val.call0() {
                     Ok(res) => Ok(Some(res.extract::<bool>()?)),
                     Err(_) => Ok(None),
                 }
@@ -133,18 +132,12 @@ fn to_date(py: Python, input: &str, custom_format: Option<&str>) -> PyResult<Py<
         custom_format.unwrap_or_default(),
     ];
 
-    // Try parsing as ISO 8601 date only.
     for &fmt in &formats {
         if let Ok(date) = NaiveDate::parse_from_str(input, fmt) {
             return Ok(PyDate::new(py, date.year(), date.month() as u8, date.day() as u8)?.into_py(py));
         }
-        if let Ok(date) = NaiveDate::parse_from_str(input, fmt) {
-            // Convert NaiveDate to PyDate
-            return Ok(PyDate::new(py, date.year(), date.month() as u8, date.day() as u8)?.into_py(py));
-        }
     }
 
-    // If all attempts fail, raise a ValueError.
     Err(PyValueError::new_err(format!(
         "Unable to parse input '{}' into a date. Accepted types are strings (ISO 8601 or custom formats)",
         input

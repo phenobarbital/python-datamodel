@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "rst_converters",
+    "rst_parsers",
+    "rst_validators"
+]
