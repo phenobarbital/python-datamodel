@@ -18,7 +18,7 @@ from .functions import is_empty, is_dataclass, is_iterable, is_primitive
 from .validation import _validation
 from .fields import Field
 # New converter:
-import rst_converters as rc
+import rs_parsers as rc
 
 
 # Maps a type to a conversion callable
@@ -33,7 +33,7 @@ cpdef object register_converter(object _type, object converter_func):
     TYPE_CONVERTERS[_type] = converter_func
 
 
-cdef str to_string(object obj):
+cpdef str to_string(object obj):
     """
     Returns a string version of an object.
     """
@@ -51,7 +51,7 @@ cdef str to_string(object obj):
             pass
     return str(obj)
 
-cdef object to_uuid(object obj):
+cpdef object to_uuid(object obj):
     """Returns a UUID version of a str column.
     """
     if isinstance(obj, pgproto.UUID):
@@ -63,7 +63,7 @@ cdef object to_uuid(object obj):
     elif callable(obj):
         # its a function callable returning a value
         try:
-            return obj()
+            return UUID(obj())
         except:
             pass
     try:
@@ -149,41 +149,6 @@ cpdef datetime.date to_date(object obj):
                 f"Can't convert invalid data *{obj}* to date"
             )
 
-    # elif isinstance(obj, str):
-
-    #     try:
-    #         return datetime.datetime.fromisoformat(obj).date()
-    #     except ValueError:
-    #         pass
-    #     try:
-    #         year, month, day = ts_parse_date(obj)
-    #         return datetime.date(year=year, month=month, day=day)
-    #     except ValueError as ex:
-    #         pass
-    #     try:
-    #         year, month, day, hour, minute = ts_parse_datetime(obj)
-    #         return datetime.date(year=year, month=month, day=day)
-    #     except ValueError as ex:
-    #         pass
-    #     try:
-    #         return datetime.datetime.strptime(obj, "%Y-%m-%d").date()
-    #     except ValueError:
-    #         pass
-    #     try:
-    #         return datetime.datetime.strptime(obj, "%d-%m-%Y").date()
-    #     except ValueError:
-    #         pass
-    #     try:
-    #         return datetime.datetime.strptime(obj, "%Y-%m-%d %H:%M:%S").date()
-    #     except ValueError:
-    #         pass
-    # try:
-    #     return pendulum.parse(obj, strict=False).date()
-    # except (ValueError, TypeError, ParserError):
-    #     raise ValueError(
-    #         f"Can't convert invalid data *{obj}* to date"
-    #     )
-
 cpdef datetime.datetime to_datetime(object obj):
     """to_datetime.
 
@@ -219,38 +184,6 @@ cpdef datetime.datetime to_datetime(object obj):
         raise ValueError(
             f"Can't convert invalid data *{obj}* to datetime"
         )
-    # elif isinstance(obj, str):
-
-    #     try:
-    #         return ciso8601.parse_datetime(obj)
-    #     except ValueError:
-    #         pass
-    #     try:
-    #         return datetime.datetime.strptime(obj, "%Y-%m-%d %H:%M")
-    #     except ValueError:
-    #         pass
-    #     try:
-    #         return datetime.datetime.strptime(obj, "%Y-%m-%d %H:%M:%S")
-    #     except ValueError:
-    #         pass
-    #     try:
-    #         return datetime.datetime.strptime(obj, "%Y-%m-%d")
-    #     except ValueError:
-    #         pass
-    #     try:
-    #         return datetime.datetime.strptime(obj, "%d-%m-%Y")
-    #     except ValueError:
-    #         pass
-    # try:
-    #     return datetime.datetime.fromisoformat(obj)
-    # except ValueError:
-    #     pass
-    # try:
-    #     return pendulum.parse(obj, strict=False)
-    # except (ValueError, TypeError, ParserError):
-    #     raise ValueError(
-    #         f"Can't convert invalid data *{obj}* to datetime"
-    #     )
 
 cpdef object to_integer(object obj):
     """to_integer.

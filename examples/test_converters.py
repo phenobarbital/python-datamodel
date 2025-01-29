@@ -7,7 +7,7 @@ import random
 
 
 def test_datamodel():
-    class User(Model):
+    class User(BaseModel):
         id: int
         name: str = 'John Doe'
         signup_ts: datetime
@@ -18,7 +18,7 @@ def test_datamodel():
         results = rst_converters.parse_datamodel(user)
 
     print('Test with Rust: ')
-    time = timeit.timeit(test_model, number=10000)
+    time = timeit.timeit(test_model, number=1)
     print(f"Execution time: {time:.6f} seconds")
 
     # user = User(id="1", name="Alice", signup_ts=datetime.now())
@@ -42,7 +42,7 @@ def test_dates():
             assert dt.day == 31
 
     print('Test with Cython: ')
-    time = timeit.timeit(test_date, number=10000)
+    time = timeit.timeit(test_date, number=100000)
     print(f"Execution time: {time:.6f} seconds")
 
     def test_rst_date():
@@ -61,7 +61,7 @@ def test_dates():
             assert dt.day == 31
 
     print('Test with Rust: ')
-    time = timeit.timeit(test_rst_date, number=10000)
+    time = timeit.timeit(test_rst_date, number=100000)
     print(f"Execution time: {time:.6f} seconds")
 
 def test_booleans():
@@ -117,5 +117,5 @@ def test_booleans():
 
 if __name__ == '__main__':
     # test_booleans()
-    # test_dates()
-    test_datamodel()
+    test_dates()
+    # test_datamodel()

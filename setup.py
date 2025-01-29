@@ -193,6 +193,7 @@ setup(
         compiler_directives={"language_level": "3"},
         annotate=True
     ),
+    zip_safe=False,
     project_urls={  # Optional
         "Source": "https://github.com/phenobarbital/datamodel",
         "Funding": "https://paypal.me/phenobarbital",

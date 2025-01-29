@@ -3,7 +3,9 @@ requires = [
     'setuptools==74.0.0',
     'Cython==3.0.11',
     'wheel==0.44.0',
-    "setuptools-rust>=1.10.2"
+    "setuptools-rust>=1.10.2",
+    'maturin>=1,<2',
+    'typing-extensions >=4.6.0,!=4.7.0'
 ]
 build-backend = "setuptools.build_meta"
 
@@ -18,11 +20,16 @@ classifiers=[
   "Intended Audience :: System Administrators",
   "Intended Audience :: Information Technology",
   "Operating System :: OS Independent",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: Microsoft :: Windows",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Programming Language :: Python",
+  "Programming Language :: Rust",
   "Typing :: Typed",
   "Environment :: Web Environment",
   "Framework :: AsyncIO",
@@ -31,7 +38,7 @@ classifiers=[
   "Topic :: Software Development :: Build Tools",
   "License :: OSI Approved :: BSD License",
 ]
-dynamic = ['version', 'description']
+dynamic = ['version', 'description', 'license', 'keywords', 'readme']
 description-file = "README.md"
 requires-python = ">=3.9.13"
 
@@ -73,3 +80,9 @@ ignore_missing_imports = true
 
 [tool.flake8]
 ignore = 'E501,W503,E203'
+
+[tool.maturin]
+python-source = "datamodel/rs_datamodel"
+module-name = "datamodel.rs_datamodel"
+bindings = "pyo3"
+features = ["pyo3/extension-module"]
