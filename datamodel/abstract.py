@@ -200,10 +200,6 @@ class ModelMeta(type):
                         df = Field(required=False, type=_type, default=df)
                     df.name = field
                     df.type = _type
-                    try:
-                        df._encoder_fn = encoders[_type]
-                    except (TypeError, KeyError):
-                        df._encoder_fn = None
 
                     # Cache reflection info so we DON’T need to call
                     # get_origin/get_args repeatedly:
@@ -225,21 +221,42 @@ class ModelMeta(type):
                     df._typeinfo_ = {
                         "default_callable": callable(_default)
                     }
-
+                    # Current Field have an Encoder Function.
+                    custom_encoder = df.metadata.get("encoder")
+                    try:
+                        df.parser = encoders[_type]
+                    except (TypeError, KeyError):
+                        df.parser = None
+                    if custom_encoder:
+                        df.parser = lambda value, _type=_type, encoder=custom_encoder: parse_basic(_type, value, encoder)  # noqa
                     # check type of field:
                     if _is_prim:
-                        df.parser = lambda value, _type=_type, _encoder=df.metadata.get('encoder'): parse_basic(_type, value, _encoder)
                         _type_category = 'primitive'
                     elif origin == type:
                         _type_category = 'type'
                     elif _is_dc:
                         _type_category = 'dataclass'
-                    elif _is_typing:  # noqa
+                    elif _is_typing or _is_alias:  # noqa
+                        if df.origin is not None and (df.origin is list and df.args):
+                            df._inner_type = args[0]
+                            df._inner_origin = get_origin(df._inner_type)
+                            df._typing_args = get_args(df._inner_type)
+                            df._inner_is_dc = is_dataclass(df._inner_type)
+                            try:
+                                df._encoder_fn = encoders[df._inner_type]
+                            except (TypeError, KeyError):
+                                df._encoder_fn = None
+                        if origin is list:
+                            inner_type = args[0]
+                            try:
+                                df._encoder_fn = encoders[inner_type]
+                            except (TypeError, KeyError):
+                                df._encoder_fn = None
                         _type_category = 'typing'
                     elif isclass(_type):
                         _type_category = 'class'
-                    elif _is_alias:
-                        _type_category = 'typing'
+                    # elif _is_alias:
+                    #    _type_category = 'typing'
                     else:
                         # TODO: making parser for complex types
                         _type_category = 'complex'

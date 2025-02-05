@@ -88,6 +88,7 @@ print(f"Execution ClassDict: {time:.6f} seconds")
 print('============= Model =============')
 # Basic Model:
 from datamodel import Model, Field
+from datamodel.exceptions import ValidationError
 
 class Account(BaseModel):
     """
@@ -142,7 +143,7 @@ external_user = {
     }
 }
 
-from datamodel import BaseModel, Field
+from datamodel import BaseModel
 
 
 class Account(BaseModel):
@@ -172,11 +173,14 @@ print(type(user.born), user.born)
 
 def create_user2():
     for i in range(10):
-        user = NewUser(**external_user)
+        try:
+            user = NewUser(**external_user)
+        except ValidationError as e:
+            print(e.payload)
 
 
 print('Test with DataModel: ')
-time = timeit.timeit(create_user2, number=1000)
+time = timeit.timeit(create_user2, number=1)
 print(f"Execution time: {time:.6f} seconds")
 # runner.bench_func('datamodel', create_user2)
 print(user, user.friends)

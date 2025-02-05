@@ -94,6 +94,7 @@ user_payload = """
         "physical_country": "USA",
         "role_name": "Global Admin",
         "is_active": true,
+        "org_name": "assembly",
         "client_id": [
             61,
             54,
@@ -153,6 +154,7 @@ def create_organization(
     parent_data: BaseModel
 ) -> Organization:
     org_name = parent_data.get('org_name', None) if parent_data else None
+    print('Creating organization')
     args = {
         name: value,
         "org_name": org_name,
@@ -160,7 +162,7 @@ def create_organization(
     }
     return obj(**args)
 
-BaseModel.register_converter(Organization, create_organization, 'orgid')
+BaseModel.register_parser(Organization, create_organization, 'orgid')
 
 class Client(BaseModel):
     client_id: int = Field(primary_key=True)
@@ -225,6 +227,7 @@ class User(BaseModel):
     is_active: bool = Field(required=False, default=True)
     client_id: List[Client] = Field(required=True)
     orgid: List[Organization] = Field(required=True)
+    org_name: str
     client_names: List[str] = Field(required=True)
 
     class Meta:
@@ -300,9 +303,9 @@ def get_user():
         return user
 
 if __name__ == "__main__":
-    client = get_client()
+    # client = get_client()
     # formid = get_formid()
     # form_metadata = get_formmetadata()
-    # user = get_user()
-    df = pd.DataFrame([client.to_dict(as_values=True)])
-    print('DF = ', df)
+    user = get_user()
+    # df = pd.DataFrame([client.to_dict(as_values=True)])
+    # print('DF = ', df)

@@ -19,18 +19,6 @@ from .fields import Field
 import rs_parsers as rc
 
 
-# Maps a type to a conversion callable
-cdef dict TYPE_CONVERTERS = {}
-
-
-cpdef object register_converter(object _type, object converter_func):
-    """register_converter.
-
-    Register a new converter function for a given type.
-    """
-    TYPE_CONVERTERS[_type] = converter_func
-
-
 cpdef str to_string(object obj):
     """
     Returns a string version of an object.
@@ -39,13 +27,16 @@ cpdef str to_string(object obj):
         return None
     if isinstance(obj, str):
         return obj
-    elif isinstance(obj, bytes):
-        return obj.decode()
-    elif callable(obj):
+    if isinstance(obj, bytes):
+        try:
+            return obj.decode()
+        except UnicodeDecodeError as e:
+            raise ValueError(f"Cannot decode bytes: {e}") from e
+    if callable(obj):
         # its a function callable returning a value
         try:
             return str(obj())
-        except:
+        except Exception:
             pass
     return str(obj)
 
@@ -166,6 +157,15 @@ cpdef object to_integer(object obj):
         return None
     if isinstance(obj, int):
         return obj
+    if isinstance(obj, unicode):
+        obj = obj.encode("ascii")
+    if isinstance(obj, bytes):
+        try:
+            return int(obj)
+        except (TypeError, ValueError) as e:
+            raise ValueError(
+                f"Invalid conversion to Integer of {obj}"
+            ) from e
     elif callable(obj):
         # its a function callable returning a value
         try:
@@ -364,6 +364,42 @@ cpdef object to_object(object obj):
             f"Can't convert invalid data {obj} to Object"
         )
 
+cpdef bytes to_bytes(object obj):
+    """
+    Convert the given object to bytes.
+
+    - If the object is already bytes, return it directly.
+    - If the object is a string, encode it (using UTF-8).
+    - If the object is callable, call it and convert its result.
+    - Otherwise, attempt to convert the object to bytes.
+    If conversion fails, raise a ValueError.
+    """
+    if obj is None:
+        raise ValueError("Cannot convert None to bytes")
+
+    # 1. If already bytes, return as is.
+    if isinstance(obj, bytes):
+        return obj
+
+    # 2. If it's a string, encode it to bytes.
+    elif isinstance(obj, str):
+        return obj.encode("utf-8")
+
+    # 3. If it's callable, attempt to call it and convert its result.
+    elif callable(obj):
+        try:
+            result = obj()
+            # Recursively convert the result.
+            return to_bytes(result)
+        except Exception as e:
+            raise ValueError("Failed to convert callable to bytes: %s" % e)
+
+    # 4. Try converting the object into bytes using Python's built-in conversion.
+    try:
+        return bytes(obj)
+    except Exception as e:
+        raise ValueError("Invalid conversion to bytes: %s" % e)
+
 cdef bint is_callable(object value) nogil:
     """
     Check if `value` is callable by calling Python's callable(...)
@@ -388,8 +424,28 @@ encoders = {
     Decimal: to_decimal,
     dict: to_object,
     list: to_object,
-    tuple: to_object
+    tuple: to_object,
+    bytes: to_bytes,
 }
+
+
+# Maps a type to a conversion callable
+cdef dict TYPE_PARSERS = {}
+
+
+cpdef object register_parser(object _type, object parser_func):
+    """register_parser.
+
+    Register a new Parser function for a given type.
+
+    Parameters:
+    _type (type): The type for which the parser function is registered.
+    parser_func (function): The parser function to convert the given type.
+    """
+    TYPE_PARSERS[_type] = parser_func
+
+
+## Parsing Functions
 
 cdef object _parse_dict_type(
     object field,
@@ -409,10 +465,17 @@ cdef object _parse_list_type(
     object T,
     object data,
     object encoder,
-    object args
+    object args,
+    object _parent = None
 ):
+    """
+    Parse a list of items to a typing type.
+    """
     cdef object arg_type = args[0]
     cdef list result = []
+    cdef tuple key = (arg_type, field.name)
+    cdef object converter = TYPE_PARSERS.get(key) or TYPE_PARSERS.get(arg_type)
+    cdef object inner_type = field._inner_type or arg_type
 
     if data is None:
         return []   # short-circuit
@@ -421,23 +484,33 @@ cdef object _parse_list_type(
         data = [data]
 
     # If it's a dataclass
-    if is_dataclass(arg_type):
+    if is_dataclass(inner_type):
         for d in data:
             if is_dataclass(d):
                 result.append(d)
-            elif isinstance(d, dict):
-                result.append(arg_type(**d))
-            elif isinstance(d, (list, tuple)):
-                result.append(arg_type(*d))
+            if converter:
+                result.append(
+                    converter(field.name, d, inner_type, _parent)
+                )
             else:
-                result.append(arg_type(d))
+                if isinstance(d, dict):
+                    result.append(inner_type(**d))
+                elif isinstance(d, (list, tuple)):
+                    result.append(inner_type(*d))
+                else:
+                    result.append(inner_type(d))
         return result
     else:
         # General conversion
         for item in data:
-            result.append(
-                parse_typing(field, arg_type, item, encoder, False)
-            )
+            if converter:
+                result.append(
+                    converter(field.name, item, inner_type, _parent)
+                )
+            else:
+                result.append(
+                    parse_typing(field, inner_type, item, encoder, False)
+                )
         return result
 
 cdef object _parse_dataclass_type(object T, object data):
@@ -674,7 +747,7 @@ cdef object _parse_optional_union(
     object args
 ):
     """
-    handle Optional or Union logic
+    Handle Optional or Union logic.
     """
     cdef object non_none_arg
     cdef object t = args[0] if args else None
@@ -684,6 +757,7 @@ cdef object _parse_optional_union(
     if origin == Union and type(None) in args:
         if data is None:
             return None
+        # Pick the non-None type (assumes only two types in the Union)
         non_none_arg = args[0] if args[1] is type(None) else args[1]
         return _parse_type(
             field,
@@ -692,9 +766,13 @@ cdef object _parse_optional_union(
             encoder=encoder,
             as_objects=False
         )
+    # Remove None from args.
     args = tuple(t for t in args if t is not type(None))
+    # If there are no non-None types left, simply return data.
+    if not args:
+        return data
+
     for t in args:
-        # let's validate all types on Union to be matched with Type of data
         if isinstance(data, t):
             matched = True
             break
@@ -810,31 +888,57 @@ cdef object _parse_type(
         result = _parse_builtin_type(field, T, data, encoder)
     return result
 
-cpdef object parse_typing(
+cdef object parse_typing(
     object field,
     object T,
     object data,
     object encoder=None,
     object as_objects=False,
+    object parent=None,
 ):
     """
     Parse a value to a typing type.
     """
     # local cdef variables:
-    cdef object origin = field.origin
-    cdef object targs = field.args
+    cdef object origin, targs
     cdef object name = getattr(T, '_name', None)  # T._name or None if not present
     cdef object sub = None     # for subtypes, local cache
     cdef object result = None
     cdef object is_dc = field.is_dc # is_dataclass(T)
+    cdef object inner_type = None
+    cdef bint inner_is_dc = 0 # field._inner_is_dc or is_dataclass(inner_type)
 
-    if not origin:
+    # Use cached values only if T is exactly the field's declared type.
+    if T == field.type:
+        origin = field.origin
+        targs = field.args
+    elif field._inner_type and field._inner_type == inner_type:
+        origin = field._inner_origin
+        targs = field._inner_args
+    else:
         origin = get_origin(T)
         targs = get_args(T)
+
+
+    # For generic (typing) fields, reuse cached inner type info if available.
+    if origin is list and targs:
+        if field._inner_type is not None:
+            inner_type = field._inner_type
+            inner_origin = field._inner_origin
+            # Optionally, also use cached type arguments for the inner type.
+        else:
+            inner_type = targs[0]
+            inner_origin = get_origin(inner_type)
+    else:
+        inner_type = None
+        inner_origin = None
+
+    inner_is_dc = field._inner_is_dc or is_dataclass(inner_type)
 
     if data is None:
         return None
 
+    # If the field is a Union and data is a list, use _parse_union_type.
     if origin is Union and isinstance(data, list):
         return _parse_union_type(
             field,
@@ -846,17 +950,29 @@ cpdef object parse_typing(
             targs
         )
 
-    if is_dataclass(T):
+    # if is_dataclass(T):
+    if is_dc:
         result = _handle_dataclass_type(None, name, data, T, as_objects, None)
     # Field type shortcuts
     elif field._type_category == 'typing':
-        result = _parse_typing_type(
-            field, T, name, data, encoder, origin, targs, as_objects
-        )
+        # For example, if the origin is list and the inner type is a dataclass,
+        # use _handle_dataclass_type on each element.
+        if origin is list:
+            # Use the cached inner type info if available.
+            if inner_is_dc:
+                result = _parse_list_type(field, T, data, encoder, targs, parent)
+            else:
+                result = _parse_typing_type(
+                    field, T, name, data, encoder, origin, targs, as_objects
+                )
+        else:
+            result = _parse_typing_type(
+                field, T, name, data, encoder, origin, targs, as_objects
+            )
     elif origin is dict and isinstance(data, dict):
         result = _parse_dict_type(field, T, data, encoder, targs)
     elif origin is list:
-        result = _parse_list_type(field, T, data, encoder, targs)
+        result = _parse_list_type(field, T, data, encoder, targs, parent)
     elif origin is not None:
         # other advanced generics
         result = data
@@ -881,7 +997,7 @@ cdef object _handle_dataclass_type(
     otherwise, build the dataclass using default logic.
     """
     cdef tuple key = (_type, name)
-    cdef object converter = TYPE_CONVERTERS.get(key) or TYPE_CONVERTERS.get(_type)
+    cdef object converter = TYPE_PARSERS.get(key) or TYPE_PARSERS.get(_type)
     cdef bint is_dc = field.is_dc if field else is_dataclass(_type)
     cdef object field_metadata = field.metadata if field else {}
     cdef str alias = field_metadata.get('alias')
@@ -949,7 +1065,7 @@ cdef object _handle_list_of_dataclasses(
         sub_type = _type.__args__[0]
         if is_dataclass(sub_type):
             key = (sub_type, name)
-            converter = TYPE_CONVERTERS.get(key) or TYPE_CONVERTERS.get(_type)
+            converter = TYPE_PARSERS.get(key) or TYPE_PARSERS.get(_type)
             new_list = []
             for item in value:
                 if converter:
@@ -1081,7 +1197,8 @@ cpdef dict process_attributes(object obj, list columns):
                         _type,
                         value,
                         _encoder,
-                        as_objects
+                        as_objects,
+                        obj
                     )
                 elif field_category == 'dataclass':
                     if no_nesting is False:

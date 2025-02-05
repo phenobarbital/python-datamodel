@@ -5,14 +5,12 @@ from dataclasses import (
     _FIELD,
 )
 from html import escape
-from .converters import process_attributes, register_converter
+from .converters import process_attributes, register_parser
 from .fields import Field
 from .exceptions import ValidationError
 from .abstract import ModelMeta
 from .models import ModelMixin
 
-
-TYPE_CONVERTERS = {}
 
 RendererFn = Callable[["BaseModel", bool], str]
 
@@ -55,14 +53,14 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
             object.__setattr__(self, "__valid__", True)
 
     @classmethod
-    def register_converter(
+    def register_parser(
         cls,
         target_type: Any,
         func: Callable,
         field_name: str = None
     ):
         key = (target_type, field_name) if field_name else target_type
-        register_converter(key, func)
+        register_parser(key, func)
 
     @classmethod
     def add_field(cls, name: str, value: Any = None) -> None:
