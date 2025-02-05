@@ -118,6 +118,9 @@ class ModelMixin:
     def has_column(self, name: str) -> bool:
         return name in self.__columns__
 
+    def list_columns(self) -> list[str]:
+        return self.__fields__
+
     def get_fields(self):
         return self.__fields__
 
@@ -154,6 +157,24 @@ class ModelMixin:
     def __repr__(self) -> str:
         f_repr = ", ".join(f"{f.name}={getattr(self, f.name)}" for f in fields(self))
         return f"{self.__class__.__name__}({f_repr})"
+
+    def pop(self, key: str, default: Any = _MISSING_TYPE) -> Any:
+        """
+        A dict-like pop() method.
+        Removes the value of `self.key` if it exists, otherwise returns `default`.
+        """
+        if key not in self.__columns__:
+            if default is not _MISSING_TYPE:
+                return default
+            raise KeyError(f"{self.__class__.__name__} has no attribute {key}")
+
+        # return the current value:
+        value = getattr(self, key)
+        setattr(self, key, None)
+        if hasattr(self, '__values__') and key in self.__values__:
+            del self.__values__[key]
+
+        return value
 
     def remove_nulls(self, obj: Any) -> dict[str, Any]:
         """Recursively removes any fields with None values from the given object."""
