@@ -8,8 +8,80 @@ from datamodel.converters import (
     to_datetime,
     to_uuid,
     to_integer,
-    to_float
+    to_float,
+    to_decimal,
+    # strtobool,
+    to_boolean
 )
+from decimal import Decimal
+
+# print('==== STRING TO BOOL =====')
+
+# def ct_str_to_bool():
+#     for _ in range(1, 10):
+#         obj = strtobool('True')
+#         obj = strtobool('False')
+#         obj = strtobool('true')
+#         obj = strtobool('false')
+#         obj = strtobool('TRUE')
+#         obj = strtobool('FALSE')
+#         obj = strtobool('1')
+#         obj = strtobool('0')
+#         obj = strtobool('yes')
+#         obj = strtobool('no')
+#         obj = strtobool('YES')
+#         obj = strtobool('NO')
+#         assert isinstance(obj, bool)
+
+# def rs_str_to_bool():
+#     for _ in range(1, 10):
+#         obj = rs_parsers.strtobool('True')
+#         obj = rs_parsers.strtobool('False')
+#         obj = rs_parsers.strtobool('true')
+#         obj = rs_parsers.strtobool('false')
+#         obj = rs_parsers.strtobool('TRUE')
+#         obj = rs_parsers.strtobool('FALSE')
+#         obj = rs_parsers.strtobool('1')
+#         obj = rs_parsers.strtobool('0')
+#         obj = rs_parsers.strtobool('yes')
+#         obj = rs_parsers.strtobool('no')
+#         obj = rs_parsers.strtobool('YES')
+#         obj = rs_parsers.strtobool('NO')
+#         assert isinstance(obj, bool)
+
+# print('Test with Cython: ')
+# time = timeit.timeit(ct_str_to_bool, number=100000)
+# print(f"Execution time: {time:.6f} seconds")
+
+# print('Test with Rust: ')
+# time = timeit.timeit(rs_str_to_bool, number=100000)
+# print(f"Execution time: {time:.6f} seconds")
+
+
+print('======== BOOLEAN ======')
+
+def ct_to_boolean():
+    for _ in range(1, 10):
+        obj = to_boolean('True')
+        obj = to_boolean('False')
+        obj = to_boolean('true')
+        obj = to_boolean('false')
+        obj = to_boolean('TRUE')
+        obj = to_boolean('FALSE')
+        obj = to_boolean('1')
+        obj = to_boolean('0')
+        obj = to_boolean('yes')
+        obj = to_boolean('no')
+        obj = to_boolean('YES')
+        obj = to_boolean('NO')
+        assert isinstance(obj, bool)
+
+
+print('Test with Cython: ')
+time = timeit.timeit(ct_to_boolean, number=100000)
+print(f"Execution time: {time:.6f} seconds")
+
+print('=========== STRINGS ============== ')
 
 def ct_to_string():
     for _ in range(1, 10):
@@ -183,4 +255,40 @@ print(f"Execution time: {time:.6f} seconds")
 
 print('Test with Rust: ')
 time = timeit.timeit(rs_floats, number=10000)
+print(f"Execution time: {time:.6f} seconds")
+
+
+print('============ DECIMALS =============================')
+
+
+def ct_decimals():
+    for _ in range(1, 10):
+        obj = to_decimal(Decimal("10.5"))
+        obj = to_decimal("100.1234")
+        obj = to_decimal(lambda: "3.1415")
+        obj = to_decimal(42.56)
+        obj = to_decimal(None)
+        try:
+            _ = to_decimal("not-a-decimal")
+        except ValueError:
+            pass
+
+def rs_decimals():
+    for _ in range(1, 10):
+        obj = rs_parsers.to_decimal(Decimal("10.5"))
+        obj = rs_parsers.to_decimal("100.1234")
+        obj = rs_parsers.to_decimal(lambda: "3.1415")
+        obj = rs_parsers.to_decimal(42.56)
+        obj = rs_parsers.to_decimal(None)
+        try:
+            _ = rs_parsers.to_decimal("not-a-decimal")
+        except ValueError:
+            pass
+
+print('Test with Cython: ')
+time = timeit.timeit(ct_decimals, number=100)
+print(f"Execution time: {time:.6f} seconds")
+
+print('Test with Rust: ')
+time = timeit.timeit(rs_decimals, number=100)
 print(f"Execution time: {time:.6f} seconds")

@@ -71,11 +71,16 @@ cpdef list _validation(
         annotated_type = annotated_type.type
     errors = []
 
+    return errors
+
     # first: calling (if exists) custom validator:
     # print('VALIDATION F ', F)
     # print('VALIDATION NAME ', name)
     # print('VALIDATION VALUE ', value)
     # print('VALIDATION ANNOTATED TYPE ', annotated_type)
+
+    if F.metadata.get('disable_validation', False):
+        return []
 
     fn = F.metadata.get('validator', None)
     if fn is not None and callable(fn):

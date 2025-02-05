@@ -1000,9 +1000,12 @@ cdef object _handle_default_value(
     return value
 
 cpdef dict process_attributes(object obj, list columns):
-    """process_attributes.
-
+    """
     Process the attributes of a dataclass object.
+
+    For each field, if a custom parser is attached (i.e. f.parser is not None),
+    it is used to convert the value. Otherwise, the standard conversion logic
+    (parse_basic, parse_typing, etc.) is applied.
     """
     cdef object new_val
     cdef object _encoder = None
@@ -1034,7 +1037,7 @@ cpdef dict process_attributes(object obj, list columns):
             _type = f.type
             _encoder = metadata.get('encoder')
             _default = f.default
-            typeinfo = f.typeinfo
+            typeinfo = f.typeinfo # cached info (e.g., type_args, default_callable)
             is_dc = f.is_dc
             _default_callable = typeinfo.get('default_callable', False)
 
@@ -1049,17 +1052,26 @@ cpdef dict process_attributes(object obj, list columns):
                 setattr(obj, name, value)
             if _default is not None:
                 value = _handle_default_value(obj, name, value, _default, _default_callable)
+
+            if f.parser is not None:
+                # If a custom parser is attached, use it
+                try:
+                    new_val = f.parser(value)
+                    setattr(obj, name, new_val)
+                except Exception as ex:
+                    errors[name] = f"Error parsing *{name}* = *{value}*, error: {ex}"
+                    continue
             try:
                 if field_category == 'primitive':
-                    if isinstance(value, str) and _type == str:
-                        continue  # short-circuit
-                    if isinstance(value, int) and _type == int:
-                        continue  # short-circuit
-                    try:
-                        value = parse_basic(_type, value, _encoder)
-                    except ValueError as e:
-                        errors[name] = f"Error parsing {name}: {e}"
-                        continue
+                    if (isinstance(value, str) and _type == str) or (isinstance(value, int) and _type == int):
+                        # No conversion needed. The value remains as-is.
+                        pass
+                    else:
+                        try:
+                            value = parse_basic(_type, value, _encoder)
+                        except ValueError as ex:
+                            errors[name] = f"Error parsing {name}: {ex}"
+                            continue
                 elif field_category == 'type':
                     pass
                 elif field_category == 'typing':

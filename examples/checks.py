@@ -25,7 +25,12 @@ class User(BaseModel):
     """
     User Basic Structure
     """
-    id: uuid.UUID = Column(primary_key=True, required=True, default=auto_now_add, db_default='uuid_generate_v4()')
+    id: uuid.UUID = Column(
+        primary_key=True,
+        required=True,
+        default=auto_now_add,
+        db_default='uuid_generate_v4()'
+    )
     firstname: str = Field(required=True)
     lastname: str = Field(required=True)
     name: str = Column(required=True, default='John Doe')
@@ -47,7 +52,7 @@ class User(BaseModel):
 try:
     u = User(firstname='Jesus', lastname='Lara', birth='Egg')
 except ValidationError as ex:
-    print(ex)
+    print('Valid Error: ', ex)
 except TypeError as ex:
     print(ex)
 except ValueError as ex:
@@ -56,11 +61,19 @@ except ValueError as ex:
 ### creates a new user:
 try:
     jesus = User(
-        firstname='Jesus', lastname='Lara', age='Hola', salary=1500.25, size=185.28, birth='1978-10-23', in_time='11:00:00.000', out_time='23:59:00.000', is_employee=True
+        firstname='Jesus',
+        lastname='Lara',
+        age='Hola',
+        salary=1500.25,
+        size=185.28,
+        birth='1978-10-23',
+        in_time='11:00:00.000',
+        out_time='23:59:00.000',
+        is_employee=True
     )
     print(jesus)
 except ValidationError as ex:
-    print(ex)
+    print('Validation for bad Age > ', ex)
     print(ex.payload)
 
 # try to adding a missing keyword:
@@ -80,7 +93,7 @@ try:
     animal = Animal(**{
         "name": "Human",
         "specie": "Homo Sapiens",
-        "age": "otra verga"
+        "age": "otra cosa"
     })
 except ValidationError as ex:
     print(ex)
