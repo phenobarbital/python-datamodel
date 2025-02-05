@@ -71,8 +71,6 @@ cpdef list _validation(
         annotated_type = annotated_type.type
     errors = []
 
-    return errors
-
     # first: calling (if exists) custom validator:
     # print('VALIDATION F ', F)
     # print('VALIDATION NAME ', name)

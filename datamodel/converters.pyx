@@ -112,15 +112,16 @@ cpdef datetime.date to_date(object obj):
             return rc.to_timestamp(obj).date()
         except ValueError:
             pass
+    # using rust todate function
+    try:
+        return rc.to_date(obj)
+    except ValueError:
+        pass
     # Fallback to Cython-native ciso8601 parsing
     try:
         return ciso8601.parse_datetime(obj).date()
     except ValueError:
         pass
-    # using rust todate function
-    try:
-        return rc.to_date(obj)
-    except ValueError:
         raise ValueError(
             f"Can't convert invalid data *{obj}* to date"
         )

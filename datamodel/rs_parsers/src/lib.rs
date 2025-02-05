@@ -7,6 +7,8 @@ use chrono::{Datelike, Timelike, NaiveDate, NaiveDateTime, DateTime, Utc};
 use speedate::Date as SpeeDate;
 use speedate::DateTime as SpeeDateTime;
 use uuid::Uuid;
+use rust_decimal::Decimal; // Rust Decimal crate
+use rust_decimal::prelude::FromStr;
 // use speedate::{Date, DateTime, ParseError};
 // use std::collections::HashMap;
 // NaiveTime
@@ -411,18 +413,21 @@ fn to_integer(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> 
     match obj {
         None => Ok(None), // If input is None, return None
         Some(py_obj) => {
-            let val = py_obj.bind(py); // Bind object in PyO3 0.23.0
+            // Bind the object to the current GIL.
+            let val = py_obj.bind(py);
 
-            // If the object is already an integer, return it directly
+            // If the object is already an integer, return it directly.
             if val.is_instance(&PyInt::type_object(py))? {
-                return Ok(Some(py_obj.into())); // Return Python integer object
+                return Ok(Some(py_obj.into()));
             }
 
-            // If the object is a string, attempt to parse it as an integer
+            // If the object is a string, attempt to parse it as an integer.
             if val.is_instance(&PyString::type_object(py))? {
                 let py_str = val.downcast::<PyString>()?;
                 if let Ok(parsed_int) = py_str.to_str()?.parse::<i64>() {
-                    return Ok(Some(parsed_int.into_py(py)));
+                    // Construct a new Python integer by calling the type.
+                    let py_int_obj = py.get_type::<PyInt>().call1((parsed_int,))?;
+                    return Ok(Some(py_int_obj.into()));
                 } else {
                     return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                         format!("Invalid integer string: {}", py_str.to_str()?),
@@ -430,15 +435,19 @@ fn to_integer(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> 
                 }
             }
 
-            // If it's callable, call it and process its result
+            // If it's callable, call it and recursively process its result.
             if val.is_callable() {
-                let call_result = val.call0()?; // Only call once
-                return to_integer(py, Some(call_result.extract()?)); // Recursively process result
+                let call_result = val.call0()?; // Call with no arguments.
+                return to_integer(py, Some(call_result.extract()?));
             }
 
-            // Try converting to an integer
+            // Try converting the object to an integer.
             match val.extract::<i64>() {
-                Ok(int_value) => Ok(Some(int_value.into_py(py))), // ✅ Corrected: Use `into_py(py)`
+                Ok(int_value) => {
+                    // Construct a Python int by calling the Python integer type.
+                    let py_int_obj = py.get_type::<PyInt>().call1((int_value,))?;
+                    Ok(Some(py_int_obj.into()))
+                }
                 Err(_) => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                     format!("Invalid conversion to Integer of {}", val.str()?.to_str()?),
                 )),
@@ -453,18 +462,19 @@ fn to_float(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> {
     match obj {
         None => Ok(None), // If input is None, return None
         Some(py_obj) => {
-            let val = py_obj.bind(py); // Bind object in PyO3 0.23.0
+            let val = py_obj.bind(py); // Bind the object to the Python GIL
 
-            // If the object is already a float, return it directly
-            if val.is_instance(&PyFloat::type_object(py))? {
-                return Ok(Some(py_obj.into())); // Return Python float object
+            // If the object is already a float, return it directly.
+            if val.get_type().name()? == "float" {
+                return Ok(Some(py_obj.into()));
             }
 
-            // If the object is a string, attempt to parse it as a float
+            // If the object is a string, attempt to parse it as a float.
             if val.is_instance(&PyString::type_object(py))? {
                 let py_str = val.downcast::<PyString>()?;
                 if let Ok(parsed_float) = py_str.to_str()?.parse::<f64>() {
-                    return Ok(Some(parsed_float.into_py(py))); // ✅ Convert parsed float
+                    // Create a Python float from the Rust f64.
+                    return Ok(Some(PyFloat::new(py, parsed_float).into()));
                 } else {
                     return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                         format!("Invalid float string: {}", py_str.to_str()?),
@@ -472,17 +482,69 @@ fn to_float(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> {
                 }
             }
 
-            // If it's callable, call it and process its result
+            // If it's callable, call it and process its result recursively.
             if val.is_callable() {
-                let call_result = val.call0()?; // Only call once
+                let call_result = val.call0()?; // Call the object with no arguments
                 return to_float(py, Some(call_result.extract()?)); // Recursively process result
             }
 
-            // Try converting to a float
+            // Try converting the object to an f64.
             match val.extract::<f64>() {
-                Ok(float_value) => Ok(Some(float_value.into_py(py))), // ✅ Corrected: Use `into_py(py)`
+                Ok(float_value) => Ok(Some(PyFloat::new(py, float_value).into())),
                 Err(_) => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                     format!("Invalid conversion to Float of {}", val.str()?.to_str()?),
+                )),
+            }
+        }
+    }
+}
+
+
+#[pyfunction]
+#[pyo3(signature = (obj=None))]
+fn to_decimal(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> {
+    match obj {
+        None => Ok(None), // If input is None, return None
+        Some(py_obj) => {
+            let val = py_obj.bind(py); // Bind object in PyO3 0.23.0
+
+            // If the object is already a Decimal, return it directly
+            if val.get_type().name()? == "Decimal" {
+                return Ok(Some(py_obj.into())); // ✅ Return existing Decimal
+            }
+
+            // Import Python's `decimal.Decimal`
+            let py_decimal = py.import("decimal")?.getattr("Decimal")?;
+
+            // If the object is a string, attempt to parse it as a Decimal
+            if val.is_instance(&PyString::type_object(py))? {
+                let py_str = val.downcast::<PyString>()?;
+                if let Ok(parsed_decimal) = Decimal::from_str(py_str.to_str()?) {
+                    return Ok(Some(py_decimal.call1((parsed_decimal.to_string(),))?.into())); // ✅ Convert Rust Decimal to Python Decimal
+                } else {
+                    return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                        format!("Invalid decimal string: {}", py_str.to_str()?),
+                    ));
+                }
+            }
+
+            // If it's callable, call it and process its result
+            if val.is_callable() {
+                let call_result = val.call0()?; // Only call once
+                return to_decimal(py, Some(call_result.extract()?)); // ✅ Recursively process result
+            }
+
+            // Try converting to a Decimal from a float
+            match val.extract::<f64>() {
+                Ok(float_value) => {
+                    let rust_decimal = Decimal::from_f64_retain(float_value)
+                        .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                            format!("Invalid conversion to Decimal from float: {}", float_value),
+                        ))?;
+                    return Ok(Some(py_decimal.call1((rust_decimal.to_string(),))?.into())); // ✅ Convert Rust Decimal to Python Decimal
+                }
+                Err(_) => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                    format!("Invalid conversion to Decimal of {}", val.str()?.to_str()?),
                 )),
             }
         }
@@ -504,5 +566,6 @@ fn rs_parsers(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(to_uuid, m)?)?;
     m.add_function(wrap_pyfunction!(to_integer, m)?)?;
     m.add_function(wrap_pyfunction!(to_float, m)?)?;
+    m.add_function(wrap_pyfunction!(to_decimal, m)?)?;
     Ok(())
 }
