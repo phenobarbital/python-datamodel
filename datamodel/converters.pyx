@@ -7,10 +7,8 @@ from collections.abc import Sequence, Mapping, Callable, Awaitable
 from dataclasses import _MISSING_TYPE, _FIELDS, fields
 import ciso8601
 import orjson
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from cpython cimport datetime
-import pendulum
-from pendulum.parsing.exceptions import ParserError
 from uuid import UUID
 import asyncpg.pgproto.pgproto as pgproto
 from cpython.ref cimport PyObject
@@ -92,22 +90,6 @@ cpdef str slugify_camelcase(str obj):
         slugified.append(c)
     return ''.join(slugified)
 
-cdef list ts_parse_date(ts_string):
-    """ts_string_parser.
-
-    Parse a timestamp string into a list of strings.
-    """
-    year, month, day = int(ts_string[:4]), int(ts_string[5:7]), int(ts_string[8:10])
-    return [year, month, day]
-
-cdef list ts_parse_datetime(ts_string):
-    """ts_string_parser.
-
-    Parse a timestamp string into a list of strings.
-    """
-    year, month, day = int(ts_string[:4]), int(ts_string[5:7]), int(ts_string[8:10])
-    hour, minute = int(ts_string[11:13]), int(ts_string[14:])
-    return [year, month, day, hour, minute]
 
 cpdef datetime.date to_date(object obj):
     """to_date.
@@ -139,15 +121,10 @@ cpdef datetime.date to_date(object obj):
     try:
         return rc.to_date(obj)
     except ValueError:
-        pass
-    # Last resort: parse manually
-        try:
-            year, month, day, hour, minute = ts_parse_datetime(obj)
-            return datetime.date(year=year, month=month, day=day)
-        except ValueError as ex:
-            raise ValueError(
-                f"Can't convert invalid data *{obj}* to date"
-            )
+        raise ValueError(
+            f"Can't convert invalid data *{obj}* to date"
+        )
+
 
 cpdef datetime.datetime to_datetime(object obj):
     """to_datetime.
@@ -175,12 +152,6 @@ cpdef datetime.datetime to_datetime(object obj):
     try:
         return ciso8601.parse_datetime(obj)
     except ValueError:
-        pass
-    # last resort:
-    try:
-        year, month, day, hour, minute = ts_parse_datetime(obj)
-        return datetime.datetime(year=year, month=month, day=day, hour=hour, minute=minute)
-    except ValueError as ex:
         raise ValueError(
             f"Can't convert invalid data *{obj}* to datetime"
         )
@@ -247,12 +218,16 @@ cpdef object to_decimal(object obj):
     else:
         try:
             return Decimal(obj)
+        except InvalidOperation as ex:
+            raise ValueError(
+                f"Invalid Decimal conversion of {obj}"
+            ) from ex
         except (TypeError, ValueError):
             return None
 
 TIMEDELTA_RE = re.compile(r"(-)?(\d{1,3}):(\d{1,2}):(\d{1,2})(?:.(\d{1,6}))?")
 
-cpdef int _convert_second_fraction(s):
+cdef int _convert_second_fraction(s):
     if not s:
         return 0
     # Pad zeros to ensure the fraction length in microseconds
@@ -328,7 +303,7 @@ cpdef object to_time(object obj):
             )
 
 
-cdef object strtobool(str val):
+cpdef object strtobool(str val):
     """Convert a string representation of truth to true (1) or false (0).
 
     True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values
@@ -336,9 +311,9 @@ cdef object strtobool(str val):
     'val' is anything else.
     """
     val = val.lower()
-    if val in ('y', 'yes', 't', 'true', 'on', '1'):
+    if val in ('y', 'yes', 't', 'true', 'on', '1', 'T'):
         return True
-    elif val in ('n', 'no', 'f', 'false', 'off', '0'):
+    elif val in ('n', 'no', 'f', 'false', 'off', '0', 'none', 'null'):
         return False
     else:
         raise ValueError(
@@ -396,6 +371,8 @@ cdef bint is_callable(object value) nogil:
     with gil:
         return callable(value)
 
+
+# Encoder List:
 encoders = {
     str: to_string,
     UUID: to_uuid,
@@ -537,6 +514,20 @@ cpdef object parse_basic(object T, object data, object encoder = None):
     if T == bool:
         if isinstance(data, bool):
             return data
+    # function encoder:
+    if encoder:
+        if is_callable(encoder):
+            # using a function encoder:
+            try:
+                return encoder(data)
+            except TypeError as e:
+                raise TypeError(
+                    f"Type Error for Encoder {encoder!s} for type {T}: {e}"
+                ) from e
+            except ValueError as e:
+                raise ValueError(
+                    f"Error parsing type {T}, {e}"
+                )
     # Using the encoders for basic types:
     try:
         return encoders[T](data)
@@ -549,19 +540,6 @@ cpdef object parse_basic(object T, object data, object encoder = None):
             f"Error parsing type {T}: {e}"
         ) from e
 
-    # function encoder:
-    if encoder and is_callable(encoder):
-        # using a function encoder:
-        try:
-            return encoder(data)
-        except TypeError as e:
-            raise TypeError(
-                f"Error type {T}: {e}"
-            ) from e
-        except ValueError as e:
-            raise ValueError(
-                f"Error parsing type {T}, {e}"
-            )
 
 cdef object _parse_typing_type(
     object field,
@@ -1121,7 +1099,6 @@ cpdef dict process_attributes(object obj, list columns):
                 else:
                     errors[name] = f"Wrong Value for {f.name}: {f.type}, error: {ex}"
                     continue
-                raise
             except (TypeError, RuntimeError) as ex:
                 errors[name] = f"Wrong Type for {f.name}: {f.type}, error: {ex}"
                 continue

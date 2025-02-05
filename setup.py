@@ -52,6 +52,10 @@ with open(version, 'r', encoding='utf-8') as meta:
 
 COMPILE_ARGS = ["-O3"]
 
+rust_extensions = [
+    RustExtension("datamodel.rs_parsers", path="datamodel/rs_parsers/Cargo.toml"),
+]
+
 extensions = [
     Extension(
         name='datamodel.fields',
@@ -178,8 +182,7 @@ setup(
         'typing_extensions>=4.9.0',
         "asyncpg>=0.29.0",
         "python-dateutil>=2.8.2",
-        "python-slugify==8.0.1",
-        "pendulum==3.0.0"
+        "python-slugify==8.0.1"
     ],
     tests_require=[
         'pytest>=7.2.2',
