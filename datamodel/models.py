@@ -1,4 +1,5 @@
 from __future__ import annotations
+import contextlib
 from typing import Any, Dict
 from enum import Enum, EnumMeta
 # Dataclass
@@ -109,22 +110,27 @@ class ModelMixin:
     def get_column(cls, name: str) -> Field:
         try:
             return cls.__columns__[name]
-        except KeyError:
+        except KeyError as ex:
             raise AttributeError(
                 f"{cls.__name__} has no column {name}"
-            )
+            ) from ex
+
+    def has_column(self, name: str) -> bool:
+        return name in self.__columns__
 
     def get_fields(self):
         return self.__fields__
 
-    def __getitem__(self, item):
+    def __contains__(self, key: str) -> bool:
+        """__contains__. Check if key is in the columns of the Model."""
+        return key in self.__columns__
+
+    def __getitem__(self, item: str) -> Any:
         return getattr(self, item)
 
     def reset_values(self):
-        try:
+        with contextlib.suppress(AttributeError):
             self.__values__ = {}
-        except AttributeError:
-            pass
 
     def old_value(self, name: str) -> Any:
         """
@@ -137,10 +143,10 @@ class ModelMixin:
         """
         try:
             return self.__values__[name]
-        except KeyError:
+        except KeyError as ex:
             raise AttributeError(
                 f"{self.__class__.__name__} has no attribute {name}"
-            )
+            ) from ex
 
     def column(self, name: str) -> Field:
         return self.__columns__[name]
