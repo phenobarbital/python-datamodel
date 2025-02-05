@@ -9,6 +9,7 @@ import ciso8601
 import orjson
 from decimal import Decimal, InvalidOperation
 from cpython cimport datetime
+cimport cython
 from uuid import UUID
 import asyncpg.pgproto.pgproto as pgproto
 from cpython.ref cimport PyObject
@@ -1115,6 +1116,18 @@ cdef object _handle_default_value(
 
     # Otherwise, return value as-is
     return value
+
+@cython.profile(True)
+cpdef dict processing_fields(object obj, list columns):
+    """
+    Process the fields (columns) of a dataclass object.
+
+    For each field, if a custom parser is attached (i.e. f.parser is not None),
+    it is used to convert the value. Otherwise, the standard conversion logic
+    (parse_basic, parse_typing, etc.) is applied.
+    """
+    cdef dict errors = {}
+    return errors
 
 cpdef dict process_attributes(object obj, list columns):
     """

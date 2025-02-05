@@ -67,7 +67,8 @@ extensions = [
         name='datamodel.converters',
         sources=['datamodel/converters.pyx'],
         extra_compile_args=COMPILE_ARGS,
-        language="c"
+        language="c",
+        compiler_directives={'profile': True}
     ),
     Extension(
         name='datamodel.functions',
