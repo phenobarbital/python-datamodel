@@ -244,7 +244,13 @@ cdef int _convert_second_fraction(s):
     s = s.ljust(6, "0")
     return int(s[:6])
 
-cpdef datetime.timedelta to_timedelta(object obj):
+cpdef object to_timedelta(object obj):
+
+    if obj is None:
+        return None
+    if isinstance(obj, datetime.timedelta):
+        return obj
+
     if isinstance(obj, (bytes, bytearray)):
         obj = obj.decode("ascii")
 
