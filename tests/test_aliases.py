@@ -2,6 +2,7 @@
 import pytest
 from datamodel import BaseModel, Field
 from datamodel.aliases import to_snakecase
+from datamodel.exceptions import ValidationError
 
 class Store(BaseModel):
     # Fields (with normal pythonic names)
@@ -14,6 +15,25 @@ class Store(BaseModel):
         as_objects = True
         # The function that transforms keys (e.g., EmailAddress -> email_address)
         alias_function = to_snakecase
+
+class Organization(BaseModel):
+    orgid: int = Field(primary_key=True)
+    name: str
+
+    class Meta:
+        strict = True
+
+class Client(BaseModel):
+    client_id: int = Field(primary_key=True)
+    client_name: str
+    status: bool = Field(required=True)
+    orgid: Organization = Field(required=False, alias="org_id")
+    org_name: str = Field(required=False)
+
+    class Meta:
+        name: str = 'clients'
+        strict: bool = True
+        as_objects: bool = True
 
 class User(BaseModel):
     email_address: str = Field(alias='emailAddress')
@@ -40,3 +60,19 @@ def test_alias_simple_store():
 
     # Check the model's type and printing
     assert isinstance(user, User)
+
+
+def test_alias_clients():
+    org_data = {"org_id": 10, "name": "Org A"}
+    try:
+        client = Client(
+            client_id=1,
+            client_name="Test Client",
+            status=True,
+            org_id=org_data,
+            org_name="Organization A"
+        )
+        assert client.orgid.orgid == 10
+        assert client.orgid.name == "Org A"
+    except ValidationError as e:
+        print(e.payload)

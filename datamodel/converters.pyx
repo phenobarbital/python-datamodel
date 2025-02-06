@@ -9,6 +9,14 @@ import ciso8601
 import orjson
 from decimal import Decimal, InvalidOperation
 from cpython cimport datetime
+from cpython.object cimport (
+    PyObject_IsInstance,
+    PyObject_IsSubclass,
+    PyObject_HasAttrString,
+    PyObject_GetAttrString,
+    PyObject_TypeCheck,
+    PyCallable_Check
+)
 cimport cython
 from uuid import UUID
 import asyncpg.pgproto.pgproto as pgproto
@@ -1003,26 +1011,36 @@ cdef object _handle_dataclass_type(
     cdef object field_metadata = field.metadata if field else {}
     cdef str alias = field_metadata.get('alias')
 
-    try:
-        if value is None or is_dataclass(value):
-            return value
-        if isinstance(value, dict):
-            try:
-                return _type(**value)
-            except TypeError:
-                # Ensure keys are strings
-                value = {str(k): v for k, v in value.items()}
-                return _type(**value)
-            except ValueError:
-                # replace in "value" dictionary the current "name" for "alias"
-                if alias:
+    if value is None or is_dataclass(value):
+        return value
+    if PyObject_IsInstance(value, dict):
+        try:
+            # If alias exists, adjust the key passed to the dataclass
+            if alias:
+                # if alias exists on type, preserve the alias:
+                if alias not in value and name in value:
                     value = value.copy()
-                    value[alias] = value.pop(name, None)
-                return _type(**value)
-            except Exception as exc:
-                raise ValueError(
-                    f"Invalid value for {name}:{_type} == {value}, error: {exc}"
-                )
+                    value[alias] = value.pop(name)
+            # convert the dictionary to the dataclass
+            return _type(**value)
+        except TypeError:
+            # Ensure keys are strings
+            value = {str(k): v for k, v in value.items()}
+            if alias:
+                value = value.copy()
+                value[name] = value.pop(alias, None)
+            return _type(**value)
+        except ValueError:
+            # replace in "value" dictionary the current "name" for "alias"
+            if alias:
+                value = value.copy()
+                value[alias] = value.pop(name, None)
+            return _type(**value)
+        except Exception as exc:
+            raise ValueError(
+                f"Invalid value for {name}:{_type} == {value}, error: {exc}"
+            )
+    try:
         if isinstance(value, (list, tuple)):
             return _type(*value)
         else:
@@ -1045,7 +1063,7 @@ cdef object _handle_dataclass_type(
                 return _type(value)
     except Exception as exc:
         raise ValueError(
-            f"Invalid value for {_type}: {value}, error: {exc}"
+            f"Invalid value for {name}:{_type} == {value}, error: {exc}"
         )
 
 cdef object _handle_list_of_dataclasses(
@@ -1089,7 +1107,7 @@ cdef object _handle_default_value(
 ):
     """Handle default value of fields."""
     # If value is callable, try calling it directly
-    if is_callable(value):
+    if PyCallable_Check(value):
         try:
             new_val = value()
         except TypeError:
@@ -1117,21 +1135,10 @@ cdef object _handle_default_value(
     # Otherwise, return value as-is
     return value
 
-@cython.profile(True)
+@cython.profile(False)
 cpdef dict processing_fields(object obj, list columns):
     """
     Process the fields (columns) of a dataclass object.
-
-    For each field, if a custom parser is attached (i.e. f.parser is not None),
-    it is used to convert the value. Otherwise, the standard conversion logic
-    (parse_basic, parse_typing, etc.) is applied.
-    """
-    cdef dict errors = {}
-    return errors
-
-cpdef dict process_attributes(object obj, list columns):
-    """
-    Process the attributes of a dataclass object.
 
     For each field, if a custom parser is attached (i.e. f.parser is not None),
     it is used to convert the value. Otherwise, the standard conversion logic
@@ -1144,37 +1151,35 @@ cpdef dict process_attributes(object obj, list columns):
     cdef object meta = obj.Meta
     cdef bint as_objects = meta.as_objects
     cdef bint no_nesting = meta.no_nesting
-    cdef bint is_dc = False
     cdef dict errors = {}
     cdef dict _typeinfo = {}
 
     for name, f in columns:
+        value = getattr(obj, name)
+        # Use the precomputed field type category:
+        field_category = f._type_category
+
+        if field_category == 'descriptor':
+            # Handle descriptor-specific logic
+            try:
+                value = f.__get__(obj, type(obj))  # Get the descriptor value
+                setattr(obj, name, value)
+            except Exception as e:
+                errors[name] = f"Descriptor error in {name}: {e}"
+            continue
+
+        # get type and default:
+        _type = f.type
+        _default = f.default
+        typeinfo = f.typeinfo # cached info (e.g., type_args, default_callable)
+        metadata = PyObject_GetAttrString(f, "metadata")
+        _encoder = metadata.get('encoder')
+        _default_callable = typeinfo.get('default_callable', False)
+
+        if isinstance(_type, NewType):
+            _type = _type.__supertype__
+
         try:
-            value = getattr(obj, name)
-            # Use the precomputed field type category:
-            field_category = f._type_category
-
-            if field_category == 'descriptor':
-                # Handle descriptor-specific logic
-                try:
-                    value = f.__get__(obj, type(obj))  # Get the descriptor value
-                    setattr(obj, name, value)
-                except Exception as e:
-                    errors[name] = f"Descriptor error in {name}: {e}"
-                continue
-
-            metadata = getattr(f, "metadata", {})
-            _type = f.type
-            _encoder = metadata.get('encoder')
-            _default = f.default
-            typeinfo = f.typeinfo # cached info (e.g., type_args, default_callable)
-            is_dc = f.is_dc
-            _default_callable = typeinfo.get('default_callable', False)
-
-            if isinstance(_type, NewType):
-                # change type if is a NewType object.
-                _type = _type.__supertype__
-
             # Check if object is empty
             if is_empty(value) and not isinstance(value, list):
                 if _type == str and value is not "":
@@ -1184,77 +1189,82 @@ cpdef dict process_attributes(object obj, list columns):
                 value = _handle_default_value(obj, name, value, _default, _default_callable)
 
             if f.parser is not None:
-                # If a custom parser is attached, use it
+                # If a custom parser is attached to Field, use it
                 try:
-                    new_val = f.parser(value)
-                    setattr(obj, name, new_val)
+                    value = f.parser(value)
+                    setattr(obj, name, value)
                 except Exception as ex:
                     errors[name] = f"Error parsing *{name}* = *{value}*, error: {ex}"
                     continue
-            try:
-                if field_category == 'primitive':
-                    if (isinstance(value, str) and _type == str) or (isinstance(value, int) and _type == int):
-                        # No conversion needed. The value remains as-is.
-                        pass
-                    else:
-                        try:
-                            value = parse_basic(_type, value, _encoder)
-                        except ValueError as ex:
-                            errors[name] = f"Error parsing {name}: {ex}"
-                            continue
-                elif field_category == 'type':
-                    pass
-                elif field_category == 'typing':
-                    value = parse_typing(
-                        f,
-                        _type,
-                        value,
-                        _encoder,
-                        as_objects,
-                        obj
-                    )
-                elif field_category == 'dataclass':
-                    if no_nesting is False:
-                        if as_objects is True:
-                            value = _handle_dataclass_type(f, name, value, _type, as_objects, obj)
-                        else:
-                            value = _handle_dataclass_type(f, name, value, _type, as_objects, None)
-                elif isinstance(value, list) and typeinfo.get('type_args'):
-                    if as_objects is True:
-                        value = _handle_list_of_dataclasses(f, name, value, _type, obj)
-                    else:
-                        value = _handle_list_of_dataclasses(f, name, value, _type, None)
-                else:
-                    value = parse_typing(
-                        f,
-                        _type,
-                        value,
-                        _encoder,
-                        as_objects
-                    )
-                setattr(obj, name, value)
-                # then, call the validation process:
-                if (error := _validation_(name, value, f, _type, meta, field_category, as_objects)):
-                    errors[name] = error
-            except ValueError as ex:
-                if meta.strict is True:
-                    raise
-                else:
-                    errors[name] = f"Wrong Value for {f.name}: {f.type}, error: {ex}"
+
+            elif field_category == 'primitive':
+                try:
+                    value = parse_basic(_type, value, _encoder)
+                    setattr(obj, name, value)
+                except ValueError as ex:
+                    errors[name] = f"Error parsing {name}: {ex}"
                     continue
-            except (TypeError, RuntimeError) as ex:
-                errors[name] = f"Wrong Type for {f.name}: {f.type}, error: {ex}"
-                continue
-        except ValueError as e:
+            elif field_category == 'type':
+                # TODO: support multiple types
+                pass
+            elif field_category == 'dataclass':
+                if no_nesting is False:
+                    if as_objects is True:
+                        value = _handle_dataclass_type(
+                            f, name, value, _type, as_objects, obj
+                        )
+                    else:
+                        value = _handle_dataclass_type(
+                            f, name, value, _type, as_objects, None
+                        )
+                    setattr(obj, name, value)
+            elif field_category == 'typing':
+                value = parse_typing(
+                    f,
+                    _type,
+                    value,
+                    _encoder,
+                    as_objects,
+                    obj
+                )
+                setattr(obj, name, value)
+            elif f.origin == 'list' and f._inner_is_dc:
+                if as_objects is True:
+                    value = _handle_list_of_dataclasses(f, name, value, _type, obj)
+                else:
+                    value = _handle_list_of_dataclasses(f, name, value, _type, None)
+                setattr(obj, name, value)
+            elif isinstance(value, list) and typeinfo.get('type_args'):
+                if as_objects is True:
+                    value = _handle_list_of_dataclasses(f, name, value, _type, obj)
+                else:
+                    value = _handle_list_of_dataclasses(f, name, value, _type, None)
+                setattr(obj, name, value)
+            else:
+                value = parse_typing(
+                    f,
+                    _type,
+                    value,
+                    _encoder,
+                    as_objects
+                )
+                setattr(obj, name, value)
+            # then, call the validation process:
+            if (error := _validation_(name, value, f, _type, meta, field_category, as_objects)):
+                errors[name] = error
+        except ValueError as ex:
             if meta.strict is True:
                 raise
-        except (TypeError, RuntimeError) as e:
-            errors[name] = f"Error processing {name}: {e}"
+            else:
+                errors[name] = f"Wrong Value for {f.name}: {f.type}, error: {ex}"
+                continue
+        except (TypeError, RuntimeError) as ex:
+            errors[name] = f"Wrong Type for {f.name}: {f.type}, error: {ex}"
             continue
+    # Return Errors (if any)
     return errors
 
-
-cdef list _validation_(
+cdef dict _validation_(
     str name,
     object value,
     object f,
@@ -1267,12 +1277,18 @@ cdef list _validation_(
     _validation_.
     TODO: cover validations as length, not_null, required, max, min, etc
     """
-    val_type = type(value)
+    cdef object val_type = type(value)
     if val_type == type or value == _type or is_empty(value):
         try:
             _field_checks_(f, name, value, meta)
-            return []
+            return {}
         except (ValueError, TypeError):
+            raise
+    # If the field has a cached validator, use it.
+    if f.validator is not None:
+        try:
+            return f.validator(f, name, value, _type)
+        except ValueError:
             raise
     else:
         # capturing other errors from validator:

@@ -49,7 +49,7 @@ def test_invalid_employee_team():
     errors = excinfo.value.payload
     # Check that the error mentions the 'user_class' field and the allowed types.
     assert "user_class" in errors
-    error_message = errors["user_class"][0]["error"]
+    error_message = errors["user_class"]["error"]
     assert "type" in error_message
 
 # For manual testing when running this file directly:

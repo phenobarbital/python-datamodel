@@ -94,6 +94,7 @@ class Field(ff):
         '_inner_origin',
         '_inner_type',
         '_inner_is_dc',
+        'validator',
         '_required',
         '_nullable',
         '_primary',
@@ -133,6 +134,7 @@ class Field(ff):
         self.is_dc: bool = False
         self.is_primitive: bool = False
         self._encoder_fn: Optional[callable] = None
+        self.validator: Optional[callable] = None
         self._typing_args = None
         self._inner_type = None
         self._inner_is_dc = None

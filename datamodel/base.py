@@ -5,7 +5,7 @@ from dataclasses import (
     _FIELD,
 )
 from html import escape
-from .converters import process_attributes, processing_fields, register_parser
+from .converters import processing_fields, register_parser
 from .fields import Field
 from .exceptions import ValidationError
 from .abstract import ModelMeta

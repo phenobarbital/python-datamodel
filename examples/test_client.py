@@ -45,3 +45,32 @@ try:
     assert client.org_name == "Test Org"
 except ValidationError as e:
     print(e.payload)
+
+try:
+    Client.Meta.as_objects = True
+    client = Client(
+        client_id=1,
+        client_name="Test Client",
+        status=True,
+        org_id=10,
+        org_name="Organization A"
+    )
+    print(client.orgid)
+    assert client.orgid.org_id == 10
+except ValidationError as e:
+    print(e.payload)
+
+try:
+    org_data = {"org_id": 10, "name": "Org A"}
+    client = Client(
+        client_id=1,
+        client_name="Test Client",
+        status=True,
+        org_id=org_data,
+        org_name="Organization A"
+    )
+    print(client)
+    assert client.orgid.org_id == 10
+    assert client.orgid.name == "Org A"
+except ValidationError as e:
+    print(e.payload)

@@ -97,7 +97,7 @@ def default_rect():
     return [0, 0, 0, 0]
 
 
-def valid_zipcode(field, value):
+def valid_zipcode(field, value, *args, **kwargs):
     return value == 45510
 
 

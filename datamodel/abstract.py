@@ -8,7 +8,8 @@ import types
 from inspect import isclass
 from dataclasses import dataclass, InitVar
 from .parsers.json import JSONContent
-from .converters import encoders, parse_basic, parse_type
+from .converters import encoders, parse_basic
+from .validation import validators
 from .fields import Field
 from .functions import (
     is_dataclass,
@@ -229,6 +230,12 @@ class ModelMeta(type):
                         df.parser = None
                     if custom_encoder:
                         df.parser = lambda value, _type=_type, encoder=custom_encoder: parse_basic(_type, value, encoder)  # noqa
+                    # Caching Validator:
+                    try:
+                        df.validator = validators[_type]
+                    except (KeyError, TypeError):
+                        df.validator = None
+
                     # check type of field:
                     if _is_prim:
                         _type_category = 'primitive'
