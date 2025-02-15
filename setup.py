@@ -183,7 +183,8 @@ setup(
         'typing_extensions>=4.9.0',
         "asyncpg>=0.29.0",
         "python-dateutil>=2.8.2",
-        "python-slugify==8.0.1"
+        "python-slugify==8.0.1",
+        "psycopg2-binary==2.9.10"
     ],
     tests_require=[
         'pytest>=7.2.2',
