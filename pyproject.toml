@@ -82,7 +82,7 @@ ignore_missing_imports = true
 ignore = 'E501,W503,E203'
 
 [tool.maturin]
-python-source = "datamodel/rs_datamodel"
-module-name = "datamodel.rs_datamodel"
+python-source = "datamodel/rs_parsers"
+module-name = "datamodel.rs_parsers"
 bindings = "pyo3"
 features = ["pyo3/extension-module"]

@@ -53,7 +53,10 @@ with open(version, 'r', encoding='utf-8') as meta:
 COMPILE_ARGS = ["-O3"]
 
 rust_extensions = [
-    RustExtension("datamodel.rs_parsers", path="datamodel/rs_parsers/Cargo.toml"),
+    RustExtension(
+        "datamodel.rs_parsers",
+        path="datamodel/rs_parsers/Cargo.toml"
+    ),
 ]
 
 extensions = [
@@ -179,12 +182,13 @@ setup(
         "faust-cchardet==2.1.19",
         "ciso8601==2.3.2",
         "objectpath==0.6.1",
-        "orjson==3.10.11",
+        "orjson>=3.10.11",
         'typing_extensions>=4.9.0',
         "asyncpg>=0.29.0",
         "python-dateutil>=2.8.2",
         "python-slugify==8.0.1",
-        "psycopg2-binary==2.9.10"
+        "psycopg2-binary==2.9.10",
+        "msgspec==0.19.0"
     ],
     tests_require=[
         'pytest>=7.2.2',
@@ -199,9 +203,13 @@ setup(
         annotate=True
     ),
     zip_safe=False,
+    rust_extensions=rust_extensions,
     project_urls={  # Optional
         "Source": "https://github.com/phenobarbital/datamodel",
         "Funding": "https://paypal.me/phenobarbital",
+        "Tracker": "https://github.com/phenobarbital/datamodel/issues",
+        "Documentation": "https://datamodel.readthedocs.io/en/latest/",
+        "Buy Me A Coffee!": "https://www.buymeacoffee.com/phenobarbital",
         "Say Thanks!": "https://saythanks.io/to/phenobarbital",
     },
 )
