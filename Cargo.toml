@@ -11,9 +11,7 @@ rust-version = "1.84.0"
 
 [workspace]
 members = [
-    "datamodel/rs_core",
     "datamodel/rs_parsers",
-    "datamodel/rs_validators"
 ]
 resolver = "2"
 edition = "2021"

@@ -647,14 +647,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rs_core"
-version = "0.1.0"
-dependencies = [
- "pyo3",
- "rayon",
-]
-
-[[package]]
 name = "rs_parsers"
 version = "0.1.0"
 dependencies = [
@@ -666,14 +658,6 @@ dependencies = [
  "rust_decimal_macros",
  "speedate",
  "uuid",
-]
-
-[[package]]
-name = "rs_validators"
-version = "0.1.0"
-dependencies = [
- "pyo3",
- "rayon",
 ]
 
 [[package]]
