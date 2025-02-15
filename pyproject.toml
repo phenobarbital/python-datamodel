@@ -1,7 +1,7 @@
 [build-system]
 requires = [
     'setuptools==74.0.0',
-    'Cython==3.0.11',
+    'Cython>=3.0',
     'wheel==0.44.0',
     "setuptools-rust>=1.10.2",
     'maturin>=1,<2',
@@ -58,7 +58,7 @@ filterwarnings = [
 
 [tool.black]
 line-length = 120
-target-version = [ 'py39', 'py310', 'py311', 'py312']
+target-version = [ 'py310', 'py311', 'py312', 'py313' ]
 include = '\.pyi?$'
 exclude = '''
 /(

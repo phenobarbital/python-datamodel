@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
 
@@ -48,6 +48,7 @@ jobs:
           CIBW_BEFORE_BUILD: "curl https://sh.rustup.rs -sSf | sh -s -- -y"
           # Make sure Rust tools are on the PATH for the build.
           CIBW_ENVIRONMENT: "PATH=/root/.cargo/bin:$PATH"
+          RUST_SUBPACKAGE_PATH: datamodel/rs_parsers
         run: |
           pip install --upgrade pip==25.0
           pip install cibuildwheel
