@@ -1,3 +1,4 @@
+import contextlib
 import logging
 from typing import Optional, Any, List, Dict, get_args, get_origin, ClassVar
 from types import GenericAlias
@@ -7,7 +8,8 @@ import types
 from inspect import isclass
 from dataclasses import dataclass, InitVar
 from .parsers.json import JSONContent
-from .converters import encoders, parse_basic, parse_type
+from .converters import encoders, parse_basic
+from .validation import validators
 from .fields import Field
 from .functions import (
     is_dataclass,
@@ -50,85 +52,86 @@ def set_connection(cls, conn: Callable):
     cls.connection = conn
 
 
-def _dc_method_setattr_(
-    self,
-    name: str,
-    value: Any,
-) -> None:
+def _dc_method_setattr_(self, name: str, value: Any) -> None:
     """
-    _dc_method_setattr_.
-    - Method for overwrite the "setattr" on Dataclasses.
+    Simplified __setattr__ for dataclass-like objects.
+
+    This version separates the known-field assignment (with optional validation)
+    from the “extra field” assignment and uses a helper to perform conversion/validation.
     """
-    # Initialize __values__ if it doesn't exist
+    # Ensure that the __values__ dict is present.
     if not hasattr(self, '__values__'):
         object.__setattr__(self, '__values__', {})
 
-    # If the attribute name is already a known field, proceed normally
+    # Check whether we are assigning to a known field.
     if name in self.__fields__:
-        # Only store the initial value:
-        if name not in self.__values__:
-            # Store the initial value in __values__
-            self.__values__[name] = value
+        # Save the initial value (only once).
+        self.__values__.setdefault(name, value)
+
+        # If assignment validation is active, convert the value.
         if self.Meta.validate_assignment:
-            try:
-                # re-apply the parse/validation of this field:
-                field_category = self.__field_types__.get(name, 'complex')
-                field_obj = self.__columns__[name]
-                _type = field_obj.type
-                _encoder = field_obj.metadata.get('encoder')
-                if field_category == 'primitive':
-                    new_val = parse_basic(_type, value, _encoder)
-                elif field_category == 'typing':
-                    new_val = parse_type(field_obj, _type, value, _encoder)
-                elif field_category in ('dataclass', 'class', ):
-                    new_val = value
-                else:
-                    new_val = parse_type(field_obj, _type, value, _encoder)
-                # Assign the new value to the field
-                value = new_val
-            except Exception as e:
-                # Raise or re-raise a TypeError or something meaningful
-                raise TypeError(
-                    f"Cannot assign {value!r} to field {name!r}: {e}"
-                ) from e
+            value = _validate_field_assignment(self, name, value)
         object.__setattr__(self, name, value)
         return
 
-    if self.Meta.frozen is True and name not in self.__fields__:
+    # If the class is frozen, do not allow new attributes.
+    if self.Meta.frozen:
         raise TypeError(
-            f"Cannot add New attribute {name} on {self.modelName}, "
-            "This DataClass is frozen (read-only class)"
+            f"Cannot add new attribute {name!r} on {self.modelName} "
+            "(the class is frozen)"
         )
-    else:
-        # try to dynamically add a field or store the attribute
-        value = None if callable(value) else value
-        object.__setattr__(self, name, value)
-        if name == '__values__':
-            return
-        if name not in self.__fields__:
-            if self.Meta.strict is True:
-                return False
-            # If it’s not a known field, consult self.Meta.extra
-            extra_policy = self.Meta.extra
-            if extra_policy == 'forbid':
-                raise TypeError(
-                    f"Field {name!r} is not allowed on {self.modelName}"
-                )
 
-            if extra_policy == 'ignore':
-                # do nothing, skip silently
-                return
-            try:
-                # create a new Field on Model.
-                f = Field(required=False, default=value)
-                f.name = name
-                f.type = type(value)
-                self.__columns__[name] = f
-                self.__fields__.append(name)
-                setattr(self, name, value)
-            except Exception as err:
-                logging.exception(err, stack_info=True)
-                raise
+    # For extra attributes, store them as usual.
+    # (Note: here we “neutralize” any callable value to None if needed.)
+    object.__setattr__(self, name, None if callable(value) else value)
+    if name == '__values__':
+        return
+
+    # If the field isn’t known yet:
+    if name not in self.__fields__:
+        # In strict mode, we don’t allow unknown fields.
+        if self.Meta.strict:
+            return False
+
+        # Otherwise, check the "extra" policy.
+        extra_policy = self.Meta.extra
+        if extra_policy == 'forbid':
+            raise TypeError(f"Field {name!r} is not allowed on {self.modelName}")
+        elif extra_policy == 'ignore':
+            return
+
+        # Dynamically create a new Field for the unknown attribute.
+        try:
+            new_field = Field(required=False, default=value)
+            new_field.name = name
+            new_field.type = type(value)
+            # (Optionally, you might attach a parser here if validation is on.)
+            self.__columns__[name] = new_field
+            self.__fields__.append(name)
+            object.__setattr__(self, name, value)
+        except Exception as err:
+            logging.exception(err, stack_info=True)
+            raise
+
+
+def _validate_field_assignment(self, name: str, value: Any) -> Any:
+    """
+    Helper that applies field conversion/validation based on cached field info.
+
+    If you cache the parser (or the type-category) on the Field during model creation,
+    this helper could simply call that parser.
+    """
+    field_obj = self.__columns__[name]
+    # _type = field_obj.type
+    # _encoder = field_obj.metadata.get('encoder')
+    # Retrieve the field category (pre‐computed at class creation)
+    # field_category = self.__field_types__.get(name, 'complex')
+    try:
+        return field_obj.parser(value) if field_obj.parser else value
+    except Exception as e:
+        raise TypeError(
+            f"Cannot assign {value!r} to field {name!r}: {e}"
+        ) from e
 
 
 class ModelMeta(type):
@@ -153,10 +156,8 @@ class ModelMeta(type):
 
         if "__annotations__" in attrs:
             annotations = attrs.get('__annotations__', {})
-            try:
+            with contextlib.suppress(TypeError, AttributeError, KeyError):
                 strict = attrs['Meta'].strict
-            except (TypeError, AttributeError, KeyError):
-                pass
 
             @staticmethod
             def _initialize_fields(attrs, annotations, strict):
@@ -179,8 +180,8 @@ class ModelMeta(type):
                         hasattr(default_value, method)
                         for method in ("__get__", "__set__", "__delete__")
                     )
+                    # Handle the descriptor field
                     if is_descriptor:
-                        # Handle descriptor field
                         default_value._type_category = 'descriptor'
                         cols[field] = default_value
                         _types_local[field] = 'descriptor'
@@ -200,10 +201,6 @@ class ModelMeta(type):
                         df = Field(required=False, type=_type, default=df)
                     df.name = field
                     df.type = _type
-                    try:
-                        df._encoder_fn = encoders[_type]
-                    except (TypeError, KeyError):
-                        df._encoder_fn = None
 
                     # Cache reflection info so we DON’T need to call
                     # get_origin/get_args repeatedly:
@@ -225,6 +222,19 @@ class ModelMeta(type):
                     df._typeinfo_ = {
                         "default_callable": callable(_default)
                     }
+                    # Current Field have an Encoder Function.
+                    custom_encoder = df.metadata.get("encoder")
+                    try:
+                        df.parser = encoders[_type]
+                    except (TypeError, KeyError):
+                        df.parser = None
+                    if custom_encoder:
+                        df.parser = lambda value, _type=_type, encoder=custom_encoder: parse_basic(_type, value, encoder)  # noqa
+                    # Caching Validator:
+                    try:
+                        df.validator = validators[_type]
+                    except (KeyError, TypeError):
+                        df.validator = None
 
                     # check type of field:
                     if _is_prim:
@@ -233,13 +243,29 @@ class ModelMeta(type):
                         _type_category = 'type'
                     elif _is_dc:
                         _type_category = 'dataclass'
-                    elif _is_typing:  # noqa
+                    elif _is_typing or _is_alias:  # noqa
+                        if df.origin is not None and (df.origin is list and df.args):
+                            df._inner_type = args[0]
+                            df._inner_origin = get_origin(df._inner_type)
+                            df._typing_args = get_args(df._inner_type)
+                            df._inner_is_dc = is_dataclass(df._inner_type)
+                            try:
+                                df._encoder_fn = encoders[df._inner_type]
+                            except (TypeError, KeyError):
+                                df._encoder_fn = None
+                        if origin is list:
+                            inner_type = args[0]
+                            try:
+                                df._encoder_fn = encoders[inner_type]
+                            except (TypeError, KeyError):
+                                df._encoder_fn = None
                         _type_category = 'typing'
                     elif isclass(_type):
                         _type_category = 'class'
-                    elif _is_alias:
-                        _type_category = 'typing'
+                    # elif _is_alias:
+                    #    _type_category = 'typing'
                     else:
+                        # TODO: making parser for complex types
                         _type_category = 'complex'
                     _types_local[field] = _type_category
                     df._type_category = _type_category

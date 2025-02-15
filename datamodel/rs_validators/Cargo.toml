@@ -1,0 +1,17 @@
+[package]
+name = "rs_validators"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jesus Lara <jesuslarag@gmail.com>"]
+description = "Functions for value and type validation of datamodel fields."
+license = "MIT"
+repository = "https://github.com/phenobarbital/python-datamodel"
+
+[lib]
+name = "rs_validators"
+crate-type = ["cdylib"]
+
+
+[dependencies]
+pyo3 = { version = "0.23.3", features = ["generate-import-lib", "extension-module"] }
+rayon = "1.5.3"

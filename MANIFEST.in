@@ -9,6 +9,7 @@ graft datamodel
 graft tests
 
 recursive-include datamodel *.pxd *.pyx
+recursive-include datamodel/rs_parsers *
 
 # Exclude tests, settings, env, examples, and bin folders
 global-exclude *.pyc

@@ -1,0 +1,35 @@
+[package]
+name = "datamodel-rs"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+homepage = "https://github.com/phenobarbital/python-datamodel"
+repository = "https://github.com/phenobarbital/python-datamodel.git"
+description = "A Python library for building data models using dataclasses."
+readme = "README.md"
+rust-version = "1.84.0"
+
+[workspace]
+members = [
+    "datamodel/rs_core",
+    "datamodel/rs_parsers",
+    "datamodel/rs_validators"
+]
+resolver = "2"
+edition = "2021"
+
+
+[workspace.dependencies]
+pyo3 = { version = "0.23.3", features = ["generate-import-lib", "extension-module"] }
+serde_json = {version = "1.0.134", features = ["arbitrary_precision", "preserve_order"]}
+serde = { version = "1.0.217", features = ["derive"] }
+hex = "0.4.3"
+
+[dependencies]
+pyo3 = { version = "0.23.3", features = ["generate-import-lib", "extension-module"] }
+
+[features]
+extension-module = ["pyo3/extension-module"]
+
+[profile.dev]
+opt-in = ["unstable-preview"]

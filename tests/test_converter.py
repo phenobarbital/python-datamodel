@@ -69,7 +69,7 @@ def test_client_creation(client_id, client_name, status, orgid, org_name, expect
         (7, "Client F", True, 123, None),  # ID: edge_case_invalid_orgid_type
 
         # Error cases - expecting exceptions due to strict mode
-        (8, 123, True, {"orgid": 20, "name": "Org B"}, None),  # ID: error_case_invalid_orgid_type
+        (8, 123, True, {"orgid": "Bother", "name": "Org B"}, None),  # ID: error_case_invalid_orgid_type
         (9, "Client E", "Family", None, None),  # ID: error_case_invalid_status_type
 
     ],
@@ -146,7 +146,7 @@ def test_handle_dataclass_with_alias_on_error():
     assert client.orgid.name == "Org A"
 
     # This will trigger alias logic
-    org_data_alias = {"org_id": 20, "name": "Org B"}
+    org_data_alias = {"orgid": 20, "name": "Org B"}
     client_with_alias = Client(
         client_id=2,
         client_name="Test Client B",

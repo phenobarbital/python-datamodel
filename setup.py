@@ -10,6 +10,7 @@ from os import path
 
 from Cython.Build import cythonize
 from setuptools import Extension, find_packages, setup
+from setuptools_rust import RustExtension
 
 
 def get_path(filename):
@@ -49,7 +50,14 @@ with open(version, 'r', encoding='utf-8') as meta:
                     __author_email__ = v.s
 
 
-COMPILE_ARGS = ["-O2"]
+COMPILE_ARGS = ["-O3"]
+
+rust_extensions = [
+    RustExtension(
+        "datamodel.rs_parsers",
+        path="datamodel/rs_parsers/Cargo.toml"
+    ),
+]
 
 extensions = [
     Extension(
@@ -62,7 +70,8 @@ extensions = [
         name='datamodel.converters',
         sources=['datamodel/converters.pyx'],
         extra_compile_args=COMPILE_ARGS,
-        language="c"
+        language="c",
+        compiler_directives={'profile': True}
     ),
     Extension(
         name='datamodel.functions',
@@ -162,7 +171,9 @@ setup(
     setup_requires=[
         'setuptools==74.0.0',
         'Cython==3.0.11',
-        'wheel==0.44.0'
+        'wheel==0.44.0',
+        'pip==25.0',
+        'setuptools-rust==1.10.2',
     ],
     install_requires=[
         "numpy>=1.26.4",
@@ -171,12 +182,13 @@ setup(
         "faust-cchardet==2.1.19",
         "ciso8601==2.3.2",
         "objectpath==0.6.1",
-        "orjson==3.10.11",
+        "orjson>=3.10.11",
         'typing_extensions>=4.9.0',
         "asyncpg>=0.29.0",
         "python-dateutil>=2.8.2",
         "python-slugify==8.0.1",
-        "pendulum==3.0.0"
+        "psycopg2-binary==2.9.10",
+        "msgspec==0.19.0"
     ],
     tests_require=[
         'pytest>=7.2.2',
@@ -185,10 +197,19 @@ setup(
         'pytest-assume==2.4.3'
     ],
     test_suite='tests',
-    ext_modules=cythonize(extensions),
+    ext_modules=cythonize(
+        extensions,
+        compiler_directives={"language_level": "3"},
+        annotate=True
+    ),
+    zip_safe=False,
+    rust_extensions=rust_extensions,
     project_urls={  # Optional
         "Source": "https://github.com/phenobarbital/datamodel",
         "Funding": "https://paypal.me/phenobarbital",
+        "Tracker": "https://github.com/phenobarbital/datamodel/issues",
+        "Documentation": "https://datamodel.readthedocs.io/en/latest/",
+        "Buy Me A Coffee!": "https://www.buymeacoffee.com/phenobarbital",
         "Say Thanks!": "https://saythanks.io/to/phenobarbital",
     },
 )

@@ -1,0 +1,22 @@
+[package]
+name = "rs_parsers"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jesus Lara <jesuslarag@gmail.com>"]
+description = "Parallel DataModel Parser and validator using Rust"
+license = "MIT"
+repository = "https://github.com/phenobarbital/python-datamodel"
+
+[lib]
+name = "rs_parsers"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.23.3", features = ["generate-import-lib", "extension-module"] }
+rayon = "1.5.3"
+chrono = "0.4.39"
+speedate = "0.15.0"
+uuid = "1.11.0"
+fastuuid = "0.3.0"
+rust_decimal = "1.36"
+rust_decimal_macros = "1.36"

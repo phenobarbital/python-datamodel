@@ -7,31 +7,28 @@ from collections.abc import Sequence, Mapping, Callable, Awaitable
 from dataclasses import _MISSING_TYPE, _FIELDS, fields
 import ciso8601
 import orjson
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from cpython cimport datetime
-import pendulum
-from pendulum.parsing.exceptions import ParserError
+from cpython.object cimport (
+    PyObject_IsInstance,
+    PyObject_IsSubclass,
+    PyObject_HasAttrString,
+    PyObject_GetAttrString,
+    PyObject_TypeCheck,
+    PyCallable_Check
+)
+cimport cython
 from uuid import UUID
 import asyncpg.pgproto.pgproto as pgproto
 from cpython.ref cimport PyObject
 from .functions import is_empty, is_dataclass, is_iterable, is_primitive
 from .validation import _validation
 from .fields import Field
+# New converter:
+import rs_parsers as rc
 
 
-# Maps a type to a conversion callable
-cdef dict TYPE_CONVERTERS = {}
-
-
-cpdef object register_converter(object _type, object converter_func):
-    """register_converter.
-
-    Register a new converter function for a given type.
-    """
-    TYPE_CONVERTERS[_type] = converter_func
-
-
-cdef str to_string(object obj):
+cpdef str to_string(object obj):
     """
     Returns a string version of an object.
     """
@@ -39,17 +36,20 @@ cdef str to_string(object obj):
         return None
     if isinstance(obj, str):
         return obj
-    elif isinstance(obj, bytes):
-        return obj.decode()
-    elif callable(obj):
+    if isinstance(obj, bytes):
+        try:
+            return obj.decode()
+        except UnicodeDecodeError as e:
+            raise ValueError(f"Cannot decode bytes: {e}") from e
+    if callable(obj):
         # its a function callable returning a value
         try:
             return str(obj())
-        except:
+        except Exception:
             pass
     return str(obj)
 
-cdef object to_uuid(object obj):
+cpdef object to_uuid(object obj):
     """Returns a UUID version of a str column.
     """
     if isinstance(obj, pgproto.UUID):
@@ -61,7 +61,7 @@ cdef object to_uuid(object obj):
     elif callable(obj):
         # its a function callable returning a value
         try:
-            return obj()
+            return UUID(obj())
         except:
             pass
     try:
@@ -90,22 +90,6 @@ cpdef str slugify_camelcase(str obj):
         slugified.append(c)
     return ''.join(slugified)
 
-cdef list ts_parse_date(ts_string):
-    """ts_string_parser.
-
-    Parse a timestamp string into a list of strings.
-    """
-    year, month, day = int(ts_string[:4]), int(ts_string[5:7]), int(ts_string[8:10])
-    return [year, month, day]
-
-cdef list ts_parse_datetime(ts_string):
-    """ts_string_parser.
-
-    Parse a timestamp string into a list of strings.
-    """
-    year, month, day = int(ts_string[:4]), int(ts_string[5:7]), int(ts_string[8:10])
-    hour, minute = int(ts_string[11:13]), int(ts_string[14:])
-    return [year, month, day, hour, minute]
 
 cpdef datetime.date to_date(object obj):
     """to_date.
@@ -114,47 +98,34 @@ cpdef datetime.date to_date(object obj):
     """
     if obj is None:
         return None
+    elif obj == _MISSING_TYPE:
+        return None
     if isinstance(obj, datetime.date):
         return obj
+    elif isinstance(obj, (datetime.datetime, datetime.timedelta)):
+        return obj.date()
     if isinstance(obj, (bytes, bytearray)):
         obj = obj.decode("ascii")
-    elif isinstance(obj, str):
+    # Handle Unix epoch via Rust's `to_timestamp`
+    if isinstance(obj, (int, float)):
         try:
-            return ciso8601.parse_datetime(obj).date()
+            return rc.to_timestamp(obj).date()
         except ValueError:
             pass
-        try:
-            return datetime.datetime.fromisoformat(obj).date()
-        except ValueError:
-            pass
-        try:
-            year, month, day = ts_parse_date(obj)
-            return datetime.date(year=year, month=month, day=day)
-        except ValueError as ex:
-            pass
-        try:
-            year, month, day, hour, minute = ts_parse_datetime(obj)
-            return datetime.date(year=year, month=month, day=day)
-        except ValueError as ex:
-            pass
-        try:
-            return datetime.datetime.strptime(obj, "%Y-%m-%d").date()
-        except ValueError:
-            pass
-        try:
-            return datetime.datetime.strptime(obj, "%d-%m-%Y").date()
-        except ValueError:
-            pass
-        try:
-            return datetime.datetime.strptime(obj, "%Y-%m-%d %H:%M:%S").date()
-        except ValueError:
-            pass
+    # using rust todate function
     try:
-        return pendulum.parse(obj, strict=False).date()
-    except (ValueError, TypeError, ParserError):
+        return rc.to_date(obj)
+    except ValueError:
+        pass
+    # Fallback to Cython-native ciso8601 parsing
+    try:
+        return ciso8601.parse_datetime(obj).date()
+    except ValueError:
+        pass
         raise ValueError(
             f"Can't convert invalid data *{obj}* to date"
         )
+
 
 cpdef datetime.datetime to_datetime(object obj):
     """to_datetime.
@@ -163,45 +134,25 @@ cpdef datetime.datetime to_datetime(object obj):
     """
     if obj is None:
         return None
-    if isinstance(obj, datetime.datetime):
-        return obj
     elif obj == _MISSING_TYPE:
         return None
+    if isinstance(obj, datetime.datetime):
+        return obj
     if isinstance(obj, (bytes, bytearray)):
         obj = obj.decode("ascii")
-    elif isinstance(obj, str):
+    # Handle Unix epoch via Rust's `to_timestamp`
+    if isinstance(obj, (int, float)):
         try:
-            year, month, day, hour, minute = ts_parse_datetime(obj)
-            return datetime.datetime(year=year, month=month, day=day, hour=hour, minute=minute)
-        except ValueError as ex:
-            pass
-        try:
-            return ciso8601.parse_datetime(obj)
-        except ValueError:
-            pass
-        try:
-            return datetime.datetime.strptime(obj, "%Y-%m-%d %H:%M")
-        except ValueError:
-            pass
-        try:
-            return datetime.datetime.strptime(obj, "%Y-%m-%d %H:%M:%S")
-        except ValueError:
-            pass
-        try:
-            return datetime.datetime.strptime(obj, "%Y-%m-%d")
-        except ValueError:
-            pass
-        try:
-            return datetime.datetime.strptime(obj, "%d-%m-%Y")
+            return rc.to_timestamp(obj)
         except ValueError:
             pass
     try:
-        return datetime.datetime.fromisoformat(obj)
+        return rc.to_datetime(obj)
     except ValueError:
         pass
     try:
-        return pendulum.parse(obj, strict=False)
-    except (ValueError, TypeError, ParserError):
+        return ciso8601.parse_datetime(obj)
+    except ValueError:
         raise ValueError(
             f"Can't convert invalid data *{obj}* to datetime"
         )
@@ -215,6 +166,15 @@ cpdef object to_integer(object obj):
         return None
     if isinstance(obj, int):
         return obj
+    if isinstance(obj, unicode):
+        obj = obj.encode("ascii")
+    if isinstance(obj, bytes):
+        try:
+            return int(obj)
+        except (TypeError, ValueError) as e:
+            raise ValueError(
+                f"Invalid conversion to Integer of {obj}"
+            ) from e
     elif callable(obj):
         # its a function callable returning a value
         try:
@@ -268,19 +228,29 @@ cpdef object to_decimal(object obj):
     else:
         try:
             return Decimal(obj)
+        except InvalidOperation as ex:
+            raise ValueError(
+                f"Invalid Decimal conversion of {obj}"
+            ) from ex
         except (TypeError, ValueError):
             return None
 
 TIMEDELTA_RE = re.compile(r"(-)?(\d{1,3}):(\d{1,2}):(\d{1,2})(?:.(\d{1,6}))?")
 
-cpdef int _convert_second_fraction(s):
+cdef int _convert_second_fraction(s):
     if not s:
         return 0
     # Pad zeros to ensure the fraction length in microseconds
     s = s.ljust(6, "0")
     return int(s[:6])
 
-cpdef datetime.timedelta to_timedelta(object obj):
+cpdef object to_timedelta(object obj):
+
+    if obj is None:
+        return None
+    if isinstance(obj, datetime.timedelta):
+        return obj
+
     if isinstance(obj, (bytes, bytearray)):
         obj = obj.decode("ascii")
 
@@ -349,7 +319,7 @@ cpdef object to_time(object obj):
             )
 
 
-cdef object strtobool(str val):
+cpdef object strtobool(str val):
     """Convert a string representation of truth to true (1) or false (0).
 
     True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values
@@ -357,9 +327,9 @@ cdef object strtobool(str val):
     'val' is anything else.
     """
     val = val.lower()
-    if val in ('y', 'yes', 't', 'true', 'on', '1'):
+    if val in ('y', 'yes', 't', 'true', 'on', '1', 'T'):
         return True
-    elif val in ('n', 'no', 'f', 'false', 'off', '0'):
+    elif val in ('n', 'no', 'f', 'false', 'off', '0', 'none', 'null'):
         return False
     else:
         raise ValueError(
@@ -409,6 +379,42 @@ cpdef object to_object(object obj):
             f"Can't convert invalid data {obj} to Object"
         )
 
+cpdef bytes to_bytes(object obj):
+    """
+    Convert the given object to bytes.
+
+    - If the object is already bytes, return it directly.
+    - If the object is a string, encode it (using UTF-8).
+    - If the object is callable, call it and convert its result.
+    - Otherwise, attempt to convert the object to bytes.
+    If conversion fails, raise a ValueError.
+    """
+    if obj is None:
+        raise ValueError("Cannot convert None to bytes")
+
+    # 1. If already bytes, return as is.
+    if isinstance(obj, bytes):
+        return obj
+
+    # 2. If it's a string, encode it to bytes.
+    elif isinstance(obj, str):
+        return obj.encode("utf-8")
+
+    # 3. If it's callable, attempt to call it and convert its result.
+    elif callable(obj):
+        try:
+            result = obj()
+            # Recursively convert the result.
+            return to_bytes(result)
+        except Exception as e:
+            raise ValueError("Failed to convert callable to bytes: %s" % e)
+
+    # 4. Try converting the object into bytes using Python's built-in conversion.
+    try:
+        return bytes(obj)
+    except Exception as e:
+        raise ValueError("Invalid conversion to bytes: %s" % e)
+
 cdef bint is_callable(object value) nogil:
     """
     Check if `value` is callable by calling Python's callable(...)
@@ -417,6 +423,8 @@ cdef bint is_callable(object value) nogil:
     with gil:
         return callable(value)
 
+
+# Encoder List:
 encoders = {
     str: to_string,
     UUID: to_uuid,
@@ -431,8 +439,28 @@ encoders = {
     Decimal: to_decimal,
     dict: to_object,
     list: to_object,
-    tuple: to_object
+    tuple: to_object,
+    bytes: to_bytes,
 }
+
+
+# Maps a type to a conversion callable
+cdef dict TYPE_PARSERS = {}
+
+
+cpdef object register_parser(object _type, object parser_func):
+    """register_parser.
+
+    Register a new Parser function for a given type.
+
+    Parameters:
+    _type (type): The type for which the parser function is registered.
+    parser_func (function): The parser function to convert the given type.
+    """
+    TYPE_PARSERS[_type] = parser_func
+
+
+## Parsing Functions
 
 cdef object _parse_dict_type(
     object field,
@@ -452,10 +480,17 @@ cdef object _parse_list_type(
     object T,
     object data,
     object encoder,
-    object args
+    object args,
+    object _parent = None
 ):
+    """
+    Parse a list of items to a typing type.
+    """
     cdef object arg_type = args[0]
     cdef list result = []
+    cdef tuple key = (arg_type, field.name)
+    cdef object converter = TYPE_PARSERS.get(key) or TYPE_PARSERS.get(arg_type)
+    cdef object inner_type = field._inner_type or arg_type
 
     if data is None:
         return []   # short-circuit
@@ -464,23 +499,33 @@ cdef object _parse_list_type(
         data = [data]
 
     # If it's a dataclass
-    if is_dataclass(arg_type):
+    if is_dataclass(inner_type):
         for d in data:
             if is_dataclass(d):
                 result.append(d)
-            elif isinstance(d, dict):
-                result.append(arg_type(**d))
-            elif isinstance(d, (list, tuple)):
-                result.append(arg_type(*d))
+            if converter:
+                result.append(
+                    converter(field.name, d, inner_type, _parent)
+                )
             else:
-                result.append(arg_type(d))
+                if isinstance(d, dict):
+                    result.append(inner_type(**d))
+                elif isinstance(d, (list, tuple)):
+                    result.append(inner_type(*d))
+                else:
+                    result.append(inner_type(d))
         return result
     else:
         # General conversion
         for item in data:
-            result.append(
-                parse_typing(field, arg_type, item, encoder, False)
-            )
+            if converter:
+                result.append(
+                    converter(field.name, item, inner_type, _parent)
+                )
+            else:
+                result.append(
+                    parse_typing(field, inner_type, item, encoder, False)
+                )
         return result
 
 cdef object _parse_dataclass_type(object T, object data):
@@ -558,6 +603,20 @@ cpdef object parse_basic(object T, object data, object encoder = None):
     if T == bool:
         if isinstance(data, bool):
             return data
+    # function encoder:
+    if encoder:
+        if is_callable(encoder):
+            # using a function encoder:
+            try:
+                return encoder(data)
+            except TypeError as e:
+                raise TypeError(
+                    f"Type Error for Encoder {encoder!s} for type {T}: {e}"
+                ) from e
+            except ValueError as e:
+                raise ValueError(
+                    f"Error parsing type {T}, {e}"
+                )
     # Using the encoders for basic types:
     try:
         return encoders[T](data)
@@ -570,19 +629,6 @@ cpdef object parse_basic(object T, object data, object encoder = None):
             f"Error parsing type {T}: {e}"
         ) from e
 
-    # function encoder:
-    if encoder and is_callable(encoder):
-        # using a function encoder:
-        try:
-            return encoder(data)
-        except TypeError as e:
-            raise TypeError(
-                f"Error type {T}: {e}"
-            ) from e
-        except ValueError as e:
-            raise ValueError(
-                f"Error parsing type {T}, {e}"
-            )
 
 cdef object _parse_typing_type(
     object field,
@@ -716,7 +762,7 @@ cdef object _parse_optional_union(
     object args
 ):
     """
-    handle Optional or Union logic
+    Handle Optional or Union logic.
     """
     cdef object non_none_arg
     cdef object t = args[0] if args else None
@@ -726,6 +772,7 @@ cdef object _parse_optional_union(
     if origin == Union and type(None) in args:
         if data is None:
             return None
+        # Pick the non-None type (assumes only two types in the Union)
         non_none_arg = args[0] if args[1] is type(None) else args[1]
         return _parse_type(
             field,
@@ -734,9 +781,13 @@ cdef object _parse_optional_union(
             encoder=encoder,
             as_objects=False
         )
+    # Remove None from args.
     args = tuple(t for t in args if t is not type(None))
+    # If there are no non-None types left, simply return data.
+    if not args:
+        return data
+
     for t in args:
-        # let's validate all types on Union to be matched with Type of data
         if isinstance(data, t):
             matched = True
             break
@@ -852,31 +903,57 @@ cdef object _parse_type(
         result = _parse_builtin_type(field, T, data, encoder)
     return result
 
-cpdef object parse_typing(
+cdef object parse_typing(
     object field,
     object T,
     object data,
     object encoder=None,
     object as_objects=False,
+    object parent=None,
 ):
     """
     Parse a value to a typing type.
     """
     # local cdef variables:
-    cdef object origin = field.origin
-    cdef object targs = field.args
+    cdef object origin, targs
     cdef object name = getattr(T, '_name', None)  # T._name or None if not present
     cdef object sub = None     # for subtypes, local cache
     cdef object result = None
     cdef object is_dc = field.is_dc # is_dataclass(T)
+    cdef object inner_type = None
+    cdef bint inner_is_dc = 0 # field._inner_is_dc or is_dataclass(inner_type)
 
-    if not origin:
+    # Use cached values only if T is exactly the field's declared type.
+    if T == field.type:
+        origin = field.origin
+        targs = field.args
+    elif field._inner_type and field._inner_type == inner_type:
+        origin = field._inner_origin
+        targs = field._inner_args
+    else:
         origin = get_origin(T)
         targs = get_args(T)
+
+
+    # For generic (typing) fields, reuse cached inner type info if available.
+    if origin is list and targs:
+        if field._inner_type is not None:
+            inner_type = field._inner_type
+            inner_origin = field._inner_origin
+            # Optionally, also use cached type arguments for the inner type.
+        else:
+            inner_type = targs[0]
+            inner_origin = get_origin(inner_type)
+    else:
+        inner_type = None
+        inner_origin = None
+
+    inner_is_dc = field._inner_is_dc or is_dataclass(inner_type)
 
     if data is None:
         return None
 
+    # If the field is a Union and data is a list, use _parse_union_type.
     if origin is Union and isinstance(data, list):
         return _parse_union_type(
             field,
@@ -888,17 +965,29 @@ cpdef object parse_typing(
             targs
         )
 
-    if is_dataclass(T):
+    # if is_dataclass(T):
+    if is_dc:
         result = _handle_dataclass_type(None, name, data, T, as_objects, None)
     # Field type shortcuts
     elif field._type_category == 'typing':
-        result = _parse_typing_type(
-            field, T, name, data, encoder, origin, targs, as_objects
-        )
+        # For example, if the origin is list and the inner type is a dataclass,
+        # use _handle_dataclass_type on each element.
+        if origin is list:
+            # Use the cached inner type info if available.
+            if inner_is_dc:
+                result = _parse_list_type(field, T, data, encoder, targs, parent)
+            else:
+                result = _parse_typing_type(
+                    field, T, name, data, encoder, origin, targs, as_objects
+                )
+        else:
+            result = _parse_typing_type(
+                field, T, name, data, encoder, origin, targs, as_objects
+            )
     elif origin is dict and isinstance(data, dict):
         result = _parse_dict_type(field, T, data, encoder, targs)
     elif origin is list:
-        result = _parse_list_type(field, T, data, encoder, targs)
+        result = _parse_list_type(field, T, data, encoder, targs, parent)
     elif origin is not None:
         # other advanced generics
         result = data
@@ -923,31 +1012,41 @@ cdef object _handle_dataclass_type(
     otherwise, build the dataclass using default logic.
     """
     cdef tuple key = (_type, name)
-    cdef object converter = TYPE_CONVERTERS.get(key) or TYPE_CONVERTERS.get(_type)
+    cdef object converter = TYPE_PARSERS.get(key) or TYPE_PARSERS.get(_type)
     cdef bint is_dc = field.is_dc if field else is_dataclass(_type)
     cdef object field_metadata = field.metadata if field else {}
     cdef str alias = field_metadata.get('alias')
 
-    try:
-        if value is None or is_dataclass(value):
-            return value
-        if isinstance(value, dict):
-            try:
-                return _type(**value)
-            except TypeError:
-                # Ensure keys are strings
-                value = {str(k): v for k, v in value.items()}
-                return _type(**value)
-            except ValueError:
-                # replace in "value" dictionary the current "name" for "alias"
-                if alias:
+    if value is None or is_dataclass(value):
+        return value
+    if PyObject_IsInstance(value, dict):
+        try:
+            # If alias exists, adjust the key passed to the dataclass
+            if alias:
+                # if alias exists on type, preserve the alias:
+                if alias not in value and name in value:
                     value = value.copy()
-                    value[alias] = value.pop(name, None)
-                return _type(**value)
-            except Exception as exc:
-                raise ValueError(
-                    f"Invalid value for {name}:{_type} == {value}, error: {exc}"
-                )
+                    value[alias] = value.pop(name)
+            # convert the dictionary to the dataclass
+            return _type(**value)
+        except TypeError:
+            # Ensure keys are strings
+            value = {str(k): v for k, v in value.items()}
+            if alias:
+                value = value.copy()
+                value[name] = value.pop(alias, None)
+            return _type(**value)
+        except ValueError:
+            # replace in "value" dictionary the current "name" for "alias"
+            if alias:
+                value = value.copy()
+                value[alias] = value.pop(name, None)
+            return _type(**value)
+        except Exception as exc:
+            raise ValueError(
+                f"Invalid value for {name}:{_type} == {value}, error: {exc}"
+            )
+    try:
         if isinstance(value, (list, tuple)):
             return _type(*value)
         else:
@@ -970,7 +1069,7 @@ cdef object _handle_dataclass_type(
                 return _type(value)
     except Exception as exc:
         raise ValueError(
-            f"Invalid value for {_type}: {value}, error: {exc}"
+            f"Invalid value for {name}:{_type} == {value}, error: {exc}"
         )
 
 cdef object _handle_list_of_dataclasses(
@@ -991,7 +1090,7 @@ cdef object _handle_list_of_dataclasses(
         sub_type = _type.__args__[0]
         if is_dataclass(sub_type):
             key = (sub_type, name)
-            converter = TYPE_CONVERTERS.get(key) or TYPE_CONVERTERS.get(_type)
+            converter = TYPE_PARSERS.get(key) or TYPE_PARSERS.get(_type)
             new_list = []
             for item in value:
                 if converter:
@@ -1014,7 +1113,7 @@ cdef object _handle_default_value(
 ):
     """Handle default value of fields."""
     # If value is callable, try calling it directly
-    if is_callable(value):
+    if PyCallable_Check(value):
         try:
             new_val = value()
         except TypeError:
@@ -1042,10 +1141,14 @@ cdef object _handle_default_value(
     # Otherwise, return value as-is
     return value
 
-cpdef dict process_attributes(object obj, list columns):
-    """process_attributes.
+@cython.profile(False)
+cpdef dict processing_fields(object obj, list columns):
+    """
+    Process the fields (columns) of a dataclass object.
 
-    Process the attributes of a dataclass object.
+    For each field, if a custom parser is attached (i.e. f.parser is not None),
+    it is used to convert the value. Otherwise, the standard conversion logic
+    (parse_basic, parse_typing, etc.) is applied.
     """
     cdef object new_val
     cdef object _encoder = None
@@ -1054,37 +1157,35 @@ cpdef dict process_attributes(object obj, list columns):
     cdef object meta = obj.Meta
     cdef bint as_objects = meta.as_objects
     cdef bint no_nesting = meta.no_nesting
-    cdef bint is_dc = False
     cdef dict errors = {}
     cdef dict _typeinfo = {}
 
     for name, f in columns:
+        value = getattr(obj, name)
+        # Use the precomputed field type category:
+        field_category = f._type_category
+
+        if field_category == 'descriptor':
+            # Handle descriptor-specific logic
+            try:
+                value = f.__get__(obj, type(obj))  # Get the descriptor value
+                setattr(obj, name, value)
+            except Exception as e:
+                errors[name] = f"Descriptor error in {name}: {e}"
+            continue
+
+        # get type and default:
+        _type = f.type
+        _default = f.default
+        typeinfo = f.typeinfo # cached info (e.g., type_args, default_callable)
+        metadata = PyObject_GetAttrString(f, "metadata")
+        _encoder = metadata.get('encoder')
+        _default_callable = typeinfo.get('default_callable', False)
+
+        if isinstance(_type, NewType):
+            _type = _type.__supertype__
+
         try:
-            value = getattr(obj, name)
-            # Use the precomputed field type category:
-            field_category = f._type_category
-
-            if field_category == 'descriptor':
-                # Handle descriptor-specific logic
-                try:
-                    value = f.__get__(obj, type(obj))  # Get the descriptor value
-                    setattr(obj, name, value)
-                except Exception as e:
-                    errors[name] = f"Descriptor error in {name}: {e}"
-                continue
-
-            metadata = getattr(f, "metadata", {})
-            _type = f.type
-            _encoder = metadata.get('encoder')
-            _default = f.default
-            typeinfo = f.typeinfo
-            is_dc = f.is_dc
-            _default_callable = typeinfo.get('default_callable', False)
-
-            if isinstance(_type, NewType):
-                # change type if is a NewType object.
-                _type = _type.__supertype__
-
             # Check if object is empty
             if is_empty(value) and not isinstance(value, list):
                 if _type == str and value is not "":
@@ -1092,70 +1193,84 @@ cpdef dict process_attributes(object obj, list columns):
                 setattr(obj, name, value)
             if _default is not None:
                 value = _handle_default_value(obj, name, value, _default, _default_callable)
-            try:
-                if field_category == 'primitive':
-                    if isinstance(value, str) and _type == str:
-                        continue  # short-circuit
-                    if isinstance(value, int) and _type == int:
-                        continue  # short-circuit
-                    try:
-                        value = parse_basic(_type, value, _encoder)
-                    except ValueError as e:
-                        errors[name] = f"Error parsing {name}: {e}"
-                        continue
-                elif field_category == 'type':
-                    pass
-                elif field_category == 'typing':
-                    value = parse_typing(
-                        f,
-                        _type,
-                        value,
-                        _encoder,
-                        as_objects
-                    )
-                elif field_category == 'dataclass':
-                    if no_nesting is False:
-                        if as_objects is True:
-                            value = _handle_dataclass_type(f, name, value, _type, as_objects, obj)
-                        else:
-                            value = _handle_dataclass_type(f, name, value, _type, as_objects, None)
-                elif isinstance(value, list) and typeinfo.get('type_args'):
-                    if as_objects is True:
-                        value = _handle_list_of_dataclasses(f, name, value, _type, obj)
-                    else:
-                        value = _handle_list_of_dataclasses(f, name, value, _type, None)
-                else:
-                    value = parse_typing(
-                        f,
-                        _type,
-                        value,
-                        _encoder,
-                        as_objects
-                    )
-                setattr(obj, name, value)
-                # then, call the validation process:
-                if (error := _validation_(name, value, f, _type, meta, field_category, as_objects)):
-                    errors[name] = error
-            except ValueError as ex:
-                if meta.strict is True:
-                    raise
-                else:
-                    errors[name] = f"Wrong Value for {f.name}: {f.type}, error: {ex}"
+
+            if f.parser is not None:
+                # If a custom parser is attached to Field, use it
+                try:
+                    value = f.parser(value)
+                    setattr(obj, name, value)
+                except Exception as ex:
+                    errors[name] = f"Error parsing *{name}* = *{value}*, error: {ex}"
                     continue
-                raise
-            except (TypeError, RuntimeError) as ex:
-                errors[name] = f"Wrong Type for {f.name}: {f.type}, error: {ex}"
-                continue
-        except ValueError as e:
+
+            elif field_category == 'primitive':
+                try:
+                    value = parse_basic(_type, value, _encoder)
+                    setattr(obj, name, value)
+                except ValueError as ex:
+                    errors[name] = f"Error parsing {name}: {ex}"
+                    continue
+            elif field_category == 'type':
+                # TODO: support multiple types
+                pass
+            elif field_category == 'dataclass':
+                if no_nesting is False:
+                    if as_objects is True:
+                        value = _handle_dataclass_type(
+                            f, name, value, _type, as_objects, obj
+                        )
+                    else:
+                        value = _handle_dataclass_type(
+                            f, name, value, _type, as_objects, None
+                        )
+                    setattr(obj, name, value)
+            elif field_category == 'typing':
+                value = parse_typing(
+                    f,
+                    _type,
+                    value,
+                    _encoder,
+                    as_objects,
+                    obj
+                )
+                setattr(obj, name, value)
+            elif f.origin == 'list' and f._inner_is_dc:
+                if as_objects is True:
+                    value = _handle_list_of_dataclasses(f, name, value, _type, obj)
+                else:
+                    value = _handle_list_of_dataclasses(f, name, value, _type, None)
+                setattr(obj, name, value)
+            elif isinstance(value, list) and typeinfo.get('type_args'):
+                if as_objects is True:
+                    value = _handle_list_of_dataclasses(f, name, value, _type, obj)
+                else:
+                    value = _handle_list_of_dataclasses(f, name, value, _type, None)
+                setattr(obj, name, value)
+            else:
+                value = parse_typing(
+                    f,
+                    _type,
+                    value,
+                    _encoder,
+                    as_objects
+                )
+                setattr(obj, name, value)
+            # then, call the validation process:
+            if (error := _validation_(name, value, f, _type, meta, field_category, as_objects)):
+                errors[name] = error
+        except ValueError as ex:
             if meta.strict is True:
                 raise
-        except (TypeError, RuntimeError) as e:
-            errors[name] = f"Error processing {name}: {e}"
+            else:
+                errors[name] = f"Wrong Value for {f.name}: {f.type}, error: {ex}"
+                continue
+        except (TypeError, RuntimeError) as ex:
+            errors[name] = f"Wrong Type for {f.name}: {f.type}, error: {ex}"
             continue
+    # Return Errors (if any)
     return errors
 
-
-cdef list _validation_(
+cdef dict _validation_(
     str name,
     object value,
     object f,
@@ -1168,12 +1283,18 @@ cdef list _validation_(
     _validation_.
     TODO: cover validations as length, not_null, required, max, min, etc
     """
-    val_type = type(value)
+    cdef object val_type = type(value)
     if val_type == type or value == _type or is_empty(value):
         try:
             _field_checks_(f, name, value, meta)
-            return []
+            return {}
         except (ValueError, TypeError):
+            raise
+    # If the field has a cached validator, use it.
+    if f.validator is not None:
+        try:
+            return f.validator(f, name, value, _type)
+        except ValueError:
             raise
     else:
         # capturing other errors from validator:

@@ -1,0 +1,17 @@
+[package]
+name = "rs_core"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jesus Lara <jesuslarag@gmail.com>"]
+description = "Core Implementation for parsing and validating Datamodel Fields."
+license = "MIT"
+repository = "https://github.com/phenobarbital/python-datamodel"
+
+[lib]
+name = "rs_core"
+crate-type = ["cdylib"]
+
+
+[dependencies]
+pyo3 = { version = "0.23.3", features = ["generate-import-lib", "extension-module"] }
+rayon = "1.5.3"

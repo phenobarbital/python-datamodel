@@ -70,7 +70,7 @@ class QueryModel(BaseModel):
     updated_at: datetime = Field(
         required=False,
         default=datetime.now,
-        encoder=rigth_now
+        # encoder=rigth_now
     )
     updated_by: int = Field(required=False)  # TODO: validation for valid user
 

@@ -59,8 +59,20 @@ try:
         first_name='John',
         last_name='Doe',
         display_name='John Doe',
-        user_id=35
+        user_id=35,
+        corporate_email='johndoe@example.com',
+        username='johndoe'
     )
     print(employee)
 except ValidationError as ex:
     print(ex.payload)
+
+# Check if column exists:
+print(employee.has_column('user_id'))
+# another way to check if column exists
+if 'user_id' in employee:
+    print('Column exists')
+
+# Check Pop:
+print(employee.pop('corporate_email'))
+print(employee)

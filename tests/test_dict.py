@@ -14,8 +14,8 @@ class DummyModel(BaseModel):
     example: Mapping[str, str | int] = Field(required=False)
     more_nested: Mapping[str, Union[str, int]] = Field(required=False)
 
-
     class Meta:
+
         strict = True
         remove_nulls = True
 
