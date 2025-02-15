@@ -47,6 +47,22 @@ def test_decimal():
     assert isinstance(parsed, float)
     assert parsed == 3.14
 
+def test_decimal_large():
+    value = Decimal("1E+100")
+    result = json_encoder(value)
+    parsed = orjson.loads(result)
+    # Expect Decimal to be converted to float without overflow
+    assert isinstance(parsed, float)
+    assert parsed == float(Decimal("1E+100"))
+
+def test_decimal_small():
+    value = Decimal("1E-100")
+    result = json_encoder(value)
+    parsed = orjson.loads(result)
+    # Expect Decimal to be converted to float without underflow
+    assert isinstance(parsed, float)
+    assert parsed == float(Decimal("1E-100"))
+
 def test_datetime():
     dt = datetime(2025, 2, 15, 12, 0, 0)
     # If naive_utc is True, orjson produces ISO format with "T" and a trailing "Z"

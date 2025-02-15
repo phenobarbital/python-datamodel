@@ -37,8 +37,8 @@ jobs:
       - name: Build wheels on Ubuntu
         if: matrix.os == 'ubuntu-latest'
         env:
-          # This command installs Rust inside the manylinux container.
-          CIBW_BEFORE_BUILD: "curl https://sh.rustup.rs -sSf | sh -s -- -y && export PATH=$HOME/.cargo/bin:$PATH"
+          # Install Rust inside the manylinux container and update PATH.
+          CIBW_BEFORE_BUILD: "curl https://sh.rustup.rs -sSf | sh -s -- -y && export PATH=/root/.cargo/bin:$PATH && rustc --version"
         run: |
           pip install cibuildwheel
           cibuildwheel --platform linux --output-dir dist
