@@ -172,7 +172,7 @@ setup(
         'setuptools==74.0.0',
         'Cython==3.0.11',
         'wheel==0.44.0',
-        'pip==25.0',
+        'pip>=24.3.1,<26.0',
         'setuptools-rust==1.10.2',
     ],
     install_requires=[
