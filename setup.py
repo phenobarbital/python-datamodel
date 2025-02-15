@@ -51,6 +51,7 @@ with open(version, 'r', encoding='utf-8') as meta:
 
 
 COMPILE_ARGS = ["-O3"]
+EXTRA_LINK_ARGS = ["-lstdc++"]
 
 rust_extensions = [
     RustExtension(
@@ -64,7 +65,7 @@ extensions = [
         name='datamodel.fields',
         sources=['datamodel/fields.pyx'],
         extra_compile_args=COMPILE_ARGS,
-        extra_link_args=["-lstdc++"],
+        extra_link_args=EXTRA_LINK_ARGS,
         language="c++"
     ),
     Extension(
@@ -77,14 +78,14 @@ extensions = [
         name='datamodel.functions',
         sources=['datamodel/functions.pyx'],
         extra_compile_args=COMPILE_ARGS,
-        extra_link_args=["-lstdc++"],
+        extra_link_args=EXTRA_LINK_ARGS,
         language="c++"
     ),
     Extension(
         name='datamodel.validation',
         sources=['datamodel/validation.pyx'],
         extra_compile_args=COMPILE_ARGS,
-        extra_link_args=["-lstdc++"],
+        extra_link_args=EXTRA_LINK_ARGS,
         language="c++"
     ),
     Extension(
@@ -103,7 +104,7 @@ extensions = [
         name='datamodel.parsers.json',
         sources=['datamodel/parsers/json.pyx'],
         extra_compile_args=COMPILE_ARGS,
-        extra_link_args=["-lstdc++"],
+        extra_link_args=EXTRA_LINK_ARGS,
         language="c++"
     ),
     Extension(
