@@ -14,7 +14,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Set up Python (Windows)
+        if: matrix.os == 'windows-latest'
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
@@ -31,14 +38,16 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
+          python -m pip install pip
           pip install cibuildwheel maturin twine cython
 
       - name: Build wheels on Ubuntu
         if: matrix.os == 'ubuntu-latest'
         env:
-          # Install Rust inside the manylinux container and update PATH.
-          CIBW_BEFORE_BUILD: "curl https://sh.rustup.rs -sSf | sh -s -- -y && export PATH=/root/.cargo/bin:$PATH && rustc --version"
+          # Install Rust inside the manylinux container.
+          CIBW_BEFORE_BUILD: "curl https://sh.rustup.rs -sSf | sh -s -- -y"
+          # Make sure Rust tools are on the PATH for the build.
+          CIBW_ENVIRONMENT: "PATH=/root/.cargo/bin:$PATH"
         run: |
           pip install --upgrade pip==25.0
           pip install cibuildwheel

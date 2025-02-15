@@ -9,7 +9,7 @@ import ast
 from os import path
 
 from Cython.Build import cythonize
-from setuptools import Extension, find_packages, setup
+from setuptools import Extension, find_packages, setup, find_namespace_packages
 from setuptools_rust import RustExtension
 
 
@@ -153,7 +153,7 @@ setup(
     ],
     author=__author__,
     author_email=__author_email__,
-    packages=find_packages(exclude=["contrib", "docs", "tests", "examples"]),
+    packages=find_namespace_packages(exclude=["contrib", "docs", "tests", "examples"]),
     include_package_data=True,
     package_data={
         "datamodel.fields": ["*.pyx"],
