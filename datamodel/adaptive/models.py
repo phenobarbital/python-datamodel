@@ -185,7 +185,7 @@ class AdaptiveCard(BaseModel):
     body: List[CardElement] = Field(default_factory=list)
     body_objects: List[Dict[str, Any]] = Field(default_factory=list, repr=False)
     actions: List[CardAction] = Field(default_factory=list)
-    sections: list[CardSection] = Field(default_factory=list)
+    sections: List[CardSection] = Field(default_factory=list)
     version: str = Field(default="1.5")
 
     def __post_init__(self):

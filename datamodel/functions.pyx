@@ -4,6 +4,11 @@
 from typing import get_args, get_origin, Union, Optional
 from collections.abc import Iterable
 from libcpp cimport bool as bool_t
+from cpython.object cimport (
+    PyObject_IsInstance,
+    PyObject_IsSubclass,
+    PyObject_HasAttr,
+)
 from uuid import UUID
 import asyncpg.pgproto.pgproto as pgproto
 from decimal import Decimal
@@ -42,7 +47,7 @@ cpdef bool_t is_dataclass(object obj):
     """Returns True if obj is a dataclass or an instance of a
     dataclass."""
     cls = obj if isinstance(obj, type) and not isinstance(obj, types.GenericAlias) else type(obj)
-    return hasattr(cls, '__dataclass_fields__')
+    return PyObject_HasAttr(cls, '__dataclass_fields__')
 
 
 cpdef bool_t is_function(object value):

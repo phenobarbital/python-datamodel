@@ -197,12 +197,6 @@ setup(
         "psycopg2-binary==2.9.10",
         "msgspec==0.19.0"
     ],
-    tests_requires=[
-        'pytest>=7.2.2',
-        'pytest-asyncio==0.23.2',
-        'pytest-xdist==3.5.0',
-        'pytest-assume==2.4.3'
-    ],
     ext_modules=cythonize(
         extensions,
         annotate=True

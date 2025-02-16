@@ -97,6 +97,7 @@ show = ShowCard(
         ]
     )
 )
+print(' NUM > ', len(show.card.actions), show.card.actions)
 show.body.append(
     InputDate(
         id="dueDate",
