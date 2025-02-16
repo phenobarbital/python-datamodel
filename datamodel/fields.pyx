@@ -1,4 +1,4 @@
-# cython: language_level=3, embedsignature=True, boundscheck=False, wraparound=False, initializedcheck=False
+# cython: language_level=3, embedsignature=True, initializedcheck=False
 # Copyright (C) 2018-present Jesus Lara
 #
 from sys import version_info
