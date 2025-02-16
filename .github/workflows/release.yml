@@ -52,7 +52,7 @@ jobs:
           RUST_SUBPACKAGE_PATH: datamodel/rs_parsers
           # Skip PyPy builds (e.g. pypy3.9)
           CIBW_SKIP: "pypy*"
-          # CIBW_BUILD: "cp3{10,11,12,13}-*"  # Build for Python 3.10, 3.11, 3.12, 3.13
+          CIBW_BUILD: "cp3{10,11,12,13}-*"  # Build for Python 3.10, 3.11, 3.12, 3.13
         run: |
           pip install --upgrade pip==25.0
           pip install cibuildwheel
