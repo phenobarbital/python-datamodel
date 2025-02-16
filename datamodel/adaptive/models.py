@@ -209,6 +209,30 @@ class AdaptiveCard(BaseModel):
         self.sections.append(section)
         return section
 
+    def add_input(
+        self,
+        id: str,
+        label: str,
+        is_required: bool = False,
+        error_message: str = None,
+        input_type: str = 'Text',
+        style: str = None
+    ):
+        element = {
+            "type": f"Input.{input_type}",
+            "id": id,
+            "label": label,
+            "isRequired": is_required
+        }
+        if error_message is not None:
+            element["errorMessage"] = error_message
+        if style is not None:
+            element["style"] = style
+        if element:
+            self.body_objects.append(
+                element
+            )
+
     def to_dict(self) -> dict:
         data = super().to_dict(remove_nulls=True)
         del data['card_id']
