@@ -9,25 +9,53 @@ from ..base import BaseModel, Field, register_renderer
 def auto_uuid(*args, **kwargs):  # pylint: disable=W0613
     return uuid4()
 
-class CardAction(BaseModel):
-    """Base class for Adaptive card actions."""
-    type: str
-    title: str
-    data: Optional[Dict[str, Any]] = Field(default=None)
-    card: Optional['AdaptiveCard'] = Field(default=None)
+class ContainerStyle(str, Enum):
+    """Shared Style for all containers in a Adaptive Card."""
+    default = 'default'
+    accent = 'accent'
+    good = 'good'
+    attention = 'attention'
+    warning = 'warning'
+    emphasis = 'emphasis'
 
-    class Meta:
-        as_objects: True
-        remove_nulls = True
+class ContainerColor(str, Enum):
+    """Shared Color for all containers in a Adaptive Card."""
+    default = 'default'
+    dark = 'dark'
+    light = 'light'
+    accent = 'accent'
+    good = 'good'
+    attention = 'attention'
+    warning = 'warning'
 
-    def __post_init__(self):
-        if not self.type:
-            self.type = f"Action.{self.__class__.__name__}"
-        return super().__post_init__()
 
-    def to_adaptive(self) -> Dict[str, Any]:
-        """Convert to AdaptiveCard JSON-representation."""
-        return self.to_dict()
+class FontType(str, Enum):
+    """Font Type for TextBlock."""
+    default = 'default'
+    monospace = 'monospace'
+
+class FontSize(str, Enum):
+    """Font Size for TextBlock."""
+    default = 'default'
+    small = 'small'
+    medium = 'medium'
+    large = 'large'
+    extraLarge = 'extraLarge'
+
+class FontWeight(str, Enum):
+    """Font Weight for TextBlock."""
+    default = 'default'
+    lighter = 'lighter'
+    bolder = 'bolder'
+
+
+class SelectAction(str, Enum):
+    """Action to be taken when a cell is selected."""
+    exectute = 'Action.Execute'
+    submit = 'Action.Submit'
+    openUrl = 'Action.OpenUrl'
+    toggleVisibility = 'Action.ToggleVisibility'
+
 
 class CardElement(BaseModel):
     """Base class for Adaptive card elements."""
@@ -55,6 +83,29 @@ class TextBlock(CardElement):
     style: Optional[str] = None
     isSubtle: Optional[bool] = None
 
+
+class TextRun(CardElement):
+    """Defines a single run of formatted text."""
+    type: str = Field(default='TextRun')
+    text: str
+    color: Optional[ContainerStyle] = Field(ContainerStyle.default)
+    fontType: Optional[FontType] = Field(FontType.default)
+    highlight: bool = Field(default=False)
+    isSubtle: bool = Field(default=False)
+    italic: bool = Field(default=False)
+    strikethrough: bool = Field(default=False)
+    underline: bool = Field(default=False)
+    selectAction: Optional[SelectAction] = Field(default=None)
+    size: Optional[FontSize] = Field(default=None)
+    weight: Optional[FontWeight] = Field(default=FontWeight.default)
+
+
+class RichTextBlock(CardElement):
+    type: str = Field(default='RichTextBlock')
+    inlines: List[Union[str, TextRun]] = Field(default_factory=list)
+    horizontalAlignment: Optional[str] = Field(default='left')
+
+
 class Column(CardElement):
     items: Optional[List[CardElement]] = Field(default_factory=list)
     width: Optional[str] = Field(default='auto')
@@ -70,7 +121,7 @@ class Column(CardElement):
         return {
             "type": "Column",
             "items": [
-                item.to_adaptive() for item in self.items if isinstance(item, CardElement)
+                item.to_adaptive() for item in self.items if isinstance(item, CardElement)  # noqa
             ],  # Prevent duplicates
             "width": self.width
         }
@@ -165,23 +216,6 @@ class BackgroundImage(CardElement):
     fillMode: Optional[ImageFillMode] = Field(default=ImageFillMode.cover)
 
 ## Table structure:
-# Enum of Cell's Style:
-class ContainerStyle(str, Enum):
-    default = 'default'
-    accent = 'accent'
-    good = 'good'
-    attention = 'attention'
-    warning = 'warning'
-    emphasis = 'emphasis'
-
-
-class SelectAction(str, Enum):
-    """Action to be taken when a cell is selected."""
-    exectute = 'Action.Execute'
-    submit = 'Action.Submit'
-    openUrl = 'Action.OpenUrl'
-    toggleVisibility = 'Action.ToggleVisibility'
-
 
 class TableCell(BaseModel):
     """A single cell in a TableRow."""
@@ -358,6 +392,28 @@ class ImageSet(CardElement):
             "imageSize": self.imageSize
         }
 
+
+class CardAction(BaseModel):
+    """Base class for Adaptive card actions."""
+    type: str
+    title: str
+    data: Optional[Dict[str, Any]] = Field(default=None)
+    card: Optional['AdaptiveCard'] = Field(default=None)
+
+    class Meta:
+        as_objects: True
+        remove_nulls = True
+
+    def __post_init__(self):
+        if not self.type:
+            self.type = f"Action.{self.__class__.__name__}"
+        return super().__post_init__()
+
+    def to_adaptive(self) -> Dict[str, Any]:
+        """Convert to AdaptiveCard JSON-representation."""
+        return self.to_dict()
+
+### Main Class: AdaptiveCard
 class AdaptiveCard(BaseModel):
     card_id: UUID = Field(required=False, default=auto_uuid, repr=False)
     content_type: str = Field(
@@ -533,3 +589,10 @@ class ShowCard(CardAction):
 class ToggleVisibility(CardAction):
     type: str = Field(default='Action.ToggleVisibility')
     targetElements: List[str] = Field(default_factory=list)
+
+class ActionSet(CardElement):
+    type: str = Field(default='ActionSet')
+    actions: List[CardAction] = Field(default_factory=list)
+
+    def to_adaptive(self):
+        return super().to_adaptive()
