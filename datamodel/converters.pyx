@@ -26,7 +26,7 @@ from .functions import is_empty, is_iterable, is_primitive
 from .validation import _validation
 from .fields import Field
 # New converter:
-import rs_parsers as rc
+import datamodel.rs_parsers as rc
 
 
 cdef bint is_dc(object obj):
