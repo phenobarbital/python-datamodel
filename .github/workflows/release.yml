@@ -116,4 +116,4 @@ jobs:
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYTHON_DATAMODEL_PYPI_API_TOKEN }}
-        run: twine upload dist/*
+        run: twine upload dist/*.whl dist/*.tar.gz || true
