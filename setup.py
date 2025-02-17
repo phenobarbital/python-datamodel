@@ -130,7 +130,7 @@ extensions = [
 setup(
     name="python-datamodel",
     version=__version__,
-    python_requires=">=3.9.13",
+    python_requires=">=3.10.0",
     url="https://github.com/phenobarbital/python-datamodel",
     description=__description__,
     keywords=['asyncio', 'dataclass', 'dataclasses', 'data models'],
@@ -145,10 +145,13 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: Implementation :: CPython",
+        "Programming Language :: Python :: Implementation :: PyPy",
+        "Programming Language :: Python :: Implementation :: Rust",
         "Framework :: AsyncIO",
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
@@ -193,12 +196,6 @@ setup(
         "python-slugify==8.0.1",
         "psycopg2-binary==2.9.10",
         "msgspec==0.19.0"
-    ],
-    tests_requires=[
-        'pytest>=7.2.2',
-        'pytest-asyncio==0.23.2',
-        'pytest-xdist==3.5.0',
-        'pytest-assume==2.4.3'
     ],
     ext_modules=cythonize(
         extensions,

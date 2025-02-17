@@ -50,8 +50,6 @@ jobs:
           # Make sure Rust tools are on the PATH for the build.
           CIBW_ENVIRONMENT: "PATH=/root/.cargo/bin:$PATH"
           RUST_SUBPACKAGE_PATH: datamodel/rs_parsers
-          # Skip PyPy builds (e.g. pypy3.9)
-          CIBW_SKIP: "pypy*"
           CIBW_BUILD: "cp3{10,11,12,13}-*"  # Build for Python 3.10, 3.11, 3.12, 3.13
         run: |
           pip install --upgrade pip==25.0
@@ -85,6 +83,11 @@ jobs:
         run: |
           find dist -name '*.whl' -exec mv {} dist \;
 
+      - name: Build sdist
+        run: |
+          pip install build
+          python -m build --sdist --outdir dist
+
       - name: Check for wheel types
         id: check_wheels
         run: |
@@ -109,16 +112,8 @@ jobs:
       - name: Install twine
         run: pip install twine
 
-      - name: Publish manylinux wheels to Production PyPI
-        if: env.HAS_MANYLINUX_WHEELS == 'true'
+      - name: Publish wheels and sdist to Production PyPI
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYTHON_DATAMODEL_PYPI_API_TOKEN }}
-        run: twine upload dist/*-manylinux*.whl
-
-      - name: Publish Windows wheels to Production PyPI
-        if: env.HAS_WINDOWS_WHEELS == 'true'
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYTHON_DATAMODEL_PYPI_API_TOKEN }}
-        run: twine upload dist/*-win_*.whl
+        run: twine upload dist/*

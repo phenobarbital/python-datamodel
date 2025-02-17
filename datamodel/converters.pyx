@@ -4,6 +4,7 @@
 import re
 from typing import get_args, get_origin, Union, Optional, List, NewType
 from collections.abc import Sequence, Mapping, Callable, Awaitable
+import types
 from dataclasses import _MISSING_TYPE, _FIELDS, fields
 import ciso8601
 import orjson
@@ -12,8 +13,8 @@ from cpython cimport datetime
 from cpython.object cimport (
     PyObject_IsInstance,
     PyObject_IsSubclass,
-    PyObject_HasAttrString,
-    PyObject_GetAttrString,
+    PyObject_HasAttr,
+    PyObject_GetAttr,
     PyObject_TypeCheck,
     PyCallable_Check
 )
@@ -21,11 +22,18 @@ cimport cython
 from uuid import UUID
 import asyncpg.pgproto.pgproto as pgproto
 from cpython.ref cimport PyObject
-from .functions import is_empty, is_dataclass, is_iterable, is_primitive
+from .functions import is_empty, is_iterable, is_primitive
 from .validation import _validation
 from .fields import Field
 # New converter:
 import rs_parsers as rc
+
+
+cdef bint is_dc(object obj):
+    """Returns True if obj is a dataclass or an instance of a
+    dataclass."""
+    cls = obj if isinstance(obj, type) and not isinstance(obj, types.GenericAlias) else type(obj)
+    return PyObject_HasAttr(cls, '__dataclass_fields__')
 
 
 cpdef str to_string(object obj):
@@ -499,9 +507,9 @@ cdef object _parse_list_type(
         data = [data]
 
     # If it's a dataclass
-    if is_dataclass(inner_type):
+    if is_dc(inner_type):
         for d in data:
-            if is_dataclass(d):
+            if is_dc(d):
                 result.append(d)
             if converter:
                 result.append(
@@ -546,7 +554,7 @@ cdef object _parse_builtin_type(object field, object T, object data, object enco
         return to_string(data)
     elif T == UUID:
         return to_uuid(data)
-    elif is_dataclass(T):
+    elif is_dc(T):
         return _parse_dataclass_type(T, data)
     elif T == datetime.date:
         return to_date(data)
@@ -720,7 +728,7 @@ cdef object _parse_list_typing(
         # nested typing: e.g. List[List[Foo]] or List[Optional[Foo]] etc.
         try:
             subT = arg_type.__args__[0]
-            if is_dataclass(subT):
+            if is_dc(subT):
                 for x in data:
                     result.append(_instantiate_dataclass(subT, x))
                 return result
@@ -729,7 +737,7 @@ cdef object _parse_list_typing(
                 return data
         except AttributeError:
             return data
-    elif arg_type is not None and is_dataclass(arg_type):
+    elif arg_type is not None and is_dc(arg_type):
         # build list of dataclasses
         for d in data:
             result.append(_instantiate_dataclass(arg_type, d))
@@ -744,7 +752,7 @@ cdef object _instantiate_dataclass(object cls, object val):
     """
     Helper for instantiating a dataclass.
     """
-    if is_dataclass(val):
+    if is_dc(val):
         return val
     if isinstance(val, dict):
         return cls(**val)
@@ -794,7 +802,7 @@ cdef object _parse_optional_union(
     if not matched:
         raise ValueError(f"Invalid type for *{field.name}* with {type(data)}, expected {T}")
     try:
-        if is_dataclass(t):
+        if is_dc(t):
             if isinstance(data, dict):
                 return t(**data)
             elif isinstance(data, (list, tuple)):
@@ -883,12 +891,12 @@ cdef object _parse_type(
     cdef object name = getattr(T, '_name', None)  # T._name or None if not present
     cdef object sub = None     # for subtypes, local cache
     cdef object result = None
-    cdef object is_dc = is_dataclass(T)
+    cdef object isdc = is_dc(T)
 
     if data is None:
         return None
 
-    if is_dataclass(T):
+    if isdc:
         result = _handle_dataclass_type(None, name, data, T, as_objects, None)
     # Field type shortcuts
     elif origin is dict and isinstance(data, dict):
@@ -919,7 +927,7 @@ cdef object parse_typing(
     cdef object name = getattr(T, '_name', None)  # T._name or None if not present
     cdef object sub = None     # for subtypes, local cache
     cdef object result = None
-    cdef object is_dc = field.is_dc # is_dataclass(T)
+    cdef object isdc = field.is_dc # is_dataclass(T)
     cdef object inner_type = None
     cdef bint inner_is_dc = 0 # field._inner_is_dc or is_dataclass(inner_type)
 
@@ -948,7 +956,7 @@ cdef object parse_typing(
         inner_type = None
         inner_origin = None
 
-    inner_is_dc = field._inner_is_dc or is_dataclass(inner_type)
+    inner_is_dc = field._inner_is_dc or is_dc(inner_type)
 
     if data is None:
         return None
@@ -965,8 +973,8 @@ cdef object parse_typing(
             targs
         )
 
-    # if is_dataclass(T):
-    if is_dc:
+    # if is_dc(T):
+    if isdc:
         result = _handle_dataclass_type(None, name, data, T, as_objects, None)
     # Field type shortcuts
     elif field._type_category == 'typing':
@@ -1013,11 +1021,11 @@ cdef object _handle_dataclass_type(
     """
     cdef tuple key = (_type, name)
     cdef object converter = TYPE_PARSERS.get(key) or TYPE_PARSERS.get(_type)
-    cdef bint is_dc = field.is_dc if field else is_dataclass(_type)
+    cdef bint isdc = field.is_dc if field else is_dc(_type)
     cdef object field_metadata = field.metadata if field else {}
     cdef str alias = field_metadata.get('alias')
 
-    if value is None or is_dataclass(value):
+    if value is None or is_dc(value):
         return value
     if PyObject_IsInstance(value, dict):
         try:
@@ -1061,7 +1069,7 @@ cdef object _handle_dataclass_type(
                 return _type(**{alias: value})
             if isinstance(value, (int, str, UUID)):
                 return value
-            if is_dc:
+            if isdc:
                 if not alias:
                     alias = name
                 return _type(**{alias: value})
@@ -1088,7 +1096,7 @@ cdef object _handle_list_of_dataclasses(
     """
     try:
         sub_type = _type.__args__[0]
-        if is_dataclass(sub_type):
+        if is_dc(sub_type):
             key = (sub_type, name)
             converter = TYPE_PARSERS.get(key) or TYPE_PARSERS.get(_type)
             new_list = []
@@ -1141,7 +1149,6 @@ cdef object _handle_default_value(
     # Otherwise, return value as-is
     return value
 
-@cython.profile(False)
 cpdef dict processing_fields(object obj, list columns):
     """
     Process the fields (columns) of a dataclass object.
@@ -1178,7 +1185,7 @@ cpdef dict processing_fields(object obj, list columns):
         _type = f.type
         _default = f.default
         typeinfo = f.typeinfo # cached info (e.g., type_args, default_callable)
-        metadata = PyObject_GetAttrString(f, "metadata")
+        metadata = PyObject_GetAttr(f, "metadata")
         _encoder = metadata.get('encoder')
         _default_callable = typeinfo.get('default_callable', False)
 
@@ -1224,17 +1231,7 @@ cpdef dict processing_fields(object obj, list columns):
                             f, name, value, _type, as_objects, None
                         )
                     setattr(obj, name, value)
-            elif field_category == 'typing':
-                value = parse_typing(
-                    f,
-                    _type,
-                    value,
-                    _encoder,
-                    as_objects,
-                    obj
-                )
-                setattr(obj, name, value)
-            elif f.origin == 'list' and f._inner_is_dc:
+            elif f.origin in (list, 'list') and f._inner_is_dc:
                 if as_objects is True:
                     value = _handle_list_of_dataclasses(f, name, value, _type, obj)
                 else:
@@ -1246,13 +1243,24 @@ cpdef dict processing_fields(object obj, list columns):
                 else:
                     value = _handle_list_of_dataclasses(f, name, value, _type, None)
                 setattr(obj, name, value)
+            elif field_category == 'typing':
+                value = parse_typing(
+                    f,
+                    _type,
+                    value,
+                    _encoder,
+                    as_objects,
+                    obj
+                )
+                setattr(obj, name, value)
             else:
                 value = parse_typing(
                     f,
                     _type,
                     value,
                     _encoder,
-                    as_objects
+                    as_objects,
+                    obj
                 )
                 setattr(obj, name, value)
             # then, call the validation process:
@@ -1368,7 +1376,7 @@ cpdef parse_type(object field, object T, object data, object encoder = None):
             if arg_type.__module__ == 'typing': # nested typing
                 try:
                     t = arg_type.__args__[0]
-                    if is_dataclass(t):
+                    if is_dc(t):
                         result = []
                         for x in data:
                             if isinstance(x, dict):
@@ -1382,12 +1390,12 @@ cpdef parse_type(object field, object T, object data, object encoder = None):
                         return data
                 except AttributeError:
                     return data # data -as is-
-            elif is_dataclass(arg_type):
+            elif is_dc(arg_type):
                 if isinstance(data, list):
                     result = []
                     for d in data:
                         # is already a dataclass:
-                        if is_dataclass(d):
+                        if is_dc(d):
                             result.append(d)
                         elif isinstance(d, list):
                             result.append(arg_type(*d))
@@ -1429,7 +1437,7 @@ cpdef parse_type(object field, object T, object data, object encoder = None):
                 return parse_type(field, non_none_arg, data, encoder)
             try:
                 t = args[0]
-                if is_dataclass(t):
+                if is_dc(t):
                     if isinstance(data, dict):
                         data = t(**data)
                     elif isinstance(data, (list, tuple)):
@@ -1442,7 +1450,7 @@ cpdef parse_type(object field, object T, object data, object encoder = None):
                         # there is also a nested typing:
                         if t._name == 'List' and isinstance(data, list):
                             arg = t.__args__[0]
-                            if is_dataclass(arg):
+                            if is_dc(arg):
                                 result = []
                                 for x in data:
                                     if isinstance(x, dict):
