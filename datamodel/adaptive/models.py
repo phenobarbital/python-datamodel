@@ -1,7 +1,10 @@
 from uuid import UUID, uuid4
+from enum import Enum
 from typing import List, Dict, Any, Optional, Union
 import contextlib
 from ..base import BaseModel, Field, register_renderer
+
+# https://adaptivecards.io/explorer/Media.html
 
 def auto_uuid(*args, **kwargs):  # pylint: disable=W0613
     return uuid4()
@@ -72,20 +75,6 @@ class Column(CardElement):
             "width": self.width
         }
 
-class ColumnSet(CardElement):
-    """A set of columns."""
-    type: str = Field(default='ColumnSet')
-    columns: List[Column] = Field(default_factory=list)
-
-    def add_column(self, column: Column):
-        self.columns.append(column)
-
-    def to_adaptive(self) -> Dict[str, Any]:
-        return {
-            "type": self.type,
-            "columns": [column.to_adaptive() for column in self.columns]
-        }
-
 
 class InputElement(CardElement):
     """Base class for input elements."""
@@ -134,6 +123,102 @@ class FactElement(BaseModel):
     title: str
     value: str
 
+class Image(CardElement):
+    type: str = Field(default='Image')
+    url: str
+    size: Optional[str] = None
+    style: Optional[str] = None
+    altText: Optional[str] = None
+
+
+class MediaSource(CardElement):
+    mimeType: str
+    url: str
+
+class CaptionSource(CardElement):
+    mimeType: str = Field(default='vtt')
+    label: str = Field(default='English')
+    url: str
+
+class Media(CardElement):
+    type: str = Field(default='Media')
+    sources: List[MediaSource] = Field(default_factory=list)
+    poster: Optional[str] = None
+    captionSources: List[CaptionSource] = Field(default_factory=list)
+
+    def add_source(self, source: Union[str, MediaSource]):
+        if isinstance(source, str):
+            source = MediaSource(url=source, mimeType='video/mp4')
+        self.sources.append(source)
+        return self
+
+class ImageFillMode(str, Enum):
+    """Describes how the image should be filled."""
+    cover = 'cover'
+    repeatHorizontally = 'repeatHorizontally'
+    repeatVertically = 'repeatVertically'
+    repeat = 'repeat'
+
+class BackgroundImage(CardElement):
+    type: str = Field(default='BackgroundImage')
+    url: str
+    fillMode: Optional[ImageFillMode] = Field(default=ImageFillMode.cover)
+
+## Table structure:
+# Enum of Cell's Style:
+class ContainerStyle(str, Enum):
+    default = 'default'
+    accent = 'accent'
+    good = 'good'
+    attention = 'attention'
+    warning = 'warning'
+    emphasis = 'emphasis'
+
+
+class SelectAction(str, Enum):
+    """Action to be taken when a cell is selected."""
+    exectute = 'Action.Execute'
+    submit = 'Action.Submit'
+    openUrl = 'Action.OpenUrl'
+    toggleVisibility = 'Action.ToggleVisibility'
+
+
+class TableCell(BaseModel):
+    """A single cell in a TableRow."""
+    type: str = Field(default='TableCell')
+    style: Optional[ContainerStyle] = Field(default=ContainerStyle.default)
+    selectAction: Optional[SelectAction] = Field(default=None)
+    items: List[CardElement] = Field(default_factory=list)
+    backgroundImage: Union[BackgroundImage, str] = Field(default=None)
+
+    def to_adaptive(self) -> Dict[str, Any]:
+        return {
+            "type": self.type,
+            "items": [item.to_adaptive() for item in self.items]
+        }
+
+
+class TableRow(BaseModel):
+    """A row in a Table."""
+    type: str = Field(default='TableRow')
+    cells: List[TableCell] = Field(default_factory=list)
+
+    def add_cell(self, cell: TableCell):
+        self.cells.append(cell)
+
+    def new_cell(self, block: Union[CardElement, List[CardElement]]):
+        if isinstance(block, CardElement):
+            block = [block]
+        cell = TableCell(items=block)
+        self.cells.append(cell)
+
+    def to_adaptive(self) -> Dict[str, Any]:
+        return {
+            "type": self.type,
+            "cells": [cell.to_adaptive() for cell in self.cells]
+        }
+
+## Containers:
 class FactSet(CardElement):
     """A set of facts."""
     type: str = Field(default='FactSet')
@@ -145,12 +230,30 @@ class FactSet(CardElement):
             "facts": [fact.to_dict() for fact in self.facts]
         }
 
-class Image(CardElement):
-    type: str = Field(default='Image')
-    url: str
-    size: Optional[str] = None
-    style: Optional[str] = None
-    altText: Optional[str] = None
+class ColumnSet(CardElement):
+    """A set of columns."""
+    type: str = Field(default='ColumnSet')
+    columns: List[Column] = Field(default_factory=list)
+
+    def add_column(self, column: Union[Column, List[Column]]):
+        if isinstance(column, Column):
+            column = [column]
+        self.columns.extend(column)
+        # return the collection added of columns
+        return column
+
+    def create_column(self, content: CardElement):
+        """Create a new column with a single item."""
+        column = Column()
+        column.add_item(content)
+        self.columns.append(column)
+        return column
+
+    def to_adaptive(self) -> Dict[str, Any]:
+        return {
+            "type": self.type,
+            "columns": [column.to_adaptive() for column in self.columns]
+        }
 
 class CardSection(CardElement):
     type: str = Field(default='Container')
@@ -171,6 +274,89 @@ class CardSection(CardElement):
             "items": [item.to_adaptive() for item in self.items]
         }
 
+class ColumnDefinition(BaseModel):
+    """A column definition in a Table."""
+    width: str = Field(default='auto')
+
+    def to_adaptive(self) -> Dict[str, Any]:
+        return {
+            "width": self.width
+        }
+
+class Table(CardElement):
+    """A table layout containing multiple rows."""
+    type: str = Field(default='Table')
+    columns: List[ColumnDefinition] = Field(default_factory=list)
+    rows: List[TableRow] = Field(default_factory=list)
+    firstRowAsHeader: bool = Field(default=True)
+    showGridLines: bool = Field(default=True)
+    gridStyle: Optional[ContainerStyle] = Field(default=ContainerStyle.default)
+
+    def add_row(self, row: TableRow):
+        self.rows.append(row)
+
+    def new_row(self, cells: Union[TableCell, List[TableCell]]):
+        if isinstance(cells, TableCell):
+            cells = [cells]
+        row = TableRow(cells=cells)
+        self.rows.append(row)
+        return row
+
+    def to_adaptive(self) -> Dict[str, Any]:
+        # Ensure columns are generated based on the number of cells in the first row
+        num_columns = max(len(row.cells) for row in self.rows) if self.rows else 0
+        self.columns = [ColumnDefinition() for _ in range(num_columns)]
+
+        return {
+            "type": self.type,
+            "gridStyle": self.gridStyle,
+            "firstRowAsHeader": self.firstRowAsHeader,
+            "showGridLines": self.showGridLines,
+            "columns": [column.to_adaptive() for column in self.columns],
+            "rows": [row.to_adaptive() for row in self.rows]
+        }
+
+# Define a Enum for Image Sizes:
+class ImageSize(str, Enum):
+    auto = 'auto'
+    stretch = 'stretch'
+    small = 'small'
+    medium = 'medium'
+    large = 'large'
+
+
+class ImageSet(CardElement):
+    """A set of images displayed together."""
+    type: str = Field(default='ImageSet')
+    images: List['Image'] = Field(default_factory=list)
+    imageSize: Optional[ImageSize] = Field(default=ImageSize.auto)
+
+    def add_image(self, image: Union[Image, List[Image]]):
+        if isinstance(image, Image):
+            image = [image]
+        self.images.extend(image)
+
+    def new_image(self, images: Union[str, Image, tuple]):
+        if isinstance(images, str):
+            img = Image(
+                url=images,
+                altText=images
+            )
+        elif isinstance(images, tuple):
+            img = Image(
+                url=images[0],
+                altText=images[1]
+            )
+        else:
+            img = images
+        self.images.append(img)
+
+    def to_adaptive(self) -> Dict[str, Any]:
+        return {
+            "type": self.type,
+            "images": [image.to_adaptive() for image in self.images],
+            "imageSize": self.imageSize
+        }
 
 class AdaptiveCard(BaseModel):
     card_id: UUID = Field(required=False, default=auto_uuid, repr=False)
@@ -182,7 +368,9 @@ class AdaptiveCard(BaseModel):
     card_type: str = "AdaptiveCard"
     title: str
     summary: str
+    minHeight: Optional[str] = None
     body: List[CardElement] = Field(default_factory=list)
+    backgroundImage: Optional[BackgroundImage] = Field(default=None)
     body_objects: List[Dict[str, Any]] = Field(default_factory=list, repr=False)
     actions: List[CardAction] = Field(default_factory=list)
     sections: List[CardSection] = Field(default_factory=list)
@@ -200,6 +388,14 @@ class AdaptiveCard(BaseModel):
 
     def add_body_element(self, element: CardElement):
         self.body.append(element)
+        return element
+
+    def add_background(self, background: Union[str, BackgroundImage]):
+        """Adding a Background Image to the Card."""
+        if isinstance(background, str):
+            background = BackgroundImage(url=background)
+        self.backgroundImage = background
+        return background
 
     def add_action(self, action: CardAction):
         self.actions.append(action)
@@ -249,6 +445,11 @@ class AdaptiveCard(BaseModel):
         """Convert to AdaptiveCard JSON-representation."""
         # Build Body based on content:
         body = []
+        properties = {}
+        if self.backgroundImage:
+            properties["backgroundImage"] = self.backgroundImage.to_dict()
+        if self.minHeight:
+            properties["minHeight"] = self.minHeight
         if self.title:
             body.append({
                 "type": "TextBlock",
@@ -291,6 +492,7 @@ class AdaptiveCard(BaseModel):
             "metadata": {
                 "webUrl": "https://contoso.com/tab"
             },
+            **properties,
             "body": body,
             **actions
         }

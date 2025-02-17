@@ -7,9 +7,12 @@ from datamodel.adaptive.models import (
     FactSet,
     ShowCard,
     Submit,
+    Media,
     OpenUrl,
     InputDate,
     InputText,
+    Table,
+    TableCell
 )
 from datamodel.parsers.json import json_encoder
 
@@ -97,7 +100,6 @@ show = ShowCard(
         ]
     )
 )
-print(' NUM > ', len(show.card.actions), show.card.actions)
 show.body.append(
     InputDate(
         id="dueDate",
@@ -117,6 +119,132 @@ activity.add_action(
 # Add an Action Button:
 activity.add_action(
     OpenUrl(title="View", url="https://adaptivecards.io")
+)
+# Export Adaptive Card:
+data = activity.to_adaptive()
+print(data)
+print('================')
+# JSON representation:
+print(json_encoder(data))
+
+
+### Adaptive Card with a Video and Open URL on a Button:
+activity = AdaptiveCard(
+    title="Adaptive Card with a Video",
+    summary="This card has a video and a button to open a URL"
+)
+colset = activity.add_body_element(
+    ColumnSet()
+)
+media = Media()
+media.add_source(
+    source="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+)
+colset.create_column(
+    media
+)
+activity.add_action(
+    OpenUrl(title="View", url="https://navigator.trocgdigital.io/")
+)
+
+# Export Adaptive Card:
+data = activity.to_adaptive()
+print(data)
+print('================')
+# JSON representation:
+print(json_encoder(data))
+
+
+print('================')
+### Adaptive Card with Pie Chart as Background Image and a Table of Contents:
+activity = AdaptiveCard(
+    title="Example Pie Chart with Table.",
+    summary="This card has Background Image and a Table of Contents",
+    minHeight="500px",
+)
+activity.add_background(
+    "https://imgix.ranker.com/user_node_img/50059/1001172544/original/d-photo-u1?auto=format&q=60&fit=crop&fm=pjpg&dpr=2&w=500"
+)
+table = Table()
+table.new_row(
+    [
+        TableCell(
+            items=[
+                TextBlock(
+                    text="Name",
+                    weight="bolder"
+                )
+            ]
+        ),
+        TableCell(
+            items=[
+                TextBlock(
+                    text="Value",
+                    weight="bolder"
+                )
+            ]
+        )
+    ]
+)
+table.new_row(
+    [
+        TableCell(
+            items=[
+                TextBlock(
+                    text="Item 1",
+                )
+            ]
+        ),
+        TableCell(
+            items=[
+                TextBlock(
+                    text="70%",
+                )
+            ]
+        )
+    ]
+)
+table.new_row(
+    [
+        TableCell(
+            items=[
+                TextBlock(
+                    text="Item 2",
+                )
+            ]
+        ),
+        TableCell(
+            items=[
+                TextBlock(
+                    text="20%",
+                )
+            ]
+        )
+    ]
+)
+table.new_row(
+    [
+        TableCell(
+            items=[
+                TextBlock(
+                    text="Item 3",
+                )
+            ]
+        ),
+        TableCell(
+            items=[
+                TextBlock(
+                    text="10%",
+                )
+            ]
+        )
+    ]
+)
+activity.add_body_element(
+    table
+)
+activity.add_action(
+    OpenUrl(title="View More ...", url="https://navigator.trocgdigital.io/")
 )
 # Export Adaptive Card:
 data = activity.to_adaptive()
