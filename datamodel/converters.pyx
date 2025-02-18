@@ -9,19 +9,21 @@ from dataclasses import _MISSING_TYPE, _FIELDS, fields
 import ciso8601
 import orjson
 from decimal import Decimal, InvalidOperation
+cimport cython
 from cpython cimport datetime
 from cpython.object cimport (
     PyObject_IsInstance,
     PyObject_IsSubclass,
     PyObject_HasAttr,
     PyObject_GetAttr,
+    PyObject_SetAttr,
+    PyObject_Call,
     PyObject_TypeCheck,
     PyCallable_Check
 )
-cimport cython
+from cpython.ref cimport PyObject
 from uuid import UUID
 import asyncpg.pgproto.pgproto as pgproto
-from cpython.ref cimport PyObject
 from .functions import is_empty, is_iterable, is_primitive
 from .validation import _validation
 from .fields import Field
@@ -35,6 +37,9 @@ cdef bint is_dc(object obj):
     cls = obj if isinstance(obj, type) and not isinstance(obj, types.GenericAlias) else type(obj)
     return PyObject_HasAttr(cls, '__dataclass_fields__')
 
+cpdef bint has_attribute(object obj, object attr):
+    """Returns True if obj has the attribute attr."""
+    return PyObject_HasAttr(obj, attr)
 
 cpdef str to_string(object obj):
     """
@@ -525,14 +530,16 @@ cdef object _parse_list_type(
         return result
     else:
         # General conversion
+        print('ENTERING HERE > ', field.name, data)
         for item in data:
             if converter:
                 result.append(
                     converter(field.name, item, inner_type, _parent)
                 )
             else:
+                # field.type = inner_type
                 result.append(
-                    parse_typing(field, inner_type, item, encoder, False)
+                    parse_typing(field, T=inner_type, data=item, encoder=encoder, as_objects=False,)
                 )
         return result
 
@@ -550,16 +557,16 @@ cdef object _parse_builtin_type(object field, object T, object data, object enco
             return encoder(data)
         except ValueError as e:
             raise ValueError(f"Error parsing type {T}, {e}")
-    elif T == str:
+    if T == str:
         return to_string(data)
-    elif T == UUID:
+    if T == datetime.date:
+        return to_date(data)
+    if T == datetime.datetime:
+        return to_datetime(data)
+    if T == UUID:
         return to_uuid(data)
     elif is_dc(T):
         return _parse_dataclass_type(T, data)
-    elif T == datetime.date:
-        return to_date(data)
-    elif T == datetime.datetime:
-        return to_datetime(data)
     else:
         # Try encoders dict:
         try:
@@ -585,7 +592,7 @@ cdef object _parse_builtin_type(object field, object T, object data, object enco
             raise ValueError(
                 f"Error parsing type {T}: {e}"
             ) from e
-
+    return data
 
 cpdef object parse_basic(object T, object data, object encoder = None):
     """parse_basic.
@@ -653,18 +660,14 @@ cdef object _parse_typing_type(
     """
     cdef tuple type_args = getattr(T, '__args__', ())
 
-    # print('FIELD > ', field)
-    # print('T > ', T)
-    # print('NAME > ', name)
-    # print('DATA > ', data)
-    # print('TYPE > ', type_args)
-
     if field.origin in {dict, Mapping} or name in {'Dict', 'Mapping'}:
         if isinstance(data, dict):
             if type_args:
                 # e.g. Dict[K, V]
                 return {k: _parse_type(field, type_args[1], v, None, False) for k, v in data.items()}
             return data
+        else:
+            raise TypeError(f"Expected dict, got {type(data).__name__}")
 
     if name == 'Tuple' or field.origin == tuple:
         if isinstance(data, (list, tuple)):
@@ -695,7 +698,7 @@ cdef object _parse_typing_type(
             as_objects=as_objects
         )
 
-    # handle None, Optional, Union, etc.
+    # handle None, Optional, Union:
     if name is None or name in ('Optional', 'Union'):
         return _parse_optional_union(field, T, data, encoder, origin, args)
 
@@ -745,7 +748,9 @@ cdef object _parse_list_typing(
     else:
         # parse each item
         for item in data:
-            result.append(_parse_type(field, arg_type, item, encoder, False))
+            result.append(
+                _parse_type(field, arg_type, item, encoder, False)
+            )
         return result
 
 cdef object _instantiate_dataclass(object cls, object val):
@@ -776,6 +781,10 @@ cdef object _parse_optional_union(
     cdef object t = args[0] if args else None
     cdef bint matched = False
 
+    for t in args:
+        if PyObject_IsInstance(data, t):
+            return data
+
     # e.g. Optional[T] is Union[T, NoneType]
     if origin == Union and type(None) in args:
         if data is None:
@@ -800,7 +809,9 @@ cdef object _parse_optional_union(
             matched = True
             break
     if not matched:
-        raise ValueError(f"Invalid type for *{field.name}* with {type(data)}, expected {T}")
+        raise ValueError(
+            f"Invalid type for *{field.name}* with {type(data)}, expected {T}"
+        )
     try:
         if is_dc(t):
             if isinstance(data, dict):
@@ -897,19 +908,70 @@ cdef object _parse_type(
         return None
 
     if isdc:
-        result = _handle_dataclass_type(None, name, data, T, as_objects, None)
+        return _handle_dataclass_type(None, name, data, T, as_objects, None)
     # Field type shortcuts
     elif origin is dict and isinstance(data, dict):
-        result = _parse_dict_type(field, T, data, encoder, targs)
+        return _parse_dict_type(field, T, data, encoder, targs)
     elif origin is list:
-        result = _parse_list_type(field, T, data, encoder, targs)
+        return _parse_list_type(field, T, data, encoder, targs)
     elif origin is not None:
         # other advanced generics
-        result = data
+        return data
     else:
         # fallback to builtin parse
         result = _parse_builtin_type(field, T, data, encoder)
-    return result
+        return result
+
+cdef object _parse_typing(
+    object field,
+    object T,
+    object data,
+    object encoder=None,
+    object as_objects=False,
+    object parent=None,
+):
+    """
+    Parse a value to a typing type.
+    """
+    # local cdef variables:
+    cdef object origin, targs
+    cdef object name = getattr(T, '_name', None)  # T._name or None if not present
+    cdef object sub = None     # for subtypes, local cache
+    cdef object result = None
+    cdef object isdc = field.is_dc # is_dataclass(T)
+    cdef object inner_type = None
+    cdef bint inner_is_dc = 0 # field._inner_is_dc or is_dataclass(inner_type)
+
+    # Use cached values only if T is exactly the field's declared type.
+    if T == field.type:
+        origin = field.origin
+        targs = field.args
+    elif field._inner_type and field._inner_type == inner_type:
+        origin = field._inner_origin
+        targs = field._inner_args
+    else:
+        origin = get_origin(T)
+        targs = get_args(T)
+
+    # For generic (typing) fields, reuse cached inner type info if available.
+    if origin is list and targs:
+        if field._inner_type is not None:
+            inner_type = field._inner_type
+            inner_origin = field._inner_origin
+            # Optionally, also use cached type arguments for the inner type.
+        else:
+            inner_type = targs[0]
+            inner_origin = get_origin(inner_type)
+    else:
+        inner_type = None
+        inner_origin = None
+
+    inner_is_dc = field._inner_is_dc or is_dc(inner_type)
+
+    if data is None:
+        return None
+
+    return data
 
 cdef object parse_typing(
     object field,
@@ -942,7 +1004,6 @@ cdef object parse_typing(
         origin = get_origin(T)
         targs = get_args(T)
 
-
     # For generic (typing) fields, reuse cached inner type info if available.
     if origin is list and targs:
         if field._inner_type is not None:
@@ -961,48 +1022,59 @@ cdef object parse_typing(
     if data is None:
         return None
 
-    # If the field is a Union and data is a list, use _parse_union_type.
-    if origin is Union and isinstance(data, list):
-        return _parse_union_type(
-            field,
-            T,
-            name,
-            data,
-            encoder,
-            origin,
-            targs
-        )
-
-    # if is_dc(T):
+    # Put more frequently cases first:
     if isdc:
-        result = _handle_dataclass_type(None, name, data, T, as_objects, None)
+        return _handle_dataclass_type(None, name, data, T, as_objects, None)
+    # If the field is a Union and data is a list, use _parse_union_type.
+    if origin is Union:
+        # e.g. Optional[...] or Union[A, B]
+        if len(targs) == 2 and type(None) in targs:
+            # Handle Optional[...] that is Union[..., None] cases first:
+            if field._inner_priv:
+                # If Optional but non-None is a primitive
+                return _parse_builtin_type(field, field._inner_type, data, encoder)
+            elif field._inner_is_dc:
+                # non-None is a Optional Dataclass:
+                return _handle_dataclass_type(None, name, data, field._inner_type, as_objects, None)
+            else:
+                real_type = targs[0] if targs[1] is type(None) else targs[1]
+                # Recursively parse the real_type exactly as if it weren't wrapped in Optional[…].
+                return parse_typing(field, real_type, data, encoder, as_objects, parent)
+        elif isinstance(data, list):
+            return _parse_union_type(
+                field,
+                T,
+                name,
+                data,
+                encoder,
+                origin,
+                targs
+            )
     # Field type shortcuts
-    elif field._type_category == 'typing':
+    if field._type_category == 'typing':
         # For example, if the origin is list and the inner type is a dataclass,
         # use _handle_dataclass_type on each element.
         if origin is list:
-            # Use the cached inner type info if available.
             if inner_is_dc:
-                result = _parse_list_type(field, T, data, encoder, targs, parent)
+                return _parse_list_type(field, T, data, encoder, targs, parent)
             else:
-                result = _parse_typing_type(
+                return _parse_typing_type(
                     field, T, name, data, encoder, origin, targs, as_objects
                 )
         else:
-            result = _parse_typing_type(
+            return _parse_typing_type(
                 field, T, name, data, encoder, origin, targs, as_objects
             )
-    elif origin is dict and isinstance(data, dict):
-        result = _parse_dict_type(field, T, data, encoder, targs)
-    elif origin is list:
-        result = _parse_list_type(field, T, data, encoder, targs, parent)
-    elif origin is not None:
+    if origin is dict and isinstance(data, dict):
+        return _parse_dict_type(field, T, data, encoder, targs)
+    if origin is list:
+        return _parse_list_type(field, T, data, encoder, targs, parent)
+    if origin is not None:
         # other advanced generics
-        result = data
+        return data
     else:
         # fallback to builtin parse
-        result = _parse_builtin_type(field, T, data, encoder)
-    return result
+        return _parse_builtin_type(field, T, data, encoder)
 
 cdef object _handle_dataclass_type(
     object field,
@@ -1205,7 +1277,6 @@ cpdef dict processing_fields(object obj, list columns):
                 # If a custom parser is attached to Field, use it
                 try:
                     value = f.parser(value)
-                    setattr(obj, name, value)
                 except Exception as ex:
                     errors[name] = f"Error parsing *{name}* = *{value}*, error: {ex}"
                     continue
@@ -1213,7 +1284,6 @@ cpdef dict processing_fields(object obj, list columns):
             elif field_category == 'primitive':
                 try:
                     value = parse_basic(_type, value, _encoder)
-                    setattr(obj, name, value)
                 except ValueError as ex:
                     errors[name] = f"Error parsing {name}: {ex}"
                     continue
@@ -1230,31 +1300,64 @@ cpdef dict processing_fields(object obj, list columns):
                         value = _handle_dataclass_type(
                             f, name, value, _type, as_objects, None
                         )
-                    setattr(obj, name, value)
             elif f.origin in (list, 'list') and f._inner_is_dc:
                 if as_objects is True:
                     value = _handle_list_of_dataclasses(f, name, value, _type, obj)
                 else:
                     value = _handle_list_of_dataclasses(f, name, value, _type, None)
-                setattr(obj, name, value)
             elif isinstance(value, list) and typeinfo.get('type_args'):
                 if as_objects is True:
                     value = _handle_list_of_dataclasses(f, name, value, _type, obj)
                 else:
                     value = _handle_list_of_dataclasses(f, name, value, _type, None)
-                setattr(obj, name, value)
             elif field_category == 'typing':
-                value = parse_typing(
-                    f,
-                    _type,
-                    value,
-                    _encoder,
-                    as_objects,
-                    obj
-                )
-                setattr(obj, name, value)
+                if f.is_dc:
+                    # means that is_dataclass(T)
+                    value = _handle_dataclass_type(None, name, value, _type, as_objects, None)
+                # If the field is a Union and data is a list, use _parse_union_type.
+                if f.origin is Union:
+                    # e.g. Optional[...] or Union[A, B]
+                    if len(f.args) == 2 and type(None) in f.args:
+                        # Handle Optional[...] that is Union[..., None] cases first:
+                        if f._inner_priv:
+                            # If Optional but non-None is a primitive
+                            value = _parse_builtin_type(f, f._inner_type, value, _encoder)
+                        if f._inner_is_dc:
+                            # non-None is a Optional Dataclass:
+                            value = _handle_dataclass_type(
+                                None, name, value, f._inner_type, as_objects, None
+                            )
+                if f.origin is list:
+                    # Other typical case is when is a List of primitives.
+                    # _parse_list_type(field, T, data, encoder, args, _parent)
+                    try:
+                        value = parse_typing(
+                            f,
+                            _type,
+                            value,
+                            _encoder,
+                            as_objects,
+                            obj
+                        )
+                    except Exception as e:
+                        raise ValueError(
+                            f"Error parsing List: {name}: {e}"
+                        )
+                    # PyObject_SetAttr(obj, name, new_value)
+                else:
+                    try:
+                        value = _parse_typing(
+                            f,
+                            _type,
+                            value,
+                            _encoder,
+                            as_objects,
+                            obj
+                        )
+                    except Exception as e:
+                        print('ERROR ON > ', name, 'error > ', e)
             else:
-                value = parse_typing(
+                value = _parse_typing(
                     f,
                     _type,
                     value,
@@ -1262,7 +1365,8 @@ cpdef dict processing_fields(object obj, list columns):
                     as_objects,
                     obj
                 )
-                setattr(obj, name, value)
+            # Set the value:
+            PyObject_SetAttr(obj, name, value)
             # then, call the validation process:
             if (error := _validation_(name, value, f, _type, meta, field_category, as_objects)):
                 errors[name] = error

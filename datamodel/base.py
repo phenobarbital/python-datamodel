@@ -47,10 +47,11 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
                         Hint: please check the "payload" attribute in the exception.""",
                     payload=errors
                 )
-            self.__errors__ = errors
-            object.__setattr__(self, "__valid__", False)
+            object.__setattr__(self, '__errors__', errors)
+            object.__setattr__(self, '__valid__', False)
         else:
-            object.__setattr__(self, "__valid__", True)
+            object.__setattr__(self, '__valid__', True)
+            return
 
     @classmethod
     def register_parser(
