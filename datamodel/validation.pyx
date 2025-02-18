@@ -225,7 +225,13 @@ cpdef dict _validation(
                     _valid = True
                     break
             if not _valid:
-                return _create_error(name, value, f"Invalid type for {annotated_type}.{name}, expected one of {inner_types}", val_type, annotated_type)
+                return _create_error(
+                    name,
+                    value,
+                    f"Invalid type for {annotated_type}.{name}, expected one of {inner_types}",
+                    val_type,
+                    annotated_type
+                )
     elif type(annotated_type).__name__ == "ModelMeta":
         # Check if there's a field in the annotated type that matches the name and type
         if as_objects:
@@ -238,7 +244,13 @@ cpdef dict _validation(
                 return _create_error(name, value, f'{annotated_type} has no column {name}', val_type, annotated_type, e)
             ftype = field.type
             if ftype <> val_type:
-                return _create_error(name, value, f"Invalid type for {annotated_type}.{name}, expected {ftype}", val_type, annotated_type)
+                return _create_error(
+                    name,
+                    value,
+                    f"Invalid type for {annotated_type}.{name}, expected {ftype}",
+                    val_type,
+                    annotated_type
+                )
         else:
             # Validate primary key
             pk_field = get_primary_key_field(annotated_type, name, field_meta)
@@ -262,11 +274,23 @@ cpdef dict _validation(
             elif val_type == t:
                 break
         else:
-            return _create_error(name, value, f"Invalid type for {annotated_type}.{name}, expected one of {inner_types}", val_type, annotated_type)
+            return _create_error(
+                name,
+                value,
+                f"Invalid type for {annotated_type}.{name}, expected one of {inner_types}",
+                val_type,
+                annotated_type
+            )
     elif val_type != annotated_type:
         instance = is_instanceof(value, annotated_type)
         if not instance:
-            return _create_error(name, value, f"Invalid Instance for {annotated_type}.{name}, expected {annotated_type}", val_type, annotated_type)
+            return _create_error(
+                name,
+                value,
+                f"Invalid Instance for {annotated_type}.{name}, expected {annotated_type}",
+                val_type,
+                annotated_type
+            )
     return error
 
 cdef dict _create_error(str name, object value, object error, object val_type, object annotated_type, object exception = None):
