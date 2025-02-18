@@ -1,9 +1,11 @@
+# test_dashboard_widget.py
 from typing import Dict, Optional, Union
 from uuid import UUID
 from datetime import datetime
 from slugify import slugify
-from datamodel import Field, BaseModel
-from datamodel.exceptions import ValidationError
+import pytest
+from datamodel import BaseModel, Field
+from datamodel.exceptions import ValidationError  # or from datamodel.exceptions import ValidationError
 
 
 class Dashboard(BaseModel):
@@ -111,8 +113,34 @@ class Widget(BaseModel):
         name = "widgets"
         strict = True
 
+def test_dashboard_basic():
+    """
+    Test that we can create a Dashboard with minimal fields, plus verifying
+    automatically generated fields like slug.
+    """
+    # Provide the minimal or typical fields
+    dash = Dashboard(
+        name="My Dashboard",
+        dashboard_type="general",
+        description="Testing dashboard creation"
+    )
+    assert dash.name == "My Dashboard"
+    assert dash.slug == "my_dashboard"  # Because of your slugify logic
 
-def make_dashboard():
+    # Since strict=True, check that extra unknown fields are not accepted
+    with pytest.raises(TypeError):
+        # Passing an unknown field "foo" should break in strict mode
+        Dashboard(
+            name="Bad Dashboard",
+            dashboard_type="something",
+            foo="bar"
+        )
+
+def test_dashboard_payload():
+    """
+    Test that passing in a more complete payload with widget_location,
+    attributes, etc. handles them properly.
+    """
     payload = {
         "dashboard_id": "a7c1e1e4-7b6f-4c1e-8b3c-6b0f1b7d5f3a",
         "signed_ts": "2021-09-01 12:22",
@@ -183,30 +211,64 @@ def make_dashboard():
             }
         }
     }
-    try:
-        dashboard = Dashboard(
-            name="Dashboard 1",
-            description="This is a dashboard",
-            dashboard_type="dashboard",
-            **payload
-        )
-        print(dashboard, dashboard.slug)
-    except ValidationError as e:
-        print(e.payload)
+    dash = Dashboard(
+        name="Dashboard 1",
+        description="Full payload test",
+        dashboard_type="dashboard",
+        **payload
+    )
+    # Check fields were parsed
+    assert dash.dashboard_id == UUID("a7c1e1e4-7b6f-4c1e-8b3c-6b0f1b7d5f3a")
+    assert dash.signed_ts == datetime(2021, 9, 1, 12, 22)
+    assert dash.attributes["icon"] == "fa fa-th"
+    # `widget_location` is a dict, with nested dict as well:
+    assert "Retail360 Flow #ZLJAH" in dash.widget_location
+    assert dash.widget_location["timestamp"] == 1735573243363
+    assert dash.widget_location["Retail360 Flow #ZLJAH"]["h"] == 21
 
-def make_widget():
-    try:
-        widget = Widget(
-            widget_name="Widget 1",
-            description="This is a widget",
+def test_widget_basic():
+    """
+    Test creating a Widget with minimal required fields.
+    """
+    # The code below is the minimal set you identified as required
+    widget = Widget(
+        widget_name="Widget 1",
+        description="This is a widget",
+        dashboard_id="a7c1e1e4-7b6f-4c1e-8b3c-6b0f1b7d5f3a",
+        program_id=1,
+        user_id=1,
+    )
+    assert widget.widget_name == "Widget 1"
+    # Because you auto-generate widget_slug if not provided:
+    assert widget.widget_slug == "widget_1"
+    assert widget.dashboard_id == UUID("a7c1e1e4-7b6f-4c1e-8b3c-6b0f1b7d5f3a")
+    assert widget.program_id == 1
+    assert widget.user_id == 1
+
+def test_widget_strict_extra():
+    """
+    Ensures that unknown fields in 'strict' mode raise an error.
+    """
+    with pytest.raises(TypeError):
+        Widget(
+            widget_name="Widget Extra",
+            description="Invalid extra field test",
             dashboard_id="a7c1e1e4-7b6f-4c1e-8b3c-6b0f1b7d5f3a",
             program_id=1,
             user_id=1,
+            invalid_field="Oops"  # this should cause a failure in strict mode
         )
-        print(widget, widget.widget_slug)
-    except ValidationError as e:
-        print(e.payload)
 
-if __name__ == "__main__":
-    make_dashboard()
-    # make_widget()
+def test_widget_validation_error():
+    """
+    Example of how to catch ValidationError if any required fields are missing
+    or invalid.
+    """
+    # Suppose 'dashboard_id' and 'program_id' are truly required by the model.
+    # If we omit them, we should get a ValidationError.
+    with pytest.raises(ValueError):
+        Widget(
+            widget_name="Missing fields",
+            description="No dash or program",
+            user_id=1,
+        )

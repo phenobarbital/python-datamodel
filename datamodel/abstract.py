@@ -1,6 +1,15 @@
 import contextlib
 import logging
-from typing import Optional, Any, List, Dict, get_args, get_origin, ClassVar
+from typing import (
+    Optional,
+    Any,
+    List,
+    Dict,
+    Union,
+    get_args,
+    get_origin,
+    ClassVar
+)
 from types import GenericAlias
 from collections import OrderedDict
 from collections.abc import Callable
@@ -59,9 +68,10 @@ def _dc_method_setattr_(self, name: str, value: Any) -> None:
     This version separates the known-field assignment (with optional validation)
     from the “extra field” assignment and uses a helper to perform conversion/validation.
     """
-    # Ensure that the __values__ dict is present.
-    if not hasattr(self, '__values__'):
-        object.__setattr__(self, '__values__', {})
+    if (name.startswith('__') and name.endswith('__')):
+        # or check explicitly if name in ('__values__', '__valid__', ...)
+        object.__setattr__(self, name, value)
+        return
 
     # Check whether we are assigning to a known field.
     if name in self.__fields__:
@@ -84,8 +94,6 @@ def _dc_method_setattr_(self, name: str, value: Any) -> None:
     # For extra attributes, store them as usual.
     # (Note: here we “neutralize” any callable value to None if needed.)
     object.__setattr__(self, name, None if callable(value) else value)
-    if name == '__values__':
-        return
 
     # If the field isn’t known yet:
     if name not in self.__fields__:
@@ -245,6 +253,7 @@ class ModelMeta(type):
                         _type_category = 'dataclass'
                     elif _is_typing or _is_alias:  # noqa
                         if df.origin is not None and (df.origin is list and df.args):
+                            df._inner_targs = df.args
                             df._inner_type = args[0]
                             df._inner_origin = get_origin(df._inner_type)
                             df._typing_args = get_args(df._inner_type)
@@ -254,11 +263,19 @@ class ModelMeta(type):
                             except (TypeError, KeyError):
                                 df._encoder_fn = None
                         if origin is list:
-                            inner_type = args[0]
+                            df._inner_targs = df.args
+                            df._inner_type = args[0]
                             try:
-                                df._encoder_fn = encoders[inner_type]
+                                df._encoder_fn = encoders[df._inner_type]
                             except (TypeError, KeyError):
                                 df._encoder_fn = None
+                        elif origin is Union:
+                            df._inner_targs = df.args
+                            df._inner_type = args[0]
+                            df._inner_is_dc = is_dataclass(df._inner_type)
+                            df._inner_priv = is_primitive(df._inner_type)
+                            df._inner_origin = get_origin(df._inner_type)
+                            df._typing_args = get_args(df._inner_type)
                         _type_category = 'typing'
                     elif isclass(_type):
                         _type_category = 'class'
@@ -341,10 +358,10 @@ class ModelMeta(type):
         # Set additional attributes:
         dc.__columns__ = cols
         dc.__fields__ = list(_columns)
-        dc.__values__ = {}
         dc.__encoder__ = JSONContent
         dc.__valid__ = False
-        dc.__errors__ = None
+        dc.__errors__ = {}
+        dc.__values__ = {}
         dc.__frozen__ = strict
         dc.__initialised__ = False
         dc.__field_types__ = _types
