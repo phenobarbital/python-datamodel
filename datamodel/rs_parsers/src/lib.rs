@@ -2,13 +2,15 @@ use pyo3::prelude::*;
 use pyo3::exceptions::PyValueError;
 use pyo3::PyTypeInfo;
 use pyo3::wrap_pyfunction;
-use pyo3::types::{PyDate, PyDateTime, PyAny, PyString, PyBool, PyBytes, PyInt, PyFloat};
+use pyo3::types::{PyDate, PyDateTime, PyAny, PyString, PyBool, PyBytes, PyInt, PyFloat, PyList};
 use chrono::{Datelike, Timelike, NaiveDate, NaiveDateTime, DateTime, Utc};
 use speedate::Date as SpeeDate;
+use std::sync::Mutex;
 use speedate::DateTime as SpeeDateTime;
 use uuid::Uuid;
 use rust_decimal::Decimal; // Rust Decimal crate
 use rust_decimal::prelude::FromStr;
+use rayon::prelude::*;
 // use speedate::{Date, DateTime, ParseError};
 // use std::collections::HashMap;
 // NaiveTime
@@ -52,6 +54,33 @@ fn to_string(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<String>> {
     }
 }
 
+#[pyfunction]
+#[pyo3(signature = (py_type, input_list))]
+fn to_list(py: Python, py_type: Py<PyAny>, input_list: Py<PyList>) -> PyResult<PyObject> {
+    let input_list = input_list.bind(py);
+
+    // Ensure py_type is callable
+    let py_type = py_type.bind(py);
+    if !py_type.is_callable() {
+        return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>("Provided type is not callable"));
+    }
+
+    let mut result_list: Vec<PyObject> = Vec::new();
+
+    for item in input_list.iter() {
+        let converted_item = Python::with_gil(|py| {
+            let py_type = py_type.clone();
+            let item_obj: PyObject = item.into();
+            py_type.call1((item_obj,)).map(|obj| obj.into())
+        });
+        result_list.push(converted_item?);
+    }
+
+    Python::with_gil(|py| {
+        let py_list = PyList::new(py, &result_list)?;
+        Ok(py_list.into())
+    })
+}
 
 #[pyfunction]
 #[pyo3(signature = (obj))]
@@ -567,5 +596,6 @@ fn rs_parsers(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(to_integer, m)?)?;
     m.add_function(wrap_pyfunction!(to_float, m)?)?;
     m.add_function(wrap_pyfunction!(to_decimal, m)?)?;
+    m.add_function(wrap_pyfunction!(to_list, m)?)?;
     Ok(())
 }

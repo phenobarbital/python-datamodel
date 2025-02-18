@@ -13,6 +13,7 @@ class User(BaseModel):
 
     class Meta:
         name = "users"
+        as_objects = True
         schema = "public"
         strict = True
         connection = None
@@ -55,6 +56,7 @@ class UserAttributes(BaseModel):
         strict = True
         connection = None
         frozen = False
+        as_objects = True
 
 
 # Path: examples/validate_user.py
@@ -64,7 +66,7 @@ try:
 except ValidationError as e:
     print(e.payload)
 
-def create_user(name: str, value: Any, target_type: Any):
+def create_user(name: str, value: Any, target_type: Any, *args, **kwargs):
     print('Target: ', target_type, value, name)
     args = {
         name: value,
@@ -73,7 +75,7 @@ def create_user(name: str, value: Any, target_type: Any):
     }
     return target_type(**args)
 
-BaseModel.register_converter(User, create_user, 'user_id')
+BaseModel.register_parser(User, create_user, 'user_id')
 
 try:
     user_attributes = UserAttributes(user_id=1, attributes={"key": "value"})

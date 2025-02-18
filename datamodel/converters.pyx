@@ -485,7 +485,7 @@ cdef object _parse_dict_type(
     cdef object val_type = args[1]
     cdef dict new_dict = {}
     for k, v in data.items():
-        new_dict[k] = parse_typing(field, val_type, v, encoder, False)
+        new_dict[k] = _parse_typing(field, val_type, v, encoder, False)
     return new_dict
 
 cdef object _parse_list_type(
@@ -528,20 +528,25 @@ cdef object _parse_list_type(
                 else:
                     result.append(inner_type(d))
         return result
-    else:
-        # General conversion
-        print('ENTERING HERE > ', field.name, data)
+    elif converter:
         for item in data:
-            if converter:
-                result.append(
-                    converter(field.name, item, inner_type, _parent)
-                )
-            else:
-                # field.type = inner_type
-                result.append(
-                    parse_typing(field, T=inner_type, data=item, encoder=encoder, as_objects=False,)
-                )
-        return result
+            result.append(
+                converter(field.name, item, inner_type, _parent)
+            )
+    elif is_primitive(inner_type):
+        try:
+            result = rc.to_list(inner_type, data)
+            # return data
+        except Exception as e:
+            raise ValueError(
+                f"Error parsing list of {inner_type}: {e}"
+            ) from e
+    else:
+        for item in data:
+            result.append(
+                _parse_typing(field, T=inner_type, data=item, encoder=encoder, as_objects=False)
+            )
+    return result
 
 cdef object _parse_dataclass_type(object T, object data):
     if isinstance(data, dict):
@@ -857,7 +862,7 @@ cdef object _parse_union_type(
             field.args = get_args(non_none_arg)
             field.origin = get_origin(non_none_arg)
             if isinstance(data, list):
-                return parse_typing(
+                return _parse_typing(
                     field,
                     non_none_arg,
                     data,
@@ -872,7 +877,7 @@ cdef object _parse_union_type(
                 result = _parse_list_type(field, arg_type, data, encoder, targs)
             else:
                 # fallback to builtin parse
-                result = parse_typing(
+                result = _parse_typing(
                     field,
                     arg_type,
                     data,
@@ -938,58 +943,6 @@ cdef object _parse_typing(
     cdef object name = getattr(T, '_name', None)  # T._name or None if not present
     cdef object sub = None     # for subtypes, local cache
     cdef object result = None
-    cdef object isdc = field.is_dc # is_dataclass(T)
-    cdef object inner_type = None
-    cdef bint inner_is_dc = 0 # field._inner_is_dc or is_dataclass(inner_type)
-
-    # Use cached values only if T is exactly the field's declared type.
-    if T == field.type:
-        origin = field.origin
-        targs = field.args
-    elif field._inner_type and field._inner_type == inner_type:
-        origin = field._inner_origin
-        targs = field._inner_args
-    else:
-        origin = get_origin(T)
-        targs = get_args(T)
-
-    # For generic (typing) fields, reuse cached inner type info if available.
-    if origin is list and targs:
-        if field._inner_type is not None:
-            inner_type = field._inner_type
-            inner_origin = field._inner_origin
-            # Optionally, also use cached type arguments for the inner type.
-        else:
-            inner_type = targs[0]
-            inner_origin = get_origin(inner_type)
-    else:
-        inner_type = None
-        inner_origin = None
-
-    inner_is_dc = field._inner_is_dc or is_dc(inner_type)
-
-    if data is None:
-        return None
-
-    return data
-
-cdef object parse_typing(
-    object field,
-    object T,
-    object data,
-    object encoder=None,
-    object as_objects=False,
-    object parent=None,
-):
-    """
-    Parse a value to a typing type.
-    """
-    # local cdef variables:
-    cdef object origin, targs
-    cdef object name = getattr(T, '_name', None)  # T._name or None if not present
-    cdef object sub = None     # for subtypes, local cache
-    cdef object result = None
-    cdef object isdc = field.is_dc # is_dataclass(T)
     cdef object inner_type = None
     cdef bint inner_is_dc = 0 # field._inner_is_dc or is_dataclass(inner_type)
 
@@ -1023,8 +976,9 @@ cdef object parse_typing(
         return None
 
     # Put more frequently cases first:
-    if isdc:
+    if field.is_dc:
         return _handle_dataclass_type(None, name, data, T, as_objects, None)
+
     # If the field is a Union and data is a list, use _parse_union_type.
     if origin is Union:
         # e.g. Optional[...] or Union[A, B]
@@ -1039,7 +993,7 @@ cdef object parse_typing(
             else:
                 real_type = targs[0] if targs[1] is type(None) else targs[1]
                 # Recursively parse the real_type exactly as if it weren't wrapped in Optional[…].
-                return parse_typing(field, real_type, data, encoder, as_objects, parent)
+                return _parse_typing(field, real_type, data, encoder, as_objects, parent)
         elif isinstance(data, list):
             return _parse_union_type(
                 field,
@@ -1127,7 +1081,7 @@ cdef object _handle_dataclass_type(
                 f"Invalid value for {name}:{_type} == {value}, error: {exc}"
             )
     try:
-        if isinstance(value, (list, tuple)):
+        if PyObject_IsInstance(value, (list, tuple)):
             return _type(*value)
         else:
             # If a converter exists for this type, use it:
@@ -1139,7 +1093,7 @@ cdef object _handle_dataclass_type(
                     alias = name
                 # convert the list to the dataclass
                 return _type(**{alias: value})
-            if isinstance(value, (int, str, UUID)):
+            if PyObject_IsInstance(value, (int, str, UUID)):
                 return value
             if isdc:
                 if not alias:
@@ -1329,21 +1283,22 @@ cpdef dict processing_fields(object obj, list columns):
                             )
                 if f.origin is list:
                     # Other typical case is when is a List of primitives.
-                    # _parse_list_type(field, T, data, encoder, args, _parent)
-                    try:
-                        value = parse_typing(
-                            f,
-                            _type,
-                            value,
-                            _encoder,
-                            as_objects,
-                            obj
-                        )
-                    except Exception as e:
-                        raise ValueError(
-                            f"Error parsing List: {name}: {e}"
-                        )
-                    # PyObject_SetAttr(obj, name, new_value)
+                    if f._inner_priv:
+                        value = _parse_list_type(f, _type, value, _encoder, f.args, obj)
+                    else:
+                        try:
+                            value = _parse_typing(
+                                f,
+                                _type,
+                                value,
+                                _encoder,
+                                as_objects,
+                                obj
+                            )
+                        except Exception as e:
+                            raise ValueError(
+                                f"Error parsing List: {name}: {e}"
+                            )
                 else:
                     try:
                         value = _parse_typing(
@@ -1355,7 +1310,9 @@ cpdef dict processing_fields(object obj, list columns):
                             obj
                         )
                     except Exception as e:
-                        print('ERROR ON > ', name, 'error > ', e)
+                        raise ValueError(
+                            f"Error parsing {f.origin}: {name}: {e}"
+                        )
             else:
                 value = _parse_typing(
                     f,
