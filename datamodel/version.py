@@ -6,7 +6,7 @@ __description__ = (
     'simple library based on python +3.8 to use Dataclass-syntax'
     'for interacting with Data'
 )
-__version__ = '0.10.2'
+__version__ = '0.10.3'
 __copyright__ = 'Copyright (c) 2020-2024 Jesus Lara'
 __author__ = 'Jesus Lara'
 __author_email__ = 'jesuslarag@gmail.com'
