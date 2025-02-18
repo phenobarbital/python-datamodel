@@ -90,10 +90,12 @@ class Field(ff):
         '_meta',
         'kw_only',
         '_field_type',  # Private: not to be used by user code.
+        '_inner_targs',
         '_typing_args',
         '_inner_origin',
         '_inner_type',
         '_inner_is_dc',
+        '_inner_priv',
         'validator',
         '_required',
         '_nullable',
@@ -136,7 +138,9 @@ class Field(ff):
         self._encoder_fn: Optional[callable] = None
         self.validator: Optional[callable] = None
         self._typing_args = None
+        self._inner_targs = None
         self._inner_type = None
+        self._inner_priv = None
         self._inner_is_dc = None
         self._inner_origin = None
         self.is_typing: bool = False
