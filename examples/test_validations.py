@@ -2,6 +2,7 @@ from typing import Union, List
 import uuid
 from datetime import datetime
 from datamodel import BaseModel, Column
+from datamodel.exceptions import ValidationError
 
 
 def auto_uuid(*args, **kwargs):
@@ -25,7 +26,7 @@ class Account(BaseModel):
     provider: str = Column(required=True, default='dummy')
     enabled: bool = Column(required=True, default=True)
     address: Union[str, list] = Column(required=False, default='')
-    phone: Union[str, list] = Column(required=False, default='')
+    phone: Union[str, List[str]] = Column(required=False, default='')
 
     def set_address(self, address: str):
         self.address = address
@@ -36,7 +37,7 @@ class Actor(BaseModel):
     """
     userid: uuid.UUID = Column(required=True, primary_key=True, default=auto_uuid)
     age: int = Column(default=def_age)
-    name: str
+    name: str = Column(required=True)
     account: Union[Account, List[Account]]
     is_employee: str = Column(required=True, default='F', encoder=is_employee)
     created_at: datetime = Column(required=False, default=datetime.now)
@@ -63,6 +64,59 @@ user = {
         }
     ]
 }
-user = Actor(**user)
-print(f"User: ID: {user.userid}, Name: {user.name}, age: {user.age}, accounts: {user.account!r}, created: {user.created_at}")
-print(f'Types: {type(user.created_at)}')
+
+
+if __name__ == '__main__':
+    user = Actor(**user)
+    print(f"User: ID: {user.userid}, Name: {user.name}, age: {user.age}, accounts: {user.account!r}, created: {user.created_at}")
+    print(f'Types: {type(user.created_at)}')
+    try:
+        # Test if name is required:
+        missing_data = {
+        "userid": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+            "account": [
+                {"provider": "twilio", "phone": "+343317871"},
+            ]
+        }
+        user = Actor(**missing_data)
+    except (ValueError, AttributeError) as ex:
+        print(f"Error: {ex}", type(ex))
+    except ValidationError as ex:
+        print(f"Error: {ex}", type(ex))
+        print(f"ValidationError: {ex.payload}")
+    # Test Account for Invalid Data:
+    invalid_data = {
+        "userid": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+        "name": "Invalid User",
+        "account": [
+            {"provider": "twilio", "phone": {"phone": 343317871}},  # Expecting a string for `phone`
+        ]
+    }
+    try:
+        Account(**invalid_data["account"][0])
+    except (ValueError, AttributeError) as ex:
+        print(
+            f"Error: {ex}", type(ex)
+        )
+    except ValidationError as ex:
+        print(
+            f"Error: {ex}", type(ex)
+        )
+        print(
+            f"ValidationError: {ex.payload}"
+        )
+    # Test for Invalid Data:
+    try:
+        user = Actor(**invalid_data)
+        print(user.account, type(user.account[0]['phone']))
+    except (ValueError, AttributeError) as ex:
+        print(
+            f"Error: {ex}", type(ex)
+        )
+    except ValidationError as ex:
+        print(
+            f"Error: {ex}", type(ex)
+        )
+        print(
+            f"ValidationError: {ex.payload}"
+        )

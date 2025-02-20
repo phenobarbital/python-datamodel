@@ -1,6 +1,5 @@
 from typing import Optional, List, Union
 from datetime import datetime, date
-from pendulum.date import Date as PDate
 from dataclasses import dataclass
 import pytest
 from datamodel import BaseModel, Field
