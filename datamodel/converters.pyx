@@ -9,6 +9,9 @@ from dataclasses import _MISSING_TYPE, _FIELDS, fields
 import ciso8601
 import orjson
 from decimal import Decimal, InvalidOperation
+from libc.stdio cimport sprintf, snprintf
+from libc.stdlib cimport malloc, free
+from cpython.mem cimport PyMem_Malloc, PyMem_Free
 cimport cython
 from cpython cimport datetime
 from cpython.object cimport (
@@ -24,18 +27,41 @@ from cpython.object cimport (
 from cpython.ref cimport PyObject
 from uuid import UUID
 import asyncpg.pgproto.pgproto as pgproto
-from .functions import is_empty, is_iterable, is_primitive
+from .functions import is_iterable, is_primitive
 from .validation import _validation
 from .fields import Field
 # New converter:
 import datamodel.rs_parsers as rc
 
+cdef struct ColumnDef:
+    const char* name
+    PyObject* field
 
 cdef bint is_dc(object obj):
     """Returns True if obj is a dataclass or an instance of a
     dataclass."""
     cls = obj if isinstance(obj, type) and not isinstance(obj, types.GenericAlias) else type(obj)
     return PyObject_HasAttr(cls, '__dataclass_fields__')
+
+cdef bint is_empty(object value):
+    cdef bint result = False
+    if value is None:
+        return True
+    if PyObject_IsInstance(value, _MISSING_TYPE) or value == _MISSING_TYPE:
+        result = True
+    elif PyObject_IsInstance(value, str) and value == '':
+        result = True
+    elif PyObject_IsInstance(value, (int, float)) and value == 0:
+        result = False
+    elif PyObject_IsInstance(value, dict) and value == {}:
+        result = False
+    elif PyObject_IsInstance(value, (list, tuple, set)) and value == []:
+        result = False
+    elif PyObject_HasAttr(value, 'empty') and PyObject_GetAttr(value, 'empty') == False:
+        result = False
+    elif not value:
+        result = True
+    return result
 
 cpdef bint has_attribute(object obj, object attr):
     """Returns True if obj has the attribute attr."""
@@ -597,7 +623,6 @@ cdef object _parse_builtin_type(object field, object T, object data, object enco
             raise ValueError(
                 f"Error parsing type {T}: {e}"
             ) from e
-    return data
 
 cpdef object parse_basic(object T, object data, object encoder = None):
     """parse_basic.
@@ -1175,6 +1200,15 @@ cdef object _handle_default_value(
     # Otherwise, return value as-is
     return value
 
+cdef dict _build_error(str name, str message, object exp):
+    """
+    _build_error.
+
+    Build a tuple containing an error message and the name of the field.
+    """
+    cdef str error_message = message + name + ", Error: " + str(exp)
+    return {name: error_message}
+
 cpdef dict processing_fields(object obj, list columns):
     """
     Process the fields (columns) of a dataclass object.
@@ -1190,10 +1224,21 @@ cpdef dict processing_fields(object obj, list columns):
     cdef object meta = obj.Meta
     cdef bint as_objects = meta.as_objects
     cdef bint no_nesting = meta.no_nesting
+    cdef tuple type_args = ()
+    # Error handling
     cdef dict errors = {}
+    # Type Information
     cdef dict _typeinfo = {}
+    # Column information:
+    cdef tuple c_col
+    cdef str name
+    cdef object f
+    cdef object value
+    cdef object newval
 
-    for name, f in columns:
+    for c_col in columns:
+        name = c_col[0]
+        f = c_col[1]
         value = getattr(obj, name)
         # Use the precomputed field type category:
         field_category = f._type_category
@@ -1202,44 +1247,49 @@ cpdef dict processing_fields(object obj, list columns):
             # Handle descriptor-specific logic
             try:
                 value = f.__get__(obj, type(obj))  # Get the descriptor value
-                setattr(obj, name, value)
+                PyObject_SetAttr(obj, name, value)
             except Exception as e:
-                errors[name] = f"Descriptor error in {name}: {e}"
+                errors.update(_build_error(name, f"Descriptor Error on {name}: ", e))
             continue
 
         # get type and default:
         _type = f.type
         _default = f.default
         typeinfo = f.typeinfo # cached info (e.g., type_args, default_callable)
-        metadata = PyObject_GetAttr(f, "metadata")
-        _encoder = metadata.get('encoder')
-        _default_callable = typeinfo.get('default_callable', False)
+        type_args = f.type_args
+        try:
+            metadata = f.metadata
+        except AttributeError:
+            metadata = PyObject_GetAttr(f, "metadata")
 
-        if isinstance(_type, NewType):
-            _type = _type.__supertype__
+        # _default_callable = typeinfo.get('default_callable', False)
+        # Check if object is empty
+        if is_empty(value) and not PyObject_IsInstance(value, list):
+            if _type == str and value is not "":
+                value = f.default_factory if PyObject_IsInstance(_default, (_MISSING_TYPE)) else _default
+            # PyObject_SetAttr(obj, name, value)
+            obj.__dict__[name] = value
+        if _default is not None:
+            value = _handle_default_value(obj, name, value, _default, f._default_callable)
 
         try:
-            # Check if object is empty
-            if is_empty(value) and not isinstance(value, list):
-                if _type == str and value is not "":
-                    value = f.default_factory if isinstance(_default, (_MISSING_TYPE)) else _default
-                setattr(obj, name, value)
-            if _default is not None:
-                value = _handle_default_value(obj, name, value, _default, _default_callable)
-
+            _encoder = metadata.get('encoder')
             if f.parser is not None:
                 # If a custom parser is attached to Field, use it
                 try:
-                    value = f.parser(value)
+                    newval = f.parser(value)
+                    if newval != value:
+                        obj.__dict__[name] = newval
                 except Exception as ex:
-                    errors[name] = f"Error parsing *{name}* = *{value}*, error: {ex}"
+                    errors.update(_build_error(name, f"Error parsing *{name}* = *{value}*", ex))
                     continue
-
             elif field_category == 'primitive':
                 try:
-                    value = parse_basic(_type, value, _encoder)
+                    newval = parse_basic(_type, value, _encoder)
+                    if newval != value:
+                        obj.__dict__[name] = newval
                 except ValueError as ex:
-                    errors[name] = f"Error parsing {name}: {ex}"
+                    errors.update(_build_error(name, f"Error parsing {name}: ", ex))
                     continue
             elif field_category == 'type':
                 # TODO: support multiple types
@@ -1247,47 +1297,41 @@ cpdef dict processing_fields(object obj, list columns):
             elif field_category == 'dataclass':
                 if no_nesting is False:
                     if as_objects is True:
-                        value = _handle_dataclass_type(
+                        newval = _handle_dataclass_type(
                             f, name, value, _type, as_objects, obj
                         )
                     else:
-                        value = _handle_dataclass_type(
+                        newval = _handle_dataclass_type(
                             f, name, value, _type, as_objects, None
                         )
+                    if newval!= value:
+                        # PyObject_SetAttr(obj, name, newval)
+                        obj.__dict__[name] = newval
             elif f.origin in (list, 'list') and f._inner_is_dc:
                 if as_objects is True:
-                    value = _handle_list_of_dataclasses(f, name, value, _type, obj)
+                    newval = _handle_list_of_dataclasses(f, name, value, _type, obj)
                 else:
-                    value = _handle_list_of_dataclasses(f, name, value, _type, None)
-            elif isinstance(value, list) and typeinfo.get('type_args'):
-                if as_objects is True:
-                    value = _handle_list_of_dataclasses(f, name, value, _type, obj)
-                else:
-                    value = _handle_list_of_dataclasses(f, name, value, _type, None)
+                    newval = _handle_list_of_dataclasses(f, name, value, _type, None)
+                obj.__dict__[name] = newval
             elif field_category == 'typing':
                 if f.is_dc:
                     # means that is_dataclass(T)
-                    value = _handle_dataclass_type(None, name, value, _type, as_objects, None)
-                # If the field is a Union and data is a list, use _parse_union_type.
-                if f.origin is Union:
-                    # e.g. Optional[...] or Union[A, B]
-                    if len(f.args) == 2 and type(None) in f.args:
-                        # Handle Optional[...] that is Union[..., None] cases first:
-                        if f._inner_priv:
-                            # If Optional but non-None is a primitive
-                            value = _parse_builtin_type(f, f._inner_type, value, _encoder)
-                        if f._inner_is_dc:
-                            # non-None is a Optional Dataclass:
-                            value = _handle_dataclass_type(
-                                None, name, value, f._inner_type, as_objects, None
-                            )
-                if f.origin is list:
+                    newval = _handle_dataclass_type(None, name, value, _type, as_objects, None)
+                    obj.__dict__[name] = newval
+                elif f.origin is list:
                     # Other typical case is when is a List of primitives.
                     if f._inner_priv:
-                        value = _parse_list_type(f, _type, value, _encoder, f.args, obj)
+                        newval = _parse_list_type(
+                            f,
+                            _type,
+                            value,
+                            _encoder,
+                            f.args,
+                            obj
+                        )
                     else:
                         try:
-                            value = _parse_typing(
+                            newval = _parse_typing(
                                 f,
                                 _type,
                                 value,
@@ -1299,9 +1343,24 @@ cpdef dict processing_fields(object obj, list columns):
                             raise ValueError(
                                 f"Error parsing List: {name}: {e}"
                             )
+                    obj.__dict__[name] = newval
+                # If the field is a Union and data is a list, use _parse_union_type.
+                elif f.origin is Union:
+                    # e.g. Optional[...] or Union[A, B]
+                    if len(f.args) == 2 and type(None) in f.args:
+                        # Handle Optional[...] that is Union[..., None] cases first:
+                        if f._inner_priv:
+                            # If Optional but non-None is a primitive
+                            newval = _parse_builtin_type(f, f._inner_type, value, _encoder)
+                        if f._inner_is_dc:
+                            # non-None is a Optional Dataclass:
+                            newval = _handle_dataclass_type(
+                                None, name, value, f._inner_type, as_objects, None
+                            )
+                        obj.__dict__[name] = newval
                 else:
                     try:
-                        value = _parse_typing(
+                        newval = _parse_typing(
                             f,
                             _type,
                             value,
@@ -1309,12 +1368,19 @@ cpdef dict processing_fields(object obj, list columns):
                             as_objects,
                             obj
                         )
+                        obj.__dict__[name] = newval
                     except Exception as e:
                         raise ValueError(
                             f"Error parsing {f.origin}: {name}: {e}"
                         )
+            elif isinstance(value, list) and type_args:
+                if as_objects is True:
+                    newval = _handle_list_of_dataclasses(f, name, value, _type, obj)
+                else:
+                    newval = _handle_list_of_dataclasses(f, name, value, _type, None)
+                obj.__dict__[name] = newval
             else:
-                value = _parse_typing(
+                newval = _parse_typing(
                     f,
                     _type,
                     value,
@@ -1322,24 +1388,25 @@ cpdef dict processing_fields(object obj, list columns):
                     as_objects,
                     obj
                 )
-            # Set the value:
-            PyObject_SetAttr(obj, name, value)
+                obj.__dict__[name] = newval
             # then, call the validation process:
-            if (error := _validation_(name, value, f, _type, meta, field_category, as_objects)):
+            if (error := _validation_(name, newval, f, _type, meta, field_category, as_objects)):
                 errors[name] = error
         except ValueError as ex:
             if meta.strict is True:
                 raise
             else:
-                errors[name] = f"Wrong Value for {f.name}: {f.type}, error: {ex}"
+                errors.update(_build_error(name, f"Wrong Value for {f.name}: {f.type}", ex))
                 continue
+        except AttributeError:
+            raise
         except (TypeError, RuntimeError) as ex:
-            errors[name] = f"Wrong Type for {f.name}: {f.type}, error: {ex}"
+            errors.update(_build_error(name, f"Wrong Type for {f.name}: {f.type}", ex))
             continue
     # Return Errors (if any)
     return errors
 
-cdef dict _validation_(
+cdef object _validation_(
     str name,
     object value,
     object f,
@@ -1353,16 +1420,26 @@ cdef dict _validation_(
     TODO: cover validations as length, not_null, required, max, min, etc
     """
     cdef object val_type = type(value)
+    cdef str error = None
+    cdef dict err = {
+        "field": name,
+        "value": value,
+        "error": None
+    }
     if val_type == type or value == _type or is_empty(value):
         try:
             _field_checks_(f, name, value, meta)
-            return {}
+            return None
         except (ValueError, TypeError):
             raise
     # If the field has a cached validator, use it.
     if f.validator is not None:
         try:
-            return f.validator(f, name, value, _type)
+            error = f.validator(f, name, value, _type)
+            if error:
+                err["error"] = error
+                return err
+            return None
         except ValueError:
             raise
     else:

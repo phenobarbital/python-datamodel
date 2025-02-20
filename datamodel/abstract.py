@@ -8,7 +8,8 @@ from typing import (
     Union,
     get_args,
     get_origin,
-    ClassVar
+    ClassVar,
+    NewType
 )
 from types import GenericAlias
 from collections import OrderedDict
@@ -178,6 +179,10 @@ class ModelMeta(type):
                         # Skip InitVar fields;
                         # they should not be part of the dataclass instance
                         continue
+                    if isinstance(_type, NewType):
+                        # Get the corresponding type of the NewType.
+                        _type = _type.__supertype__
+
                     origin = get_origin(_type)
                     if origin is ClassVar:
                         continue
@@ -226,10 +231,7 @@ class ModelMeta(type):
                     df.origin = origin
                     df.args = args
                     df.type_args = getattr(_type, '__args__', None)
-
-                    df._typeinfo_ = {
-                        "default_callable": callable(_default)
-                    }
+                    df._default_callable = callable(_default)
                     # Current Field have an Encoder Function.
                     custom_encoder = df.metadata.get("encoder")
                     try:
