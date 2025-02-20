@@ -23,6 +23,11 @@ from datamodel.types import (
 )
 
 
+# Since most per-field metadata will be unused, create an empty
+# read-only proxy that can be shared among all fields.
+_EMPTY_METADATA = MappingProxyType({})
+
+
 def fields(obj: Any):
     """Return a tuple describing the fields of this dataclass.
 
@@ -69,49 +74,51 @@ class Field(ff):
     """
 
     __slots__ = (
+        'name',
+        'type',
+        'default',
+        'default_factory',
+        'repr',
+        'hash',
+        'init',
+        'compare',
+        'metadata',
+        'kw_only',
+        'doc',
+        'description',
+        'validator',
+        'schema_extra',
+        'alias',
+        'gt',
+        'eq',
+        'lt',
+        'le',
+        'ge',
         'is_dc',
         'is_primitive',
         'is_typing',
         'origin',
         'args',
         'type_args',
-        'name',
-        'type',
+        'parser',
+        '_field_type',
         '_type_category',
-        'description',
-        'default',
-        'default_factory',
         '_typeinfo_',
-        'repr',
-        'hash',
-        'init',
-        'compare',
-        'metadata',
         '_meta',
-        'kw_only',
-        '_field_type',  # Private: not to be used by user code.
         '_inner_targs',
         '_typing_args',
         '_inner_origin',
         '_inner_type',
         '_inner_is_dc',
         '_inner_priv',
-        'validator',
         '_required',
         '_nullable',
         '_primary',
         '_dbtype',
         '_alias',
         '_pattern',
-        'gt',
-        'eq',
-        'lt',
-        'le',
-        'ge',
-        'schema_extra',
-        'alias',
         '_encoder_fn',
-        'parser'
+        '_default_callable',
     )
 
     def __init__(
@@ -126,6 +133,8 @@ class Field(ff):
         pattern: Optional[str] = None,
         alias: Optional[str] = None,
         kw_only: bool = False,
+        metadata: Optional[MappingProxyType] = None,
+        doc: Optional[str] = None,
         **kwargs,
     ):
         self.name = None
@@ -143,6 +152,7 @@ class Field(ff):
         self._inner_priv = None
         self._inner_is_dc = None
         self._inner_origin = None
+        self._default_callable = None
         self.is_typing: bool = False
         self.type_args: Any = None
         self.origin: Any = None
@@ -151,6 +161,7 @@ class Field(ff):
         self.init = kwargs.pop("init", True)
         self.repr = kwargs.pop("repr", True)
         self.hash = kwargs.pop("hash", True)
+        self.doc = doc
         self.default = default
         self._nullable = nullable
         self.kw_only = kw_only
@@ -179,7 +190,10 @@ class Field(ff):
             self.init = True
         if self.init is False:
             self.repr = False
-        metadata = kwargs.pop("metadata", {})
+        metadata = (
+            _EMPTY_METADATA if metadata is None else MappingProxyType(metadata)
+        )
+        self.metadata = metadata
         meta = {**meta, **metadata}
         ## Encoder, decoder and widget:
         meta["widget"] = kwargs.pop('widget', {})
@@ -191,6 +205,8 @@ class Field(ff):
         ## field is read-only
         meta["readonly"] = bool(kwargs.pop('readonly', False))
         self._meta = {**meta, **_range, **kwargs}
+        # assign metadata:
+        self.metadata = self._meta
         self.default_factory = MISSING
         if default is None:
             ## Default Factory:
@@ -281,6 +297,15 @@ class Field(ff):
     @property
     def primary_key(self):
         return self._primary
+
+    def __set_name__(self, owner, name):
+        func = getattr(type(self.default), '__set_name__', None)
+        if func:
+            # There is a __set_name__ method on the descriptor, call
+            # it.
+            func(self.default, owner, name)
+
+    __class_getitem__ = classmethod(GenericAlias)
 
 
 def Column(
