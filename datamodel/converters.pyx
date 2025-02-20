@@ -882,6 +882,7 @@ cdef object _parse_union_type(
                 non_none_arg = arg
                 break
         is_typing = hasattr(non_none_arg, '__module__') and non_none_arg.__module__ == 'typing'
+
         if non_none_arg is not None and is_typing is True:
             # Invoke the parse_typing_type
             field.args = get_args(non_none_arg)
@@ -899,6 +900,14 @@ cdef object _parse_union_type(
     for arg_type in targs:
         try:
             if isinstance(data, list):
+                if arg_type is str:
+                    # Ensure all elements in the list are strings
+                    if all(isinstance(item, str) for item in data):
+                        return data
+                    else:
+                        raise ValueError(
+                            f"Expected List[str], but found invalid element type in {data}"
+                        )
                 result = _parse_list_type(field, arg_type, data, encoder, targs)
             else:
                 # fallback to builtin parse
@@ -1271,9 +1280,9 @@ cpdef dict processing_fields(object obj, list columns):
             obj.__dict__[name] = value
         if _default is not None:
             value = _handle_default_value(obj, name, value, _default, f._default_callable)
-
         try:
             _encoder = metadata.get('encoder')
+            newval = value
             if f.parser is not None:
                 # If a custom parser is attached to Field, use it
                 try:
@@ -1357,6 +1366,16 @@ cpdef dict processing_fields(object obj, list columns):
                             newval = _handle_dataclass_type(
                                 None, name, value, f._inner_type, as_objects, None
                             )
+                        obj.__dict__[name] = newval
+                    else:
+                        newval = _parse_typing(
+                            f,
+                            _type,
+                            value,
+                            _encoder,
+                            as_objects,
+                            obj
+                        )
                         obj.__dict__[name] = newval
                 else:
                     try:

@@ -212,7 +212,7 @@ def test_actor_with_accounts_validation(as_objects):
         "userid": pgproto.UUID("f47ac10b-58cc-4372-a567-0e02b2c3d479"),
         "name": "Invalid User",
         "account": [
-            {"provider": "twilio", "phone": {"phone": "343317871"}},  # Expecting a string for `phone`
+            {"provider": "twilio", "phone": {"phone": 343317871}},  # Expecting a string for `phone`
         ]
     }
     with pytest.raises(ValueError, match="Invalid type.*phone"):
@@ -238,6 +238,7 @@ def test_actor_with_accounts_validation(as_objects):
             {"provider": "email", "address": "user@example.com"},
         ]
     }
+    # Validate an Account:
     actor = Actor(**valid_data)
     assert actor.name == "Valid User"
     assert isinstance(actor.account, list)

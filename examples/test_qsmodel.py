@@ -71,7 +71,7 @@ class QueryModel(BaseModel):
     dwh_driver: str = Field(required=False, default=None)
     dwh_info: Optional[dict] = Field(required=False, db_type='jsonb')
     dwh_scheduler: Optional[dict] = Field(required=False, db_type='jsonb')
-    host_info: Tuple[str, int] = Field(required=True)
+    host_info: Tuple[str, int] = Field(required=False)
     # Creation Information:
     created_at: datetime = Field(
         required=False,
@@ -100,5 +100,55 @@ class QueryModel(BaseModel):
 try:
     slug = QueryModel(**data)
     print(slug)
+    print('MAPPING > ', slug.more_nested, type(slug.more_nested))
 except ValidationError as e:
     print(e.payload)
+
+
+data_new = {
+    "query_slug": "vision_form_data",
+    "description": None,
+    "source": None,
+    "params": None,
+    "attributes": None,
+    "conditions": {
+        "orgid": "106",
+        "formid": "2681",
+        "lastdate": "CURRENT_DATE",
+        "firstdate": "CURRENT_DATE"
+    },
+    "cond_definition": {
+        "orgid": "integer",
+        "formid": "integer",
+        "lastdate": "date",
+        "firstdate": "date"
+    },
+    "fields": [],
+    "filtering": None,
+    "ordering": [],
+    "grouping": [],
+    "qry_options": None,
+    "h_filtering": False,
+    "query_raw": "-- Insert New query_slug:vision_form_date\nSELECT  fd.*, fv.FormId, f.OrgId, fv.FormVisitId, VV.VisitDateLocal AS VisitDateLocal --in store TZ\nFROM dbo._FormView_{formid}({orgid},16558) fd\nINNER JOIN dbo.FormVisit fv on fv.FormVisitId = fd.FormVisitId\nINNER JOIN vwVisitView VV ON FV.FormVisitId = VV.FormVisitId\nINNER JOIN forms f on fv.FormId = f.FormId\nWHERE ISNULL([000_055],[000_003]) BETWEEN {firstdate} and {lastdate}\n--- end form data",
+    "is_raw": False,
+    "is_cached": False,
+    "cache_timeout": 3600,
+    "cache_refresh": None,
+    "cache_options": None,
+    "program_id": 1,
+    "program_slug": "troc",
+    "provider": "sqlserver",
+    "parser": "SQLParser",
+    "dwh": False,
+    "dwh_driver": None,
+    "dwh_info": None,
+    "dwh_scheduler": None,
+    "created_at": "2021-08-28 15:09:00",
+    "created_by": None,
+    "updated_at": "2023-01-05 11:26:00",
+    "updated_by": None
+}
+
+if __name__ == '__main__':
+    slug = QueryModel(**data_new)
+    print(slug)
