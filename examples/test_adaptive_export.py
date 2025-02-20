@@ -7,7 +7,7 @@ class UserInfo(BaseModel):
     myEmail: str = Field(style='email')
     myTel: str = Field(style='url')
     myPassword: str = Field(style='password')
-    myNumber: str = Field(style='number')
+    myNumber: int = Field(style='number')
     isSuper: bool = Field(label='Super User')
 
     class Meta:
