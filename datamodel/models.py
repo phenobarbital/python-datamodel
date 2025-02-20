@@ -798,6 +798,151 @@ class ModelMixin:
         data.pop("@context", None)
         data.pop("@type", None)
 
+    @classmethod
+    def to_adaptive(cls, as_dict: bool = False, locale: Any = None):
+        """
+        Convert the Model to an Adaptive-Card compatible representation.
+
+        This method generates an Adaptive-Card that describes the structure and constraints
+        of the Model. It includes information about fields, their types,
+        validation rules, and other metadata.
+
+        Args:
+            as_dict (bool, optional): If True,
+                returns the schema as a Python dictionary.
+                If False, returns the schema as a JSON-encoded string.
+                Defaults to False.
+            locale (Any, optional):
+                The locale to use for internationalization of schema
+                elements like descriptions and labels. Defaults to None.
+
+        Returns:
+            Union[dict, str]:
+                The JSON-valid Adaptive-Card representation of the Model. If as_dict is True,
+                returns a Python dictionary. Otherwise, returns a JSON-encoded string.
+
+        Note:
+            This method caches the computed schema in the __computed_schema__ attribute
+            of the class for subsequent calls.
+        """
+        # Check if schema is already computed and cached.
+        if hasattr(cls, '__computed_adaptive__'):
+            return cls.__computed_adaptive__ if as_dict else json_encoder(
+                cls.__computed_adaptive__
+            )
+
+        # Build basic schema attributes (title, description, display_name, etc.)
+        title, description, display_name, table, endpoint, schema = cls._build_schema_basics(locale)  # pylint: disable=C0301 # noqa
+        settings = cls._build_settings(locale)
+        endpoint_kwargs = {"endpoint": endpoint} if endpoint else {}
+
+        adaptive_card = {
+            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+            "type": "AdaptiveCard",
+            "version": "1.0",
+            "body": [],
+            "actions": []
+        }
+        card_body = adaptive_card["body"]
+        card_actions = adaptive_card["actions"]
+
+        # Adding the Title:
+        card_body.append({
+            "type": "TextBlock",
+            "size": "Medium",
+            "weight": "Bolder",
+            "text": title or table
+        })
+
+        # Adding the Description:
+        card_body.append({
+            "type": "TextBlock",
+            "text": description,
+            "wrap": True
+        })
+
+        columns = cls.columns(cls).items()
+        for name, field in columns:
+            ui_help = cls._get_metadata(cls, field, 'ui_help', locale=None)
+            placeholder = cls._get_metadata(cls, field, 'placeholder', locale=None)
+            label = cls._get_metadata(cls, field, 'label', locale=None)
+            title = cls._get_metadata(cls, field, 'title', locale=None)
+            if not title:
+                title = name.replace('_', ' ').title()
+            ui_widget = field.metadata.get('ui_widget', None)
+            style = field.metadata.get('style', None)
+            is_required = field.metadata.get('required', False)
+
+            field_type = field.type
+            adaptive_input = None
+
+            # Create Label TextBlock
+            label_text = label or title  # Default label
+            label_block = {
+                "type": "TextBlock",
+                "text": label_text,
+                "wrap": True
+            }
+            card_body.append(label_block)
+
+            common_input = {
+                "id": name,
+                "isRequired": is_required,
+            }
+            if field.repr is False:  # Using metadata['repr'] to set "isVisible"
+                common_input["isVisible"] = False
+
+            # Map field types to Adaptive Card Input types
+            if field_type is str:
+                adaptive_input = {
+                    "type": "Input.Text",
+                    "placeholder": ui_help or placeholder, # noqa
+                }
+                if ui_widget == 'textarea':
+                    adaptive_input["isMultiline"] = True
+                if style:  # e.g., email, url, password
+                    adaptive_input["style"] = style
+
+            elif field_type is int or field_type is float:
+                adaptive_input = {
+                    "type": "Input.Number",
+                }
+
+            elif isinstance(field_type, EnumMeta):
+                adaptive_input = {
+                    "type": "Input.ChoiceSet",
+                    "choices": [
+                        {"title": str(e.value), "value": str(e.value)} for e in field_type  # noqa
+                    ]  # Convert Enum to choices
+                }
+                if field.default is not _MISSING_TYPE:
+                    adaptive_input["value"] = str(field.default.value)
+
+            elif field_type is bool:
+                adaptive_input = {
+                    "type": "Input.Toggle",
+                    "title": label_text,  # Use label as title for Toggle
+                    "valueOff": "false",  # Adaptive Cards convention for boolean false
+                    "valueOn": "true",  # Adaptive Cards convention for boolean true
+                    "value": "true" if field.default is True else "false"
+                }
+                # No need for separate Label TextBlock for Toggle as title is used.
+
+            if adaptive_input:
+                adaptive_input.update(common_input)
+                card_body.append(adaptive_input)
+
+        # Add Submit Action
+        # Use Meta.submit or default to "OK"
+        submit_action = {
+            "type": "Action.Submit",
+            "title": cls._get_meta_value(cls, 'submit', fallback='OK', locale=None)
+        }
+        card_actions.append(submit_action)
+
+        # Cache the computed schema for subsequent calls
+        cls.__computed_adaptive__ = adaptive_card
+        return adaptive_card if as_dict else json_encoder(adaptive_card)
 
 class Model(ModelMixin, metaclass=ModelMeta):
     """Model.
