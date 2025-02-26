@@ -1,8 +1,10 @@
 from typing import Union, List
 import uuid
+from bson import ObjectId
 from datetime import datetime
-from datamodel import BaseModel, Column
+from datamodel import BaseModel, Column, Field
 from datamodel.exceptions import ValidationError
+
 
 
 def auto_uuid(*args, **kwargs):
@@ -65,10 +67,21 @@ user = {
     ]
 }
 
+def to_objid(value):
+    if isinstance(value, str):
+        return ObjectId(value.encode('ascii'))
+    return value
+
+class Dataset(BaseModel):
+    _id: ObjectId = Field(encoder=to_objid)
+    name: str = Field(required=True)
+
 
 if __name__ == '__main__':
     user = Actor(**user)
-    print(f"User: ID: {user.userid}, Name: {user.name}, age: {user.age}, accounts: {user.account!r}, created: {user.created_at}")
+    print(
+        f"User: ID: {user.userid}, Name: {user.name}, age: {user.age}, accounts: {user.account!r}, created: {user.created_at}"
+    )
     print(f'Types: {type(user.created_at)}')
     try:
         # Test if name is required:
@@ -120,3 +133,18 @@ if __name__ == '__main__':
         print(
             f"ValidationError: {ex.payload}"
         )
+    try:
+        print('================================================================')
+        dataset = Dataset(_id='123456789012', name="Test Dataset")
+        print(dataset._id, dataset.name)
+        print(' == Convert into JSON ===')
+        data = dataset.to_json()
+        print(data)
+        print(' == Revert Back ===')
+        d = Dataset(**dataset.to_dict())
+        print(d._id, type(d._id))
+    except ValidationError as ex:
+        print(f"Error: {ex}", type(ex))
+        print(f"ValidationError: {ex.payload}")
+    except ValueError as ex:
+        print(f"Error: {ex}", type(ex))

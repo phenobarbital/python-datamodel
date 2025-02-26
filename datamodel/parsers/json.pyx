@@ -60,6 +60,13 @@ cdef inline bint is_subclassof(object obj, object cls):
         return False
     return res != 0
 
+cdef inline bint is_objid(object obj):
+    return (
+        getattr(obj, "__class__", None) is not None and
+        obj.__class__.__module__ == "bson.objectid" and
+        obj.__class__.__name__ == "ObjectId"
+    )
+
 
 ORJSON_DEFAULT_OPTIONS = (
     orjson.OPT_SERIALIZE_NUMPY |
@@ -122,6 +129,8 @@ cdef class JSONContent:
                 return obj.name
         elif isinstance(obj, Binary):  # Handle bytea column from PostgreSQL
             return str(obj)  # Convert Binary object to string
+        elif is_objid(obj):
+            return str(obj)
         elif isinstance(obj, Field):
             if has_attribute(obj, 'to_dict'):
                 return obj.to_dict()

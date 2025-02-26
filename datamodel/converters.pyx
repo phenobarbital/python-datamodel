@@ -662,6 +662,12 @@ cpdef object parse_basic(object T, object data, object encoder = None):
                 raise ValueError(
                     f"Error parsing type {T}, {e}"
                 )
+            except AttributeError as e:
+                if data is None:
+                    return None
+                raise AttributeError(
+                    f"Attribute Error for Encoder {encoder!s} for type {T}: {e}"
+                ) from e
     # Using the encoders for basic types:
     try:
         return encoders[T](data)
