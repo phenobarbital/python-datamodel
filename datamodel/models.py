@@ -155,8 +155,15 @@ class ModelMixin:
         return self.__columns__[name]
 
     def __repr__(self) -> str:
-        f_repr = ", ".join(f"{f.name}={getattr(self, f.name)}" for f in fields(self))
-        return f"{self.__class__.__name__}({f_repr})"
+        field_strs = []
+        for field_name in self.__fields__:
+            try:
+                value = getattr(self, field_name)
+            except AttributeError:
+                # If this field doesn't exist on the instance, ignore it
+                continue
+            field_strs.append(f"{field_name}={value!r}")
+        return f"{self.__class__.__name__}({', '.join(field_strs)})"
 
     def pop(self, key: str, default: Any = _MISSING_TYPE) -> Any:
         """
