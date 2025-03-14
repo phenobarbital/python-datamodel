@@ -10,10 +10,19 @@ class TupleModel(BaseModel):
     hetero: Tuple[str, int] = Field(required=True)
     # Homogeneous tuple: only floats allowed (any length)
     homo: Tuple[float, ...] = Field(required=True)
+    # Optional homogeneous tuple
+    optional_homo: Optional[Tuple[float, ...]] = Field(required=False)
+
+def test_required_tuple_fields():
+    payload = {
+        "hetero": ("test", 123), # required field
+    }
+    with pytest.raises(ValueError):
+        TupleModel(**payload)
 
 def test_heterogeneous_tuple():
     payload = {
-        "hetero": ("test", "123"),  # note the second element is a string that should be converted to in
+        "hetero": ("test", "123"),  # note the second element is a string that should be converted to int
     }
     instance = TupleModel(**payload, homo=(1.0, 2.0))  # provide homo field as floats
     assert isinstance(instance.hetero, tuple)
@@ -42,6 +51,16 @@ def test_invalid_tuple_length():
     }
     with pytest.raises(ValidationError):
         TupleModel(**payload)
+
+def test_optional_tuple():
+    payload = {
+        "hetero": ("test", 123),
+        "homo": (1.1, 2.2),
+        "optional_homo": (1.1, 2.2)
+    }
+    instance = TupleModel(**payload)
+    assert instance.optional_homo == (1.1, 2.2)
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

@@ -5,10 +5,18 @@ from typing import Union, List, Optional
 from dataclasses import dataclass, fields, is_dataclass
 import pytest
 import orjson
+from bson import ObjectId
 import asyncpg.pgproto.pgproto as pgproto
 from datamodel import Field, BaseModel, Column
 from datamodel.exceptions import ValidationError
 
+
+def to_objid(value):
+    return ObjectId(value.encode('ascii'))
+
+class Dataset(BaseModel):
+    _id: ObjectId = Field(encoder=to_objid)
+    name: str = Field(required=True)
 
 def auto_uid():
     return uuid.uuid4()
@@ -212,7 +220,7 @@ def test_actor_with_accounts_validation(as_objects):
         "userid": pgproto.UUID("f47ac10b-58cc-4372-a567-0e02b2c3d479"),
         "name": "Invalid User",
         "account": [
-            {"provider": "twilio", "phone": {"phone": 343317871}},  # Expecting a string for `phone`
+            {"provider": "twilio", "phone": {"phone": 343317871}},  # Expecting a string for `phone`, provided a Dict
         ]
     }
     with pytest.raises(ValueError, match="Invalid type.*phone"):

@@ -36,5 +36,6 @@ c2 = Customer(name='Hola', age=33, is_active=True)
 
 print('Is Instance: ', isinstance(c1, HazelPortable))
 print('Is a Subclass: ', issubclass(Customer, HazelPortable))
+print('Have SubClass Attribute: ', c2.has_column('factory_id'))
 
 print('EQUALITY :: ', c1 == c2)
