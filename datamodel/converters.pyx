@@ -2,7 +2,7 @@
 # Copyright (C) 2018-present Jesus Lara
 #
 import re
-from typing import get_args, get_origin, Union, Optional, List, NewType
+from typing import get_args, get_origin, Union, Optional, List, NewType, Literal
 from collections.abc import Sequence, Mapping, Callable, Awaitable
 import types
 from dataclasses import _MISSING_TYPE, _FIELDS, fields
@@ -80,13 +80,21 @@ cpdef str to_string(object obj):
             return obj.decode()
         except UnicodeDecodeError as e:
             raise ValueError(f"Cannot decode bytes: {e}") from e
+    if isinstance(obj, (int, float, Decimal)):
+        # its a number
+        return str(obj)
     if callable(obj):
         # its a function callable returning a value
         try:
-            return str(obj())
+            val = obj()
+            # Recursively call to_string on that result:
+            return to_string(val)
         except Exception:
             pass
-    return str(obj)
+    # For any other arbitrary type, explicitly fail:
+    raise ValueError(
+        f"Cannot convert object of type {type(obj).__name__} to string."
+    )
 
 cpdef object to_uuid(object obj):
     """Returns a UUID version of a str column.
@@ -1123,6 +1131,36 @@ cdef object _parse_typing(
         # fallback to builtin parse
         return _parse_builtin_type(field, T, data, encoder)
 
+cdef object _parse_literal_type(
+    object field,
+    object T,
+    object data,
+    object encoder
+):
+    """
+    _parse_literal_type parses a typing.Literal[...] annotation.
+
+    :param field: A Field object (or similar) containing metadata
+    :param T: The full annotated type (e.g. typing.Literal['text/plain', 'text/html']).
+    :param data: The input value to check.
+    :param encoder: Optional encoder (not usually used for literal).
+    :return: Returns 'data' if it matches one of the literal choices, otherwise raises ValueError.
+    """
+
+    # Each element in `targs` is a valid literal value, e.g. a string, int, etc.
+    # If data is exactly in that set, it's valid.
+    cdef tuple targs = field.args
+    cdef tuple i
+    for arg in targs:
+        if data == arg:
+            return data
+
+    # If we get here, data didn't match any literal value
+    raise ValueError(
+        f"Literal parse error for field '{field.name}': "
+        f"value={data!r} is not one of {targs}"
+    )
+
 cdef object _handle_dataclass_type(
     object field,
     str name,
@@ -1385,6 +1423,10 @@ cpdef dict processing_fields(object obj, list columns):
                 if f.is_dc:
                     # means that is_dataclass(T)
                     newval = _handle_dataclass_type(None, name, value, _type, as_objects, None)
+                    obj.__dict__[name] = newval
+                elif f.origin is Literal:
+                    # e.g. Literal[...]
+                    newval = _parse_literal_type(f, _type, value, _encoder)
                     obj.__dict__[name] = newval
                 elif f.origin is list:
                     # Other typical case is when is a List of primitives.

@@ -1,7 +1,7 @@
 # cython: language_level=3, embedsignature=True, initializedcheck=False
 # Copyright (C) 2018-present Jesus Lara
 #
-from typing import get_args, get_origin, Union, Optional
+from typing import get_args, get_origin, Union, Optional, Literal
 from collections.abc import Callable, Awaitable
 import typing
 import asyncio
@@ -263,6 +263,7 @@ cpdef dict _validation(
     cdef bint _valid = False
     cdef object field_meta = F.metadata
     cdef dict error = {}
+    cdef list allowed_values = []
 
     if not annotated_type:
         annotated_type = F.type
@@ -307,6 +308,16 @@ cpdef dict _validation(
         return {}
     elif field_type == 'type':
         return validate_type(F, name, value, annotated_type, val_type)
+    elif F.origin is Literal:
+        allowed_values = list(F.args)
+        if value not in allowed_values:
+            return _create_error(
+                name,
+                value,
+                f"Invalid value for {annotated_type}.{name}, expected one of {allowed_values}",
+                val_type,
+                annotated_type
+            )
     elif field_type == 'typing' or hasattr(annotated_type, '__module__') and annotated_type.__module__ == 'typing':
         if F.origin is tuple:
             # Check if we are in the homogeneous case: Tuple[T, ...]
