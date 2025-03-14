@@ -138,6 +138,119 @@ cdef object get_primary_key_field(object annotated_type, str name, object field_
             return f
     return None
 
+cdef dict _validate_union_field(
+    object F,           # Field object (your internal representation)
+    str name,           # Field name
+    object value,       # Actual runtime value
+    object annotated_type  # The declared type (e.g. Union[str, List[str]], etc.)
+):
+    """
+    Validates a complex or nested Union (including Optional and nested structures)
+    Returns {} if validation passes, or a dict describing the error.
+    """
+    cdef object origin = get_origin(annotated_type)
+    cdef tuple targs = get_args(annotated_type)
+    cdef object subtype_origin = None
+    cdef list errors = []
+    cdef dict sub_error
+    cdef tuple list_args = ()
+    cdef object inner_type = None
+    cdef list item_errors = []
+    cdef tuple dict_args = ()
+    cdef object key_type = None
+    cdef object val_type = None
+
+    # 1) Handle Optional (Union[..., None]) if present
+    if type(None) in targs and value is None:
+        return {}  # Valid because it's None
+
+    # 2) Try each subtype in the Union
+    for subtype in targs:
+        # Skip NoneType if it isn't our value
+        if subtype is type(None):
+            continue
+
+        subtype_origin = get_origin(subtype)
+
+        try:
+            # 2a) If there's no origin, it's a simple or direct type (str, int, custom class, etc.)
+            if subtype_origin is None:
+                # If it's just a normal type, check with isinstance
+                if isinstance(value, subtype):
+                    # PASS: we found a valid subtype
+                    return {}
+                # Not matching? We'll record an error & continue
+                errors.append(f"Value is not instance of {subtype}")
+
+            # 2b) If it's a nested Union, validate recursively
+            elif subtype_origin is Union:
+                sub_error = _validate_union_field(F, name, value, subtype)
+                if not sub_error:
+                    return {}  # success
+                errors.append(f"Nested union check failed for {subtype}: {sub_error}")
+
+            # 2c) If it's a list origin, e.g. List[str]
+            elif subtype_origin is list:
+                list_args = get_args(subtype)
+                if not isinstance(value, list):
+                    errors.append(f"Expected list, got {type(value).__name__}")
+                else:
+                    # Validate each item if you like (e.g. ensure each item is str)
+                    inner_type = list_args[0]
+                    item_errors = []
+                    for idx, item in enumerate(value):
+                        # For simple inner type
+                        if get_origin(inner_type) is None:
+                            if not isinstance(item, inner_type):
+                                item_errors.append(f"Index {idx}: {type(item).__name__} != {inner_type}")
+                        else:
+                            # Possibly nested structure again
+                            sub_error = _validate_union_field(F, f"{name}[{idx}]", item, inner_type)
+                            if sub_error:
+                                item_errors.append(str(sub_error))
+                    if not item_errors:
+                        return {}  # All items validated
+                    errors.append(f"List item errors: {item_errors}")
+
+            # 2d) If it's a dict origin, e.g. Dict[str, int] or Dict[str, Union[int, ...]]
+            elif subtype_origin is dict:
+                dict_args = get_args(subtype)  # (key_type, value_type)
+                key_type = dict_args[0]
+                val_type = dict_args[1]
+                if not isinstance(value, dict):
+                    errors.append(f"Expected dict, got {type(value).__name__}")
+                else:
+                    dict_errors = []
+                    # Validate each key, value
+                    for k, v in value.items():
+                        # Check key
+                        if not isinstance(k, key_type):
+                            dict_errors.append(f"Key {k!r} type mismatch; expected {key_type}")
+                        # Then check value
+                        sub_error = _validate_union_field(F, f'{name}[\"{k}\"]', v, val_type)
+                        if sub_error:
+                            dict_errors.append(f"For key={k}: {sub_error}")
+                    if not dict_errors:
+                        return {}  # success
+                    errors.append(f"Dict item errors: {dict_errors}")
+
+            else:
+                # If you have other complex type origins (tuple, etc.), handle them similarly
+                errors.append(f"Unhandled type origin: {subtype_origin} for subtype={subtype}")
+
+        except Exception as exc:
+            errors.append(f"Exception in subtype {subtype}: {exc}")
+
+    # 3) If no subtype matched, create an error record
+    return _create_error(
+        name,
+        value,
+        f"Invalid type for {annotated_type}.{name}, expected one of {targs}",
+        type(value),
+        annotated_type,
+        errors
+    )
+
 cpdef dict _validation(
     object F,
     str name,
@@ -156,8 +269,6 @@ cpdef dict _validation(
     elif isinstance(annotated_type, Field):
         annotated_type = annotated_type.type
 
-    # print(' VAL > ', name, 'Field : ', F, ' VALUE: ', value, ' TYPE: ', annotated_type)
-
     if fn := F.metadata.get('validator', None):
         try:
             result = fn(F, value, annotated_type, val_type)
@@ -170,14 +281,22 @@ cpdef dict _validation(
     # If field_type is known, short-circuit certain checks
     if F.type == Text:
         if val_type != str:
-            return _create_error(name, value, f'invalid type for {annotated_type}.{name}, expected {annotated_type}', val_type, annotated_type)
+            return _create_error(
+                name,
+                value,
+                f'invalid type for {annotated_type}.{name}, expected {annotated_type}',
+                val_type,
+                annotated_type
+            )
         return {}
     # if inspect.isclass(annotated_type) and issubclass(annotated_type, Enum):
     if is_enum_class(annotated_type):
         return validate_enum(name, value, annotated_type, val_type)
     if F.origin is Callable:
         if not is_callable(value):
-            return _create_error(name, value, f'Invalid function type, expected {annotated_type}', val_type, annotated_type)
+            return _create_error(
+                name, value, f'Invalid function type, expected {annotated_type}', val_type, annotated_type
+            )
         return {}
     elif F.origin is Awaitable:
         if asyncio.iscoroutinefunction(value):

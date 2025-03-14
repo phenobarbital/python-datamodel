@@ -877,10 +877,11 @@ cdef object _parse_union_type(
     or raise an error if all fail.
     If T is Optional[...] (i.e. a Union with NoneType), unwrap it.
     """
-    cdef object errors = []
+    cdef str error = None
     cdef object non_none_arg = None
     cdef tuple inner_targs = None
     cdef bint is_typing = False
+
     # If the union includes NoneType, unwrap it and use only the non-None type.
     if origin == Union and type(None) in targs:
         for arg in targs:
@@ -904,32 +905,41 @@ cdef object _parse_union_type(
         else:
             pass
     for arg_type in targs:
+        # Iterate over all subtypes of Union:
         try:
             if isinstance(data, list):
                 if arg_type is str:
                     # Ensure all elements in the list are strings
                     if all(isinstance(item, str) for item in data):
                         return data
+                else:
+                    return _parse_list_type(field, arg_type, data, encoder, targs)
+            else:
+                subtype_origin = get_origin(arg_type)
+                if subtype_origin is None:
+                    if isinstance(data, arg_type):
+                        return data
                     else:
                         raise ValueError(
-                            f"Expected List[str], but found invalid element type in {data}"
+                            f"Invalid type for *{field.name}* with {type(data)}, expected {arg_type}"
                         )
-                result = _parse_list_type(field, arg_type, data, encoder, targs)
-            else:
                 # fallback to builtin parse
-                result = _parse_typing(
+                return _parse_typing(
                     field,
                     arg_type,
                     data,
                     encoder,
                     False
                 )
-            return result
+        except ValueError as exc:
+            error = f"{field.name}: {exc}"
         except Exception as exc:
-            errors.append(str(exc))
+            error = f"Parse Error on {field.name}, {arg_type}: {exc}"
 
     # If we get here, all union attempts failed
-    raise ValueError(f"Union parse failed for data={data}, errors={errors}")
+    raise ValueError(
+        f"Parse failed for data={data}, error = {error}"
+    )
 
 cdef object _parse_type(
     object field,
@@ -1035,6 +1045,16 @@ cdef object _parse_typing(
                 # Recursively parse the real_type exactly as if it weren't wrapped in Optional[…].
                 return _parse_typing(field, real_type, data, encoder, as_objects, parent)
         elif isinstance(data, list):
+            return _parse_union_type(
+                field,
+                T,
+                name,
+                data,
+                encoder,
+                origin,
+                targs
+            )
+        else:
             return _parse_union_type(
                 field,
                 T,

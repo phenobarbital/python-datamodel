@@ -43,8 +43,10 @@ class BaseModel(ModelMixin, metaclass=ModelMeta):
         if errors := processing_fields(self, columns):
             if self.Meta.strict is True:
                 raise ValidationError(
-                    f"""{self.modelName}: There are errors in Model. \
-                        Hint: please check the "payload" attribute in the exception.""",
+                    (
+                        f"{self.modelName}: There are errors in Model.\n"
+                        "Hint: please check the 'payload' attribute in the exception."
+                    ),
                     payload=errors
                 )
             object.__setattr__(self, '__errors__', errors)

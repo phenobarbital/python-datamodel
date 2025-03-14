@@ -305,15 +305,23 @@ class ModelMeta(type):
             # Step 1: Collect fields from parent classes
             for base in bases:
                 cols.update(getattr(base, '__columns__', {}))
-
-                if hasattr(base, '__columns__'):
-                    cols.update(base.__columns__)  # Merge parent fields
                 if hasattr(base, '__field_types__'):
                     _types |= base.__field_types__
                 if hasattr(base, '__typing_args__'):
                     _typing_args |= base.__typing_args__
                 if hasattr(base, '__aliases__'):
                     aliases |= base.__aliases__
+
+            # Now initialize subclass-specific fields
+            new_cols, new_types, new_typing_args, new_aliases = cls._initialize_fields(
+                attrs, annotations, strict
+            )
+
+            # Merge new fields with inherited fields
+            cols.update(new_cols)
+            _types.update(new_types)
+            _typing_args.update(new_typing_args)
+            aliases.update(new_aliases)
 
             # Store computed results in cache
             cls._base_class_cache[base_key] = {
@@ -322,25 +330,6 @@ class ModelMeta(type):
                 '_typing_args': _typing_args.copy(),
                 'aliases': aliases.copy(),
             }
-
-        annotations = attrs.get('__annotations__', {})
-        with contextlib.suppress(TypeError, AttributeError, KeyError):
-            strict = attrs['Meta'].strict
-
-        cls.__field_types__ = _types
-        cls.__typing_args__ = _typing_args
-        cls.__aliases__ = aliases
-
-        # Initialize the fields
-        new_cols, new_types, new_typing_args, new_aliases = cls._initialize_fields(
-            attrs, annotations, strict
-        )
-
-        # Step 3: Merge new fields with inherited fields
-        cols.update(new_cols)
-        _types.update(new_types)
-        _typing_args.update(new_typing_args)
-        aliases.update(new_aliases)
 
         _columns = cols.keys()
         cls.__slots__ = tuple(_columns)
