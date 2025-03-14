@@ -67,7 +67,8 @@ def _dc_method_setattr_(self, name: str, value: Any) -> None:
     Simplified __setattr__ for dataclass-like objects.
 
     This version separates the known-field assignment (with optional validation)
-    from the “extra field” assignment and uses a helper to perform conversion/validation.
+    from the “extra field” assignment and uses a helper
+    to perform conversion/validation.
     """
     if (name.startswith('__') and name.endswith('__')):
         # or check explicitly if name in ('__values__', '__valid__', ...)
@@ -152,157 +153,194 @@ class ModelMeta(type):
     __fields__: List
     __field_types__: List
     __aliases__: Dict
+    # Class-level cache
+    _base_class_cache = {}
 
-    def __new__(cls, name, bases, attrs, **kwargs):  # noqa
+    @staticmethod
+    def _initialize_fields(attrs, annotations, strict):
         cols = OrderedDict()
-        strict = False
-        cls.__field_types__ = {}
-        cls.__typing_args__ = {}
-        cls.__aliases__ = {}
-        _types = {}
+        _types_local = {}
         _typing_args = {}
         aliases = {}
+        for field, _type in annotations.items():
+            if isinstance(_type, InitVar) or _type == InitVar:
+                # Skip InitVar fields;
+                # they should not be part of the dataclass instance
+                continue
+            if isinstance(_type, NewType):
+                # Get the corresponding type of the NewType.
+                _type = _type.__supertype__
 
-        if "__annotations__" in attrs:
-            annotations = attrs.get('__annotations__', {})
-            with contextlib.suppress(TypeError, AttributeError, KeyError):
-                strict = attrs['Meta'].strict
+            origin = get_origin(_type)
+            if origin is ClassVar:
+                continue
 
-            @staticmethod
-            def _initialize_fields(attrs, annotations, strict):
-                cols = OrderedDict()
-                _types_local = {}
-                _typing_args = {}
-                aliases = {}
-                for field, _type in annotations.items():
-                    if isinstance(_type, InitVar) or _type == InitVar:
-                        # Skip InitVar fields;
-                        # they should not be part of the dataclass instance
-                        continue
-                    if isinstance(_type, NewType):
-                        # Get the corresponding type of the NewType.
-                        _type = _type.__supertype__
-
-                    origin = get_origin(_type)
-                    if origin is ClassVar:
-                        continue
-
-                    # Check if the field's default value is a descriptor
-                    default_value = attrs.get(field, None)
-                    is_descriptor = any(
-                        hasattr(default_value, method)
-                        for method in ("__get__", "__set__", "__delete__")
-                    )
-                    # Handle the descriptor field
-                    if is_descriptor:
-                        default_value._type_category = 'descriptor'
-                        cols[field] = default_value
-                        _types_local[field] = 'descriptor'
-                        continue
-
-                    if isinstance(_type, Field):
-                        _type = _type.type
-                    df = attrs.get(
-                        field,
-                        Field(type=_type, required=False, default=None)
-                    )
-                    if df is not None and isinstance(df, Field):
-                        alias = df.metadata.get("alias", None)
-                        if alias:
-                            aliases[alias] = field
-                    if not isinstance(df, Field):
-                        df = Field(required=False, type=_type, default=df)
-                    df.name = field
-                    df.type = _type
-
-                    # Cache reflection info so we DON’T need to call
-                    # get_origin/get_args repeatedly:
-                    args = get_args(_type)
-                    _default = df.default
-                    _is_dc = is_dataclass(_type)
-                    _is_prim = is_primitive(_type)
-                    _is_alias = isinstance(_type, GenericAlias)
-                    _is_typing = hasattr(_type, '__module__') and _type.__module__ == 'typing'  # noqa
-
-                    # Store the type info in the field object:
-                    df.is_dc = _is_dc
-                    df.is_primitive = _is_prim
-                    df.is_typing = _is_typing
-                    df.origin = origin
-                    df.args = args
-                    df.type_args = getattr(_type, '__args__', None)
-                    df._default_callable = callable(_default)
-                    # Current Field have an Encoder Function.
-                    custom_encoder = df.metadata.get("encoder")
-                    try:
-                        df.parser = encoders[_type]
-                    except (TypeError, KeyError):
-                        df.parser = None
-                    if custom_encoder:
-                        df.parser = lambda value, _type=_type, encoder=custom_encoder: parse_basic(_type, value, encoder)  # noqa
-                    # Caching Validator:
-                    try:
-                        df.validator = validators[_type]
-                    except (KeyError, TypeError):
-                        df.validator = None
-
-                    # check type of field:
-                    if _is_prim:
-                        _type_category = 'primitive'
-                    elif origin == type:
-                        _type_category = 'type'
-                    elif _is_dc:
-                        _type_category = 'dataclass'
-                    elif _is_typing or _is_alias:  # noqa
-                        if df.origin is not None and (df.origin is list and df.args):
-                            df._inner_targs = df.args
-                            df._inner_type = args[0]
-                            df._inner_origin = get_origin(df._inner_type)
-                            df._typing_args = get_args(df._inner_type)
-                            df._inner_is_dc = is_dataclass(df._inner_type)
-                            try:
-                                df._encoder_fn = encoders[df._inner_type]
-                            except (TypeError, KeyError):
-                                df._encoder_fn = None
-                        if origin is list:
-                            df._inner_targs = df.args
-                            df._inner_type = args[0]
-                            try:
-                                df._encoder_fn = encoders[df._inner_type]
-                            except (TypeError, KeyError):
-                                df._encoder_fn = None
-                        elif origin is Union:
-                            df._inner_targs = df.args
-                            df._inner_type = args[0]
-                            df._inner_is_dc = is_dataclass(df._inner_type)
-                            df._inner_priv = is_primitive(df._inner_type)
-                            df._inner_origin = get_origin(df._inner_type)
-                            df._typing_args = get_args(df._inner_type)
-                        _type_category = 'typing'
-                    elif isclass(_type):
-                        _type_category = 'class'
-                    # elif _is_alias:
-                    #    _type_category = 'typing'
-                    else:
-                        # TODO: making parser for complex types
-                        _type_category = 'complex'
-                    _types_local[field] = _type_category
-                    df._type_category = _type_category
-
-                    # Store them in a dict keyed by field name:
-                    _typing_args[field] = (origin, args)
-                    # Assign the field object to the attrs so dataclass can pick it up
-                    attrs[field] = df
-                    cols[field] = df
-                return cols, _types_local, _typing_args, aliases
-
-            # Initialize the fields
-            cols, _types, _typing_args, aliases = _initialize_fields(
-                attrs, annotations, strict
+            # Check if the field's default value is a descriptor
+            default_value = attrs.get(field, None)
+            is_descriptor = any(
+                hasattr(default_value, method)
+                for method in ("__get__", "__set__", "__delete__")
             )
+            # Handle the descriptor field
+            if is_descriptor:
+                default_value._type_category = 'descriptor'
+                cols[field] = default_value
+                _types_local[field] = 'descriptor'
+                continue
+
+            if isinstance(_type, Field):
+                _type = _type.type
+            df = attrs.get(
+                field,
+                Field(type=_type, required=False, default=None)
+            )
+            if df is not None and isinstance(df, Field):
+                if alias := df.metadata.get("alias", None):
+                    aliases[alias] = field
+            if not isinstance(df, Field):
+                df = Field(required=False, type=_type, default=df)
+            df.name = field
+            df.type = _type
+
+            # Cache reflection info so we DON’T need to call
+            # get_origin/get_args repeatedly:
+            args = get_args(_type)
+            _default = df.default
+            _is_dc = is_dataclass(_type)
+            _is_prim = is_primitive(_type)
+            _is_alias = isinstance(_type, GenericAlias)
+            _is_typing = hasattr(_type, '__module__') and _type.__module__ == 'typing'  # noqa
+
+            # Store the type info in the field object:
+            df.is_dc = _is_dc
+            df.is_primitive = _is_prim
+            df.is_typing = _is_typing
+            df.origin = origin
+            df.args = args
+            df.type_args = getattr(_type, '__args__', None)
+            df._default_callable = callable(_default)
+            # Current Field have an Encoder Function.
+            custom_encoder = df.metadata.get("encoder")
+            try:
+                df.parser = encoders[_type]
+            except (TypeError, KeyError):
+                df.parser = None
+            if custom_encoder:
+                df.parser = lambda value, _type=_type, encoder=custom_encoder: parse_basic(_type, value, encoder)  # noqa
+            # Caching Validator:
+            try:
+                df.validator = validators[_type]
+            except (KeyError, TypeError):
+                df.validator = None
+
+            # check type of field:
+            if _is_prim:
+                _type_category = 'primitive'
+            elif origin == type:
+                _type_category = 'type'
+            elif _is_dc:
+                _type_category = 'dataclass'
+            elif _is_typing or _is_alias:  # noqa
+                if df.origin is not None and (df.origin is list and df.args):
+                    df._inner_targs = df.args
+                    df._inner_type = args[0]
+                    df._inner_origin = get_origin(df._inner_type)
+                    df._typing_args = get_args(df._inner_type)
+                    df._inner_is_dc = is_dataclass(df._inner_type)
+                    try:
+                        df._encoder_fn = encoders[df._inner_type]
+                    except (TypeError, KeyError):
+                        df._encoder_fn = None
+                if origin is list:
+                    df._inner_targs = df.args
+                    df._inner_type = args[0]
+                    try:
+                        df._encoder_fn = encoders[df._inner_type]
+                    except (TypeError, KeyError):
+                        df._encoder_fn = None
+                elif origin is Union:
+                    df._inner_targs = df.args
+                    df._inner_type = args[0]
+                    df._inner_is_dc = is_dataclass(df._inner_type)
+                    df._inner_priv = is_primitive(df._inner_type)
+                    df._inner_origin = get_origin(df._inner_type)
+                    df._typing_args = get_args(df._inner_type)
+                _type_category = 'typing'
+            elif isclass(_type):
+                _type_category = 'class'
+            # elif _is_alias:
+            #    _type_category = 'typing'
+            else:
+                # TODO: making parser for complex types
+                _type_category = 'complex'
+            _types_local[field] = _type_category
+            df._type_category = _type_category
+
+            # Store them in a dict keyed by field name:
+            _typing_args[field] = (origin, args)
+            # Assign the field object to the attrs so dataclass can pick it up
+            attrs[field] = df
+            cols[field] = df
+        return cols, _types_local, _typing_args, aliases
+
+    def __new__(cls, name, bases, attrs, **kwargs):  # noqa
+        annotations = attrs.get('__annotations__', {})
+        base_key = (tuple(bases), tuple(sorted(annotations.items())))
+        strict = getattr(attrs.get('Meta', Meta), 'strict', False)
+
+        if base_key in cls._base_class_cache:
+            # Check the Cache First:
+            cached = cls._base_class_cache[base_key]
+            cols = cached['cols'].copy()
+            _types = cached['types'].copy()
+            _typing_args = cached['_typing_args'].copy()
+            aliases = cached['aliases'].copy()
         else:
-            # if no __annotations__, cols is empty:
+            # Compute field from Bases:
             cols = OrderedDict()
+            _types = {}
+            _typing_args = {}
+            aliases = {}
+
+            # Step 1: Collect fields from parent classes
+            for base in bases:
+                cols.update(getattr(base, '__columns__', {}))
+
+                if hasattr(base, '__columns__'):
+                    cols.update(base.__columns__)  # Merge parent fields
+                if hasattr(base, '__field_types__'):
+                    _types |= base.__field_types__
+                if hasattr(base, '__typing_args__'):
+                    _typing_args |= base.__typing_args__
+                if hasattr(base, '__aliases__'):
+                    aliases |= base.__aliases__
+
+            # Store computed results in cache
+            cls._base_class_cache[base_key] = {
+                'cols': cols.copy(),
+                'types': _types.copy(),
+                '_typing_args': _typing_args.copy(),
+                'aliases': aliases.copy(),
+            }
+
+        annotations = attrs.get('__annotations__', {})
+        with contextlib.suppress(TypeError, AttributeError, KeyError):
+            strict = attrs['Meta'].strict
+
+        cls.__field_types__ = _types
+        cls.__typing_args__ = _typing_args
+        cls.__aliases__ = aliases
+
+        # Initialize the fields
+        new_cols, new_types, new_typing_args, new_aliases = cls._initialize_fields(
+            attrs, annotations, strict
+        )
+
+        # Step 3: Merge new fields with inherited fields
+        cols.update(new_cols)
+        _types.update(new_types)
+        _typing_args.update(new_typing_args)
+        aliases.update(new_aliases)
 
         _columns = cols.keys()
         cls.__slots__ = tuple(_columns)
@@ -339,14 +377,12 @@ class ModelMeta(type):
                     )
 
         # If there's a __model_init__ method, call it
-        try:
+        with contextlib.suppress(AttributeError):
             new_cls.__model_init__(
                 new_cls,
                 name,
                 attrs
             )
-        except AttributeError:
-            pass
 
         # Now that fields are in attrs, decorate the class as a dataclass
         dc = dataclass(

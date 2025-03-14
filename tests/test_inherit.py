@@ -1,12 +1,14 @@
 from typing import List
+from datetime import datetime
 from dataclasses import is_dataclass
-from datamodel import Model, Field
+from datamodel import Model, BaseModel, Field
 import pytest
 
 # Base Class
-class Animal(Model):
+class Animal(BaseModel):
     name: str
     weight: int = Field(default=0)
+    created_at: datetime = Field(default_factory=datetime.now)
 
 # Derived Classes
 class Snake(Animal):
@@ -67,6 +69,21 @@ def test_animal_hierarchy():
     # Verify all animals are dataclasses and inherit from the correct base
     assert all(is_dataclass(a) for a in animals)
     assert all(isinstance(a, Animal) for a in animals)
+    # Ensure each subclass correctly inherits from its parents
+
+def test_parents():
+    assert issubclass(Tiger, Felido)
+    assert issubclass(Felido, Mammal)
+    assert issubclass(Mammal, Animal)
+    assert issubclass(Snake, Animal)
+    assert issubclass(Whale, Cetaceus)
+    assert issubclass(Dolphin, Cetaceus)
+
+def test_created_at_inheritance():
+    # Ensure all child classes inherit created_at and it is initialized with a datetime
+    for animal in animals:
+        assert hasattr(animal, "created_at"), f"{animal.__class__.__name__} missing 'created_at'"
+        assert isinstance(animal.created_at, datetime), f"'created_at' is not a datetime for {animal.name}"
 
 
 def test_elephant_attributes():
@@ -169,3 +186,5 @@ def test_zoo_attributes():
     assert zoo.animals[4].speed == 40.5
     assert zoo.animals[5].temp == 37.5
     assert zoo.animals[6].scavenger is True
+    # check if animal zero have created_at and is a datetime object:
+    assert isinstance(zoo.animals[0].created_at, datetime)
