@@ -351,6 +351,8 @@ cpdef dict _validation(
                     val_type,
                     annotated_type
                 )
+        # elif F.origin is Union:
+        #    return _validate_union_field(F, name, value, annotated_type)
     elif type(annotated_type).__name__ == "ModelMeta":
         # Check if there's a field in the annotated type that matches the name and type
         if as_objects:

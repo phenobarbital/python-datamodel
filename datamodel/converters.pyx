@@ -476,10 +476,10 @@ encoders = {
     datetime.timedelta: to_timedelta,
     datetime.time: to_time,
     Decimal: to_decimal,
-    dict: to_object,
-    list: to_object,
-    tuple: to_object,
     bytes: to_bytes,
+    # dict: to_object,
+    # list: to_object,
+    # tuple: to_object,
 }
 
 
@@ -598,6 +598,16 @@ cdef object _parse_builtin_type(object field, object T, object data, object enco
         return to_uuid(data)
     elif is_dc(T):
         return _parse_dataclass_type(T, data)
+    elif T == dict:
+        if not isinstance(data, dict):
+            raise ValueError(
+                f"Expected dict, got {type(data).__name__}"
+            )
+        return data
+    elif T == list:
+        if not isinstance(data, (list, tuple)):
+            data = [data]
+        return data
     else:
         # Try encoders dict:
         try:
@@ -877,6 +887,7 @@ cdef object _parse_union_type(
     or raise an error if all fail.
     If T is Optional[...] (i.e. a Union with NoneType), unwrap it.
     """
+    cdef str field_name = field.name
     cdef str error = None
     cdef object non_none_arg = None
     cdef tuple inner_targs = None
@@ -906,23 +917,45 @@ cdef object _parse_union_type(
             pass
     for arg_type in targs:
         # Iterate over all subtypes of Union:
+        subtype_origin = get_origin(arg_type)
         try:
-            if isinstance(data, list):
-                if arg_type is str:
-                    # Ensure all elements in the list are strings
-                    if all(isinstance(item, str) for item in data):
-                        return data
-                else:
+            if subtype_origin is list or subtype_origin is tuple:
+                if isinstance(data, list):
                     return _parse_list_type(field, arg_type, data, encoder, targs)
-            else:
-                subtype_origin = get_origin(arg_type)
-                if subtype_origin is None:
-                    if isinstance(data, arg_type):
-                        return data
+                else:
+                    error = f"Invalid type for {field_name}: Expected a list, got {type(data).__name__}"
+                    continue
+            elif subtype_origin is dict:
+                if isinstance(data, dict):
+                    return _parse_dict_type(field, arg_type, data, encoder, targs)
+                else:
+                    error = f"Invalid type for {field_name} Expected a dict, got {type(data).__name__}"
+                    continue
+            elif arg_type is list:
+                if isinstance(data, list):
+                    if arg_type is str:
+                        # Ensure all elements in the list are strings
+                        if all(isinstance(item, str) for item in data):
+                            return data
                     else:
-                        raise ValueError(
-                            f"Invalid type for *{field.name}* with {type(data)}, expected {arg_type}"
-                        )
+                        return _parse_list_type(field, arg_type, data, encoder, targs)
+                else:
+                    error = f"Invalid type for {field_name}: Expected a list, got {type(data).__name__}"
+                    continue
+            elif arg_type is dict:
+                if isinstance(data, dict):
+                    return _parse_dict_type(field, arg_type, data, encoder, targs)
+                else:
+                    error = f"Invalid type for {field_name} Expected a dict, got {type(data).__name__}"
+                    continue
+            elif subtype_origin is None:
+                if isinstance(data, arg_type):
+                    return data
+                else:
+                    # Not matching => record an error
+                    error = f"Invalid type for {field_name}, Data {data!r} is not an instance of {arg_type}"
+                    continue
+            else:
                 # fallback to builtin parse
                 return _parse_typing(
                     field,
@@ -938,7 +971,7 @@ cdef object _parse_union_type(
 
     # If we get here, all union attempts failed
     raise ValueError(
-        f"Parse failed for data={data}, error = {error}"
+        f"Invalid type for {field.name} with data={data}, error = {error}"
     )
 
 cdef object _parse_type(
