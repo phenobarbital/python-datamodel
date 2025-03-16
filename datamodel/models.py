@@ -230,15 +230,18 @@ class ModelMixin:
     ) -> dict[str, Any]:
         """Recursively converts any BaseModel instances to their primary key value."""
         out = {}
-        fields = self.columns()
-        for name, field in fields.items():
+        _fields = self.columns()
+        for name, field in _fields.items():
             # datatype = field.type
             value = getattr(self, name)
             if value is None and remove_nulls:
                 continue
             if isinstance(value, ModelMixin):
                 if as_values:
-                    out[name] = getattr(value, name)
+                    try:
+                        out[name] = getattr(value, name)
+                    except AttributeError:
+                        out[name] = value.to_json()
                 else:
                     out[name] = value.__collapse_as_values__(
                         remove_nulls=remove_nulls,
@@ -247,11 +250,21 @@ class ModelMixin:
                     )
             # if it's a list, might contain submodels or scalars
             elif isinstance(value, list):
+                if field.origin is list and field.args:
+                    submodel_class = field.args[0]  # The type inside the list
+                    if issubclass(
+                        submodel_class, ModelMixin
+                    ) and not hasattr(submodel_class, name):
+                        out[name] = json_encoder(value)
+                        continue
                 items_out = []
                 for item in value:
                     if isinstance(item, ModelMixin):
                         if as_values:
-                            items_out.append(getattr(item, name))
+                            try:
+                                items_out.append(getattr(item, name))
+                            except AttributeError:
+                                items_out.append(item.to_json())
                         else:
                             items_out.append(item.__collapse_as_values__(
                                 remove_nulls=remove_nulls,
@@ -391,7 +404,7 @@ class ModelMixin:
     @classmethod
     def _build_fields(cls, title: str, locale: Any = None) -> dict:
         """Build the fields part of the schema."""
-        fields = {}
+        _fields = {}
         required = []
         defs = {}
 
@@ -400,12 +413,12 @@ class ModelMixin:
             field_schema, field_defs, field_required = cls._process_field_schema(
                 name, field, locale, title
             )
-            fields[name] = field_schema
+            _fields[name] = field_schema
             if field_required:
                 required.append(name)
             if field_defs:
                 defs[name] = field_defs.get('schema')
-        return fields, required, defs
+        return _fields, required, defs
 
     @classmethod
     def _extract_field_basics(cls, name: str, field: Field, title: str):
@@ -623,7 +636,7 @@ class ModelMixin:
         endpoint_kwargs = {"endpoint": endpoint} if endpoint else {}
 
         # Build the fields part of the schema.
-        fields, required, defs = cls._build_fields(title, locale)
+        _fields, required, defs = cls._build_fields(title, locale)
 
         base_schema = {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -636,7 +649,7 @@ class ModelMixin:
             "type": "object",
             "table": table,
             "schema": schema,
-            "properties": fields,
+            "properties": _fields,
             "required": required,
             "display_name": display_name,
         }
