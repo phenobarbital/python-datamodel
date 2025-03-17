@@ -153,6 +153,7 @@ class ModelMeta(type):
     __fields__: List
     __field_types__: List
     __aliases__: Dict
+    __primary_keys__: List
     # Class-level cache
     _base_class_cache = {}
 
@@ -162,6 +163,8 @@ class ModelMeta(type):
         _types_local = {}
         _typing_args = {}
         aliases = {}
+        primary_keys = []  # New list to collect primary key fields
+
         for field, _type in annotations.items():
             if isinstance(_type, InitVar) or _type == InitVar:
                 # Skip InitVar fields;
@@ -201,6 +204,10 @@ class ModelMeta(type):
                 df = Field(required=False, type=_type, default=df)
             df.name = field
             df.type = _type
+
+            # Check for primary_key in field metadata
+            if df.metadata.get("primary_key", False):
+                primary_keys.append(field)
 
             # Cache reflection info so we DON’T need to call
             # get_origin/get_args repeatedly:
@@ -281,7 +288,7 @@ class ModelMeta(type):
             # Assign the field object to the attrs so dataclass can pick it up
             attrs[field] = df
             cols[field] = df
-        return cols, _types_local, _typing_args, aliases
+        return cols, _types_local, _typing_args, aliases, primary_keys
 
     def __new__(cls, name, bases, attrs, **kwargs):  # noqa
         annotations = attrs.get('__annotations__', {})
@@ -295,12 +302,14 @@ class ModelMeta(type):
             _types = cached['types'].copy()
             _typing_args = cached['_typing_args'].copy()
             aliases = cached['aliases'].copy()
+            primary_keys = cached['primary_keys'].copy()
         else:
             # Compute field from Bases:
             cols = OrderedDict()
             _types = {}
             _typing_args = {}
             aliases = {}
+            primary_keys = []
 
             # Step 1: Collect fields from parent classes
             for base in bases:
@@ -311,9 +320,11 @@ class ModelMeta(type):
                     _typing_args |= base.__typing_args__
                 if hasattr(base, '__aliases__'):
                     aliases |= base.__aliases__
+                if hasattr(base, '__primary_keys__'):
+                    primary_keys += base.__primary_keys__
 
             # Now initialize subclass-specific fields
-            new_cols, new_types, new_typing_args, new_aliases = cls._initialize_fields(
+            new_cols, new_types, new_typing_args, new_aliases, nw_primary_keys = cls._initialize_fields(  # noqa
                 attrs, annotations, strict
             )
 
@@ -322,6 +333,7 @@ class ModelMeta(type):
             _types.update(new_types)
             _typing_args.update(new_typing_args)
             aliases.update(new_aliases)
+            primary_keys.extend(nw_primary_keys)
 
             # Store computed results in cache
             cls._base_class_cache[base_key] = {
@@ -329,6 +341,7 @@ class ModelMeta(type):
                 'types': _types.copy(),
                 '_typing_args': _typing_args.copy(),
                 'aliases': aliases.copy(),
+                'primary_keys': primary_keys.copy(),
             }
 
         _columns = cols.keys()
@@ -393,11 +406,33 @@ class ModelMeta(type):
         dc.__initialised__ = False
         dc.__field_types__ = _types
         dc.__aliases__ = aliases
+        # Set the primary_keys on the dataclass
+        dc.__primary_keys__ = primary_keys
         dc.__typing_args__ = _typing_args
         dc.modelName = dc.__name__
 
         # Override __setattr__ method
         setattr(dc, "__setattr__", _dc_method_setattr_)
+
+        # Method to get primary keys without further introspection
+        def get_primary_keys(cls):
+            return cls.__primary_keys__
+
+        # Add the method to the class
+        dc.get_primary_keys = classmethod(get_primary_keys)
+
+        def get_primary_key_fields(cls):
+            """Return a dictionary of primary key fields with their types."""
+            return {name: cls.__columns__[name] for name in cls.__primary_keys__}
+
+        dc.get_primary_key_fields = classmethod(get_primary_key_fields)
+
+        def get_primary_key_values(self):
+            """Get primary key values for this instance as a dictionary."""
+            return {key: getattr(self, key) for key in self.__primary_keys__}
+
+        dc.get_primary_key_values = get_primary_key_values
+
         return dc
 
     def __init__(cls, *args, **kwargs) -> None:
