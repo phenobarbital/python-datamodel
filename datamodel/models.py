@@ -1,6 +1,6 @@
 from __future__ import annotations
 import contextlib
-from typing import Any, Dict
+from typing import Any, Dict, get_args
 from enum import Enum, EnumMeta
 # Dataclass
 import inspect
@@ -250,13 +250,22 @@ class ModelMixin:
                     )
             # if it's a list, might contain submodels or scalars
             elif isinstance(value, list):
-                if field.origin is list and field.args:
-                    submodel_class = field.args[0]  # The type inside the list
-                    if issubclass(
-                        submodel_class, ModelMixin
-                    ) and not hasattr(submodel_class, name):
-                        out[name] = json_encoder(value)
-                        continue
+                targs = field.args
+                if len(targs) == 2 and targs[1] is type(None):
+                    # Checking if it's Optional[T]
+                    submodel_class = get_args(targs[0])
+                elif field.origin is list and field.args:
+                    submodel_class = field.args[0]
+                else:
+                    submodel_class = None
+                if field.origin is list and submodel_class and (
+                    issubclass(
+                        submodel_class,
+                        ModelMixin
+                    ) and not hasattr(submodel_class, name)
+                ):
+                    out[name] = json_encoder(value)
+                    continue
                 items_out = []
                 for item in value:
                     if isinstance(item, ModelMixin):
