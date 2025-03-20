@@ -5,12 +5,10 @@ use pyo3::wrap_pyfunction;
 use pyo3::types::{PyDate, PyDateTime, PyAny, PyString, PyBool, PyBytes, PyInt, PyFloat, PyList};
 use chrono::{Datelike, Timelike, NaiveDate, NaiveDateTime, DateTime, Utc};
 use speedate::Date as SpeeDate;
-use std::sync::Mutex;
 use speedate::DateTime as SpeeDateTime;
 use uuid::Uuid;
 use rust_decimal::Decimal; // Rust Decimal crate
 use rust_decimal::prelude::FromStr;
-use rayon::prelude::*;
 // use speedate::{Date, DateTime, ParseError};
 // use std::collections::HashMap;
 // NaiveTime
