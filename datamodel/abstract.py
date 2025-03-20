@@ -156,7 +156,25 @@ class ModelMeta(type):
     __aliases__: Dict
     __primary_keys__: List
     # Class-level cache
-    _base_class_cache = {}
+    _base_class_cache = OrderedDict()
+    _MAX_CACHE_SIZE = 512  # size limit
+
+    @classmethod
+    def _cache_get(cls, key):
+        """Get item from cache with LRU behavior."""
+        if key not in cls._base_class_cache:
+            return None
+        value = cls._base_class_cache.pop(key)
+        cls._base_class_cache[key] = value
+        return value
+
+    @classmethod
+    def _cache_set(cls, key, value):
+        """Set item in cache with LRU eviction."""
+        # If cache is full, remove oldest item (first in OrderedDict)
+        if len(cls._base_class_cache) >= cls._MAX_CACHE_SIZE:
+            cls._base_class_cache.popitem(last=False)
+        cls._base_class_cache[key] = value
 
     @staticmethod
     def _initialize_fields(attrs, annotations, strict):
@@ -295,13 +313,18 @@ class ModelMeta(type):
         annotations = attrs.get('__annotations__', {})
         _strict_ = False
         cols = OrderedDict()
+
+        # Base class constructor
         base_key = (name, tuple(bases), tuple(sorted(annotations.items())))
         with contextlib.suppress(TypeError, AttributeError, KeyError):
             _strict_ = attrs['Meta'].strict
 
-        if base_key in cls._base_class_cache:
+        # Use LRU get method
+        cached = cls._cache_get(base_key)
+        if cached:
+            # if base_key in cls._base_class_cache:
             # Check the Cache First:
-            cached = cls._base_class_cache[base_key]
+            # cached = cls._base_class_cache[base_key]
             cols = cached['cols'].copy()
             _types = cached['types'].copy()
             _typing_args = cached['_typing_args'].copy()
@@ -309,7 +332,6 @@ class ModelMeta(type):
             primary_keys = cached['primary_keys'].copy()
         else:
             # Compute field from Bases:
-            cols = OrderedDict()
             _types = {}
             _typing_args = {}
             aliases = {}
@@ -340,13 +362,21 @@ class ModelMeta(type):
             primary_keys.extend(nw_primary_keys)
 
             # Store computed results in cache
-            cls._base_class_cache[base_key] = {
+            # cls._base_class_cache[base_key] = {
+            #     'cols': cols.copy(),
+            #     'types': _types.copy(),
+            #     '_typing_args': _typing_args.copy(),
+            #     'aliases': aliases.copy(),
+            #     'primary_keys': primary_keys.copy(),
+            # }
+            cache_entry = {
                 'cols': cols.copy(),
                 'types': _types.copy(),
                 '_typing_args': _typing_args.copy(),
                 'aliases': aliases.copy(),
                 'primary_keys': primary_keys.copy(),
             }
+            cls._cache_set(base_key, cache_entry)
 
         _columns = cols.keys()
         cls.__slots__ = tuple(_columns)
