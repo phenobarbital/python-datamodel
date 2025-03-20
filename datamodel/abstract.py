@@ -16,6 +16,7 @@ from collections import OrderedDict
 from collections.abc import Callable
 import types
 from inspect import isclass
+from functools import lru_cache
 from dataclasses import dataclass, InitVar
 from .parsers.json import JSONContent
 from .converters import encoders, parse_basic
@@ -206,7 +207,7 @@ class ModelMeta(type):
             df.type = _type
 
             # Check for primary_key in field metadata
-            if df.metadata.get("primary_key", False):
+            if df.metadata.get("primary", False) or df.primary_key is True:
                 primary_keys.append(field)
 
             # Cache reflection info so we DON’T need to call
@@ -292,8 +293,11 @@ class ModelMeta(type):
 
     def __new__(cls, name, bases, attrs, **kwargs):  # noqa
         annotations = attrs.get('__annotations__', {})
-        base_key = (tuple(bases), tuple(sorted(annotations.items())))
-        strict = getattr(attrs.get('Meta', Meta), 'strict', False)
+        _strict_ = False
+        cols = OrderedDict()
+        base_key = (name, tuple(bases), tuple(sorted(annotations.items())))
+        with contextlib.suppress(TypeError, AttributeError, KeyError):
+            _strict_ = attrs['Meta'].strict
 
         if base_key in cls._base_class_cache:
             # Check the Cache First:
@@ -325,7 +329,7 @@ class ModelMeta(type):
 
             # Now initialize subclass-specific fields
             new_cols, new_types, new_typing_args, new_aliases, nw_primary_keys = cls._initialize_fields(  # noqa
-                attrs, annotations, strict
+                attrs, annotations, _strict_
             )
 
             # Merge new fields with inherited fields
@@ -388,7 +392,7 @@ class ModelMeta(type):
 
         # Now that fields are in attrs, decorate the class as a dataclass
         dc = dataclass(
-            unsafe_hash=strict,
+            unsafe_hash=_strict_,
             repr=False,
             init=True,
             order=False,
@@ -402,7 +406,7 @@ class ModelMeta(type):
         dc.__valid__ = False
         dc.__errors__ = {}
         dc.__values__ = {}
-        dc.__frozen__ = strict
+        dc.__frozen__ = _strict_
         dc.__initialised__ = False
         dc.__field_types__ = _types
         dc.__aliases__ = aliases
