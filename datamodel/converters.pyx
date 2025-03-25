@@ -194,15 +194,16 @@ cpdef datetime.datetime to_datetime(object obj):
         except ValueError:
             pass
     try:
-        return rc.to_datetime(obj)
+        return ciso8601.parse_datetime(obj)
     except ValueError:
         pass
     try:
-        return ciso8601.parse_datetime(obj)
+        return rc.to_datetime(obj)
     except ValueError:
         raise ValueError(
             f"Can't convert invalid data *{obj}* to datetime"
         )
+
 
 cpdef object to_integer(object obj):
     """to_integer.
