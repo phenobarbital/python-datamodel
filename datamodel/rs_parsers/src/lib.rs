@@ -3,7 +3,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::PyTypeInfo;
 use pyo3::wrap_pyfunction;
 use pyo3::types::{PyDate, PyDateTime, PyAny, PyString, PyBool, PyBytes, PyInt, PyFloat, PyList};
-use chrono::{Datelike, Timelike, NaiveDate, NaiveDateTime, DateTime, Utc};
+use chrono::{Datelike, Timelike, NaiveDate, NaiveDateTime, DateTime};
 use speedate::Date as SpeeDate;
 use speedate::DateTime as SpeeDateTime;
 use uuid::Uuid;
@@ -66,7 +66,7 @@ fn to_list(py: Python, py_type: Py<PyAny>, input_list: Py<PyList>) -> PyResult<P
     let mut result_list: Vec<PyObject> = Vec::new();
 
     for item in input_list.iter() {
-        let converted_item = Python::with_gil(|py| {
+        let converted_item = Python::with_gil(|_py: Python<'_>| {
             let py_type = py_type.clone();
             let item_obj: PyObject = item.into();
             py_type.call1((item_obj,)).map(|obj| obj.into())
@@ -267,7 +267,6 @@ fn to_datetime(py: Python, input: &str, custom_format: Option<&str>) -> PyResult
     }
 
     // Attempt parsing using Speedate
-    // Attempt parsing using Speedate
     if let Ok(parsed_datetime) = SpeeDateTime::parse_str(input) {
         return Ok(PyDateTime::new(
             py,
@@ -280,14 +279,6 @@ fn to_datetime(py: Python, input: &str, custom_format: Option<&str>) -> PyResult
             parsed_datetime.time.microsecond,
             None,
         )?.into());
-    }
-
-    // Try parsing as ISO 8601 datetime with timezone.
-    if let Ok(datetime) = DateTime::parse_from_rfc3339(input) {
-        let datetime_utc = datetime.with_timezone(&Utc);
-        return Ok(
-            PyDateTime::from_timestamp(py, datetime_utc.timestamp() as f64, None,)?.into()
-        );
     }
 
     // Define custom formats to try, including the optional format.
