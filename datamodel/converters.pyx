@@ -2,7 +2,7 @@
 # Copyright (C) 2018-present Jesus Lara
 #
 import re
-from typing import get_args, get_origin, Union, Optional, List, NewType, Literal
+from typing import get_args, get_origin, Union, Optional, List, NewType, Literal, Any
 from collections.abc import Sequence, Mapping, Callable, Awaitable
 import types
 from dataclasses import _MISSING_TYPE, _FIELDS, fields
@@ -44,24 +44,40 @@ cdef bint is_dc(object obj):
     return PyObject_HasAttr(cls, '__dataclass_fields__')
 
 cdef bint is_empty(object value):
-    cdef bint result = False
+    """
+    Determines if a value should be considered empty.
+
+    Enhanced to handle different container types properly, including:
+    - None
+    - Empty strings
+    - Empty lists, tuples, sets
+    - _MISSING_TYPE (used in default value checks)
+
+    Returns True if the value is considered empty, False otherwise.
+    """
+    # None is always empty
     if value is None:
         return True
+    # Field default missing markers
     if PyObject_IsInstance(value, _MISSING_TYPE) or value == _MISSING_TYPE:
-        result = True
-    elif PyObject_IsInstance(value, str) and value == '':
-        result = True
-    elif PyObject_IsInstance(value, (int, float)) and value == 0:
-        result = False
-    elif PyObject_IsInstance(value, dict) and value == {}:
-        result = False
-    elif PyObject_IsInstance(value, (list, tuple, set)) and value == []:
-        result = False
-    elif PyObject_HasAttr(value, 'empty') and PyObject_GetAttr(value, 'empty') == False:
-        result = False
-    elif not value:
-        result = True
-    return result
+        return True
+    if PyObject_IsInstance(value, str) and value == '':
+        return True
+    if PyObject_IsInstance(value, (int, float)) and value == 0:
+        return False
+    # empty containers are NOT considered empty
+    # because they are valid initialized values
+    if PyObject_IsInstance(value, (list, tuple, set)):
+        return False
+    if PyObject_IsInstance(value, dict) and value == {}:
+        return False
+    # Objects with explicit "empty" attribute
+    if PyObject_HasAttr(value, 'empty') and PyObject_GetAttr(value, 'empty') == False:
+        return False
+    if not value:
+        return True
+    # Default: not empty
+    return False
 
 cpdef bint has_attribute(object obj, object attr):
     """Returns True if obj has the attribute attr."""
@@ -486,9 +502,6 @@ encoders = {
     datetime.time: to_time,
     Decimal: to_decimal,
     bytes: to_bytes,
-    # dict: to_object,
-    # list: to_object,
-    # tuple: to_object,
 }
 
 
@@ -517,10 +530,27 @@ cdef object _parse_dict_type(
     object encoder,
     object args
 ):
-    cdef object val_type = args[1]
+    """Parse a dictionary to a typing type."""
+    cdef object val_type = args[1] or field._value_type
     cdef dict new_dict = {}
-    for k, v in data.items():
-        new_dict[k] = _parse_typing(field, val_type, v, encoder, False)
+
+    # Check if we have type args (Dict[K, V])
+    if not args or len(args) < 2:
+        return data  # If no type arguments, return as is
+
+    if field._inner_origin is dict:
+        val_args = field._typing_args or get_args(field._inner_origin)
+        for k, v in data.items():
+            # If the value should be a dict but is not, wrap it
+            if not isinstance(v, dict):
+                # Handle special case - convert primitive value to dict if needed
+                new_dict[k] = _parse_typing(field, val_type, {}, encoder, False)
+            else:
+                new_dict[k] = _parse_typing(field, val_type, v, encoder, False)
+    else:
+        # Regular dictionary processing
+        for k, v in data.items():
+            new_dict[k] = _parse_typing(field, val_type, v, encoder, False)
     return new_dict
 
 cdef object _parse_list_type(
@@ -569,16 +599,123 @@ cdef object _parse_list_type(
                 converter(field.name, item, inner_type, _parent)
             )
     elif is_primitive(inner_type):
-        try:
-            result = rc.to_list(inner_type, data)
-            # return data
-        except Exception as e:
-            raise ValueError(
-                f"Error parsing list of {inner_type}: {e}"
-            ) from e
+        # Use our type conversion system for each element
+        for item in data:
+            # For nested lists, process each element
+            if isinstance(item, list) and inner_type is not list:
+                # Recursively process nested lists
+                nested_result = []
+                for subitem in item:
+                    try:
+                        # Apply primitive type conversion
+                        if inner_type == int and isinstance(subitem, str):
+                            nested_result.append(int(subitem))
+                        elif inner_type == float and isinstance(subitem, (str, int)):
+                            nested_result.append(float(subitem))
+                        elif inner_type == bool and isinstance(subitem, str):
+                            nested_result.append(strtobool(subitem))
+                        elif inner_type == str and not isinstance(subitem, str):
+                            nested_result.append(str(subitem))
+                        else:
+                            nested_result.append(subitem)
+                    except (ValueError, TypeError):
+                        # If conversion fails, keep original
+                        nested_result.append(subitem)
+                result.append(nested_result)
+            else:
+                # Handle direct primitive conversion
+                try:
+                    if inner_type == int and isinstance(item, str):
+                        result.append(int(item))
+                    elif inner_type == float and isinstance(item, (str, int)):
+                        result.append(float(item))
+                    elif inner_type == bool and isinstance(item, str):
+                        result.append(strtobool(item))
+                    elif inner_type == str and not isinstance(item, str):
+                        result.append(str(item))
+                    else:
+                        result.append(item)
+                except (ValueError, TypeError):
+                    # If conversion fails, keep original
+                    result.append(item)
+
+        # Also try to use Rust converter as a fallback if available
+        if len(result) == 0:
+            try:
+                result = rc.to_list(inner_type, data)
+            except Exception as e:
+                # If Rust converter fails, use what we've already built
+                pass
     else:
         for item in data:
             result.append(
+                _parse_typing(field, T=inner_type, data=item, encoder=encoder, as_objects=False)
+            )
+    return result
+
+cdef object _parse_set_type(
+    object field,
+    object T,
+    object data,
+    object encoder,
+    object args,
+    object _parent = None
+):
+    """
+    Parse a set of items to a typing type.
+    """
+    cdef object arg_type = args[0] if args else Any
+    cdef set result = set()
+    cdef tuple key = (arg_type, field.name)
+    cdef object converter = TYPE_PARSERS.get(key) or TYPE_PARSERS.get(arg_type)
+    cdef object inner_type = field._inner_type if hasattr(field, '_inner_type') else arg_type
+
+    if data is None:
+        return set()   # short-circuit
+
+    # If data is not already a collection, put it in a list for processing
+    if not isinstance(data, (list, tuple, set)):
+        data = [data]
+
+    # If it's a dataclass
+    if is_dc(inner_type):
+        for d in data:
+            if is_dc(d):
+                result.add(d)
+            elif converter:
+                result.add(
+                    converter(field.name, d, inner_type, _parent)
+                )
+            elif isinstance(d, dict):
+                result.add(inner_type(**d))
+            elif isinstance(d, (list, tuple)):
+                result.add(inner_type(*d))
+            else:
+                result.add(inner_type(d))
+        return result
+    elif converter:
+        for item in data:
+            result.add(
+                converter(field.name, item, inner_type, _parent)
+            )
+    elif is_primitive(inner_type):
+        # Process each item with appropriate converters
+        for item in data:
+            try:
+                # If a specific encoder exists for this type, use it
+                if encoder:
+                    processed_item = encoder(item)
+                else:
+                    # Otherwise try to use builtin converters
+                    processed_item = _parse_builtin_type(field, inner_type, item, None)
+                result.add(processed_item)
+            except Exception as e:
+                raise ValueError(
+                    f"Error parsing set item of {inner_type}: {e}"
+                ) from e
+    else:
+        for item in data:
+            result.add(
                 _parse_typing(field, T=inner_type, data=item, encoder=encoder, as_objects=False)
             )
     return result
@@ -722,7 +859,9 @@ cdef object _parse_typing_type(
                 return {k: _parse_type(field, type_args[1], v, None, False) for k, v in data.items()}
             return data
         else:
-            raise TypeError(f"Expected dict, got {type(data).__name__}")
+            raise TypeError(
+                f"{field.name}: Expected dict, got {type(data).__name__}"
+            )
 
     if name == 'Tuple' or field.origin == tuple:
         if isinstance(data, (list, tuple)):
@@ -752,6 +891,32 @@ cdef object _parse_typing_type(
             args,
             as_objects=as_objects
         )
+
+    if name in {'Set', 'FrozenSet'} or field.origin in {set, frozenset}:
+        if not isinstance(data, (list, tuple, set, frozenset)):
+            data = {data}  # Convert to single-element set
+        elif isinstance(data, (list, tuple)):
+            # Convert lists/tuples to sets
+            data = set(data)
+
+        # Similar to list processing but returning a set
+        result = set()
+
+        if type_args:
+            arg_type = type_args[0]
+            for item in data:
+                # Convert each item to the appropriate type
+                converted = _parse_type(field, arg_type, item, encoder, False)
+                result.add(converted)
+        else:
+            # If no type args, just convert to a set
+            result = set(data)
+
+        # Return frozenset if that's the origin type
+        if field.origin is frozenset or name == 'FrozenSet':
+            return frozenset(result)
+
+        return result
 
     # handle None, Optional, Union:
     if name is None or name in ('Optional', 'Union'):
@@ -791,8 +956,29 @@ cdef object _parse_list_typing(
                     result.append(_instantiate_dataclass(subT, x))
                 return result
             else:
-                # fallback
-                return data
+                # Process nested list items
+                inner_origin = get_origin(arg_type)
+                inner_args = get_args(arg_type)
+                if inner_origin is list:
+                    # For List[List[T]] structure
+                    for item in data:
+                        if isinstance(item, list):
+                            # Apply type conversion to each inner list item
+                            inner_result = []
+                            for inner_item in item:
+                                if inner_args and inner_args[0] is int and isinstance(inner_item, str):
+                                    try:
+                                        inner_result.append(int(inner_item))
+                                    except ValueError:
+                                        inner_result.append(inner_item)
+                                else:
+                                    inner_result.append(inner_item)
+                            result.append(inner_result)
+                        else:
+                            result.append(item)
+                else:
+                    # fallback
+                    return data
         except AttributeError:
             return data
     elif arg_type is not None and is_dc(arg_type):
@@ -902,86 +1088,116 @@ cdef object _parse_union_type(
     cdef tuple inner_targs = None
     cdef bint is_typing = False
 
-    # If the union includes NoneType, unwrap it and use only the non-None type.
-    if origin == Union and type(None) in targs:
+    # If data is None, immediately return it (for Optional unions)
+    if data is None:
+        return None
+
+    # Check if data already matches one of the union types exactly
+    for arg_type in targs:
+        # Direct type match - return data as is without further processing
+        if isinstance(data, arg_type) and not (
+            hasattr(arg_type, '__origin__') and arg_type.__origin__ is not None
+        ):
+            return data
+    # For non-None unions, simplify handling for common container types
+    if origin is Union:
+        # Handle list, dict, and set types explicitly
+        if isinstance(data, list):
+            for arg_type in targs:
+                arg_origin = getattr(arg_type, '__origin__', None)
+                if arg_origin is list or arg_type is list:
+                    # For list types, return the data directly without wrapping
+                    return data
+        elif isinstance(data, dict):
+            for arg_type in targs:
+                arg_origin = getattr(arg_type, '__origin__', None)
+                if arg_origin is dict or arg_type is dict:
+                    # For dict types, return the data directly without wrapping
+                    return data
+        elif isinstance(data, (set, frozenset)):
+            for arg_type in targs:
+                arg_origin = getattr(arg_type, '__origin__', None)
+                if arg_origin is set or arg_type is set or arg_origin is frozenset or arg_type is frozenset:
+                    # For set types, return the data directly without wrapping
+                    return data
+        elif isinstance(data, str):
+            for arg_type in targs:
+                if arg_type is str:
+                    # For string types, return the data directly
+                    return data
+
+    # Handle Optional type with fallback for non-None value
+    if origin is Union and type(None) in targs:
+        # Find the non-None type in the union
         for arg in targs:
             if arg is not type(None):
                 non_none_arg = arg
                 break
-        is_typing = hasattr(non_none_arg, '__module__') and non_none_arg.__module__ == 'typing'
 
-        if non_none_arg is not None and is_typing is True:
-            # Invoke the parse_typing_type
-            field.args = get_args(non_none_arg)
-            field.origin = get_origin(non_none_arg)
-            if isinstance(data, list):
-                return _parse_typing(
-                    field,
-                    non_none_arg,
-                    data,
-                    encoder,
-                    False
-                )
-        else:
-            pass
+        if non_none_arg is not None:
+            # Check if the data is already of the correct non-None type
+            if isinstance(data, non_none_arg):
+                return data
+
+            # For container types, avoid unnecessary wrapping
+            non_none_origin = get_origin(non_none_arg)
+            if non_none_origin is list and isinstance(data, list):
+                return data
+            elif non_none_origin is dict and isinstance(data, dict):
+                return data
+            elif non_none_origin is set and isinstance(data, (set, frozenset)):
+                return data
+
+            # Otherwise try to parse with the non-None type
+            try:
+                return _parse_type(field, non_none_arg, data, encoder, False)
+            except Exception:
+                # If parsing fails, try the other option next
+                pass
+
+    # Try each union type in sequence
     for arg_type in targs:
-        # Iterate over all subtypes of Union:
-        subtype_origin = get_origin(arg_type)
-        try:
-            if subtype_origin is list or subtype_origin is tuple:
-                if isinstance(data, list):
-                    return _parse_list_type(field, arg_type, data, encoder, targs)
-                else:
-                    error = f"Invalid type for {field_name}: Expected a list, got {type(data).__name__}"
-                    continue
-            elif subtype_origin is dict:
-                if isinstance(data, dict):
-                    return _parse_dict_type(field, arg_type, data, encoder, targs)
-                else:
-                    error = f"Invalid type for {field_name} Expected a dict, got {type(data).__name__}"
-                    continue
-            elif arg_type is list:
-                if isinstance(data, list):
-                    if arg_type is str:
-                        # Ensure all elements in the list are strings
-                        if all(isinstance(item, str) for item in data):
-                            return data
-                    else:
-                        return _parse_list_type(field, arg_type, data, encoder, targs)
-                else:
-                    error = f"Invalid type for {field_name}: Expected a list, got {type(data).__name__}"
-                    continue
-            elif arg_type is dict:
-                if isinstance(data, dict):
-                    return _parse_dict_type(field, arg_type, data, encoder, targs)
-                else:
-                    error = f"Invalid type for {field_name} Expected a dict, got {type(data).__name__}"
-                    continue
-            elif subtype_origin is None:
-                if isinstance(data, arg_type):
-                    return data
-                else:
-                    # Not matching => record an error
-                    error = f"Invalid type for {field_name}, Data {data!r} is not an instance of {arg_type}"
-                    continue
-            else:
-                # fallback to builtin parse
-                return _parse_typing(
-                    field,
-                    arg_type,
-                    data,
-                    encoder,
-                    False
-                )
-        except ValueError as exc:
-            error = f"{field.name}: {exc}"
-        except Exception as exc:
-            error = f"Parse Error on {field.name}, {arg_type}: {exc}"
+        # Skip None type
+        if arg_type is type(None):
+            continue
 
-    # If we get here, all union attempts failed
+        try:
+            # Try a specific type
+            sub_origin = get_origin(arg_type)
+
+            # For primitive types with direct match
+            if sub_origin is None and isinstance(data, arg_type):
+                return data
+
+            # For container types, handle special cases
+            if (sub_origin is list or arg_type is list) and isinstance(data, list):
+                # For list types, just return the data directly
+                return data
+            elif (sub_origin is dict or arg_type is dict) and isinstance(data, dict):
+                # For dict types, just return the data directly
+                return data
+            elif (sub_origin is set or arg_type is set) and isinstance(data, (set, frozenset)):
+                # For set types, just return the data directly
+                return data
+            elif arg_type is str and isinstance(data, str):
+                # For string types, just return the data directly
+                return data
+
+            # For other cases, try parsing with this type
+            return _parse_typing(field, arg_type, data, encoder, False)
+        except Exception as e:
+            # Record error and continue to next type
+            error = f"{e}"
+
+    # If we get here, no union type worked - return data as is if possible
+    if isinstance(data, (list, dict, set, str, int, float, bool)):
+        return data
+
+    # Last resort - raise error
     raise ValueError(
-        f"Invalid type for {field.name} with data={data}, error = {error}"
+        f"Invalid type for {field.name} with data={data}, error={error}"
     )
+
 
 cdef object _parse_type(
     object field,
@@ -1058,6 +1274,14 @@ cdef object _parse_typing(
         else:
             inner_type = targs[0]
             inner_origin = get_origin(inner_type)
+    elif origin is set and targs:
+        # Similar treatment for sets
+        if hasattr(field, '_inner_type') and field._inner_type is not None:
+            inner_type = field._inner_type
+            inner_origin = getattr(field, '_inner_origin', None)
+        else:
+            inner_type = targs[0]
+            inner_origin = get_origin(inner_type)
     else:
         inner_type = None
         inner_origin = None
@@ -1117,6 +1341,14 @@ cdef object _parse_typing(
                 return _parse_typing_type(
                     field, T, name, data, encoder, origin, targs, as_objects
                 )
+        elif origin is set:
+            # Handle sets much like lists
+            if inner_is_dc:
+                return _parse_set_type(field, T, data, encoder, targs, parent)
+            else:
+                return _parse_typing_type(
+                    field, T, name, data, encoder, origin, targs, as_objects
+                )
         else:
             return _parse_typing_type(
                 field, T, name, data, encoder, origin, targs, as_objects
@@ -1125,6 +1357,8 @@ cdef object _parse_typing(
         return _parse_dict_type(field, T, data, encoder, targs)
     if origin is list:
         return _parse_list_type(field, T, data, encoder, targs, parent)
+    if origin is set:
+        return _parse_set_type(field, T, data, encoder, targs, parent)
     if origin is not None:
         # other advanced generics
         return data
@@ -1267,6 +1501,39 @@ cdef object _handle_list_of_dataclasses(
                     new_list.append(item)
             return new_list
     except AttributeError:
+        pass
+    return value
+
+# Helper function to handle sets of dataclasses
+cdef object _handle_set_of_dataclasses(
+    object field,
+    str name,
+    object value,
+    object _type,
+    object parent = None
+):
+    """
+    _handle_set_of_dataclasses.
+
+    Process a set field that is annotated as Set[SomeDataclass].
+    If there's a registered converter for the sub-dataclass, call it;
+    otherwise, build the sub-dataclass using default logic.
+    """
+    try:
+        sub_type = _type.__args__[0]
+        if is_dc(sub_type):
+            key = (sub_type, name)
+            converter = TYPE_PARSERS.get(key) or TYPE_PARSERS.get(_type)
+            new_set = set()
+            for item in value:
+                if converter:
+                    new_set.add(converter(name, item, sub_type, parent))
+                elif isinstance(item, dict):
+                    new_set.add(sub_type(**item))
+                else:
+                    new_set.add(item)
+            return new_set
+    except (AttributeError, IndexError):
         pass
     return value
 
@@ -1420,6 +1687,13 @@ cpdef dict processing_fields(object obj, list columns):
                 else:
                     newval = _handle_list_of_dataclasses(f, name, value, _type, None)
                 obj.__dict__[name] = newval
+            # Handle sets of dataclasses similar to lists
+            elif f.origin in (set, 'set') and getattr(f, '_inner_is_dc', False):
+                if as_objects is True:
+                    newval = _handle_set_of_dataclasses(f, name, value, _type, obj)
+                else:
+                    newval = _handle_set_of_dataclasses(f, name, value, _type, None)
+                obj.__dict__[name] = newval
             elif field_category == 'typing':
                 if f.is_dc:
                     # means that is_dataclass(T)
@@ -1453,6 +1727,31 @@ cpdef dict processing_fields(object obj, list columns):
                         except Exception as e:
                             raise ValueError(
                                 f"Error parsing List: {name}: {e}"
+                            )
+                    obj.__dict__[name] = newval
+                elif f.origin is set:
+                    if getattr(f, '_inner_priv', False):
+                        newval = _parse_set_type(
+                            f,
+                            _type,
+                            value,
+                            _encoder,
+                            f.args,
+                            obj
+                        )
+                    else:
+                        try:
+                            newval = _parse_typing(
+                                f,
+                                _type,
+                                value,
+                                _encoder,
+                                as_objects,
+                                obj
+                            )
+                        except Exception as e:
+                            raise ValueError(
+                                f"Error parsing Set: {name}: {e}"
                             )
                     obj.__dict__[name] = newval
                 # If the field is a Union and data is a list, use _parse_union_type.
@@ -1499,6 +1798,13 @@ cpdef dict processing_fields(object obj, list columns):
                     newval = _handle_list_of_dataclasses(f, name, value, _type, obj)
                 else:
                     newval = _handle_list_of_dataclasses(f, name, value, _type, None)
+                obj.__dict__[name] = newval
+            # Handle set values similar to list
+            elif isinstance(value, set) and type_args:
+                if as_objects is True:
+                    newval = _handle_set_of_dataclasses(f, name, value, _type, obj)
+                else:
+                    newval = _handle_set_of_dataclasses(f, name, value, _type, None)
                 obj.__dict__[name] = newval
             else:
                 newval = _parse_typing(

@@ -119,6 +119,10 @@ class Field(ff):
         '_pattern',
         '_encoder_fn',
         '_default_callable',
+        '_key_type',
+        '_value_type',
+        '_key_encoder_fn',
+        '_value_encoder_fn',
     )
 
     def __init__(
@@ -157,6 +161,10 @@ class Field(ff):
         self.type_args: Any = None
         self.origin: Any = None
         self.args: Any = None
+        self._key_type: Any = None
+        self._value_type: Any = None
+        self._key_encoder_fn: Optional[callable] = None
+        self._value_encoder_fn: Optional[callable] = None
         self.compare = kwargs.pop("compare", True)
         self.init = kwargs.pop("init", True)
         self.repr = kwargs.pop("repr", True)
