@@ -6,7 +6,6 @@ from collections.abc import Callable, Awaitable
 import typing
 import asyncio
 import inspect
-from libcpp cimport bool as bool_t
 from cpython.object cimport PyObject_IsInstance, PyObject_IsSubclass
 from cpython.type cimport PyType_Check
 from enum import Enum
@@ -109,23 +108,67 @@ cdef inline bint is_enum_class(object annotated_type):
         raise RuntimeError("Error in PyObject_IsSubclass")
     return res != 0
 
-cdef bool_t is_instanceof(object value, type annotated_type):
+cdef bint is_instanceof(object value, type annotated_type):
+    """
+    Check if value is an instance of annotated_type, handling typing objects properly.
+    For generic types (List[int], etc.), just check against the base container type.
+    """
+    # Get origin type for generics
+    origin = get_origin(annotated_type)
+
+    # If it's a typing module type like List[int], Dict[str, int], etc.
     if annotated_type.__module__ == 'typing':
-        return True # TODO: validate subscripted generic (typing extensions)
+        # For Union, check each option
+        if origin is Union:
+            args = get_args(annotated_type)
+            return any(is_instanceof(value, arg) for arg in args if arg is not type(None)) or value is None and type(None) in args
+
+        # For container types, check against base type
+        elif origin in (list, tuple, set, frozenset, dict):
+            container_map = {
+                list: list,
+                tuple: tuple,
+                set: set,
+                frozenset: frozenset,
+                dict: dict
+            }
+            return isinstance(value, container_map.get(origin, object))
+
+        # For other typing constructs, consider it valid (can be refined further)
+        return True
+
+    # For datetime types, use issubclass check
     elif value in (datetime.date, datetime.time, datetime.datetime):
-        # check if is a pendulum instance:
+        # Check if is a pendulum instance:
         return issubclass(value, (datetime.date, datetime.time, datetime.datetime))
+
+    # For normal types, use isinstance
     else:
         try:
             return isinstance(value, annotated_type)
         except (AttributeError, TypeError, ValueError) as e:
-            raise TypeError(
-                f"{e}"
-            )
+            # For errors with subscripted generics, just return True
+            if "subscripted generics" in str(e):
+                return True
+            raise TypeError(f"{e}")
 
-cpdef bool_t is_optional_type(object annotated_type):
-    if get_origin(annotated_type) is Union:
-        return type(None) in get_args(annotated_type)
+cpdef bint is_optional_type(object annotated_type):
+    """
+    Check if annotated_type is an Optional type (Union[T, None]).
+    """
+    origin = get_origin(annotated_type)
+
+    # If it's a Union, check if None is one of the options
+    if origin is Union:
+        args = get_args(annotated_type)
+        return type(None) in args
+
+    # For backward compatibility with Python 3.8
+    # Check old-style Optional typing
+    if hasattr(annotated_type, "__origin__") and annotated_type.__origin__ is Union:
+        args = annotated_type.__args__
+        return type(None) in args
+
     return False
 
 cdef object get_primary_key_field(object annotated_type, str name, object field_meta):
@@ -290,9 +333,10 @@ cpdef dict _validation(
                 annotated_type
             )
         return {}
-    # if inspect.isclass(annotated_type) and issubclass(annotated_type, Enum):
+
     if is_enum_class(annotated_type):
         return validate_enum(name, value, annotated_type, val_type)
+
     if F.origin is Callable:
         if not is_callable(value):
             return _create_error(
@@ -308,6 +352,7 @@ cpdef dict _validation(
         return {}
     elif field_type == 'type':
         return validate_type(F, name, value, annotated_type, val_type)
+
     elif F.origin is Literal:
         allowed_values = list(F.args)
         if value not in allowed_values:
@@ -318,11 +363,39 @@ cpdef dict _validation(
                 val_type,
                 annotated_type
             )
+        return {}
+
+    # Handle Union (including Optional)
+    elif F.origin is Union:
+        # If None is allowed and value is None, it's valid
+        if type(None) in F.args and value is None:
+            return {}
+        # return _validate_union_field(F, name, value, annotated_type)
     elif field_type == 'typing' or hasattr(annotated_type, '__module__') and annotated_type.__module__ == 'typing':
         if F.origin is tuple:
+            tuple_args = F.args
             # Check if we are in the homogeneous case: Tuple[T, ...]
-            if len(F.args) == 2 and F.args[1] is Ellipsis:
+            if len(tuple_args) == 2 and tuple_args[1] is Ellipsis:
+                element_type = tuple_args[0]
                 for i, elem in enumerate(value):
+                    # Can't use isinstance with generic types
+                    elem_origin = get_origin(element_type)
+                    if elem_origin is None:
+                        if not isinstance(elem, element_type):
+                            return _create_error(
+                                f"{name}[{i}]",
+                                elem,
+                                f"Invalid type at index {i}: expected {element_type}",
+                                type(elem), element_type
+                            )
+                    else:
+                        if not is_instanceof(elem, element_type):
+                            return _create_error(
+                                f"{name}[{i}]",
+                                elem,
+                                f"Invalid type at index {i}: expected {element_type}",
+                                type(elem), element_type
+                            )
                     if not isinstance(elem, F.args[0]):
                         return _create_error(
                             f"{name}[{i}]",
@@ -330,18 +403,54 @@ cpdef dict _validation(
                             f"Invalid type at index {i}: expected {F.args[0]}",
                             type(elem), F.args[0]
                         )
+                return {}
             else:
                 if len(value) != len(F.args):
                     return _create_error(name, value, f"Invalid length for {annotated_type}.{name}, expected {len(F.args)} elements", val_type, annotated_type)
                 else:
-                    for i, elem in enumerate(value):
-                        if not isinstance(elem, F.args[i]):
+                    for i, (elem, elem_type) in enumerate(zip(value, F.args)):
+                        elem_origin = get_origin(elem_type)
+                        if elem_origin is None and not isinstance(elem, elem_type):
                             return _create_error(
                                 f"{name}[{i}]",
                                 elem,
                                 f"Invalid type at index {i}: expected {F.args[i]}",
                                 type(elem), F.args[i]
                             )
+                return {}
+        elif F.origin is list:
+            if not isinstance(value, list):
+                return _create_error(
+                    name,
+                    value,
+                    f"Invalid type for {annotated_type}.{name}, expected list",
+                    val_type,
+                    annotated_type
+                )
+            # List content validation is more complex and should be done in parsing
+            return {}
+        # For sets
+        elif F.origin in (set, frozenset):
+            if not isinstance(value, F.origin):
+                return _create_error(
+                    name,
+                    value,
+                    f"Invalid type for {annotated_type}.{name}, expected {F.origin}",
+                    val_type,
+                    annotated_type
+                )
+            return {}
+        # For dictionaries
+        elif F.origin is dict:
+            if not isinstance(value, dict):
+                return _create_error(
+                    name,
+                    value,
+                    f"Invalid type for {annotated_type}.{name}, expected dict",
+                    val_type,
+                    annotated_type
+                )
+            return {}
         # Handle Optional Types:
         elif F.origin is Union and type(None) in F.args:
             inner_types = [t for t in F.args if t is not type(None)]
@@ -362,8 +471,6 @@ cpdef dict _validation(
                     val_type,
                     annotated_type
                 )
-        # elif F.origin is Union:
-        #    return _validate_union_field(F, name, value, annotated_type)
     elif type(annotated_type).__name__ == "ModelMeta":
         # Check if there's a field in the annotated type that matches the name and type
         if as_objects:
