@@ -312,7 +312,7 @@ cpdef dict _validation(
         annotated_type = F.type
     elif isinstance(annotated_type, Field):
         annotated_type = annotated_type.type
-
+    # print('VAL > ', name, ' F ', F, ' VALUE > ', value)
     if fn := F.metadata.get('validator', None):
         try:
             result = fn(F, value, annotated_type, val_type)

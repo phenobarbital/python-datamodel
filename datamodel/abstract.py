@@ -264,6 +264,8 @@ class ModelMeta(type):
                 _type_category = 'primitive'
             elif origin == type:
                 _type_category = 'type'
+            elif _type is set or _type is frozenset:
+                _type_category = 'set'
             elif _is_dc:
                 _type_category = 'dataclass'
             elif _is_typing or _is_alias:  # noqa
