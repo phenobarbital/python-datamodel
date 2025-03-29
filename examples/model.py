@@ -40,6 +40,8 @@ class User(BaseModel):
     birth: date = Column(required=False)
     is_employee: str = Column(required=True, default='F', encoder=is_employee)
     size: float
+    groups: list = Column(default_factory=list)
+    programs: list = Column(default_factory=list)
     signup_ts: datetime = Column(default=datetime.now(), db_default='now()')
     contacts: Contact = Column(required=False)
 

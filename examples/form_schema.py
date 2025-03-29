@@ -11,7 +11,7 @@ class Reward(BaseModel):
     reward_id: int = Field(
         primary_key=True, required=False, db_default="auto", repr=False
     )
-    reward: str = Field(required=True, nullable=False)
+    reward: str = Field(required=True, nullable=False, default='Reward')
     description: str = Field(required=False)
     points: int = Field(required=False, default=1)
     programs: str = Field(required=False)
@@ -71,9 +71,11 @@ class BadgeAssign(BaseModel):
         required=True,
         fk='reward_id|reward',
         api='rewards',
-        label="Badge"
+        label="Badge",
+
     )
-    reward: str = Field(repr=False)
+    reward: str = Field(repr=False, default='Reward')
+    points: int = Field(default=1)
     receiver_email: Employee = Field(
         required=True,
         fk='corporate_email|display_name',

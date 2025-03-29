@@ -1,6 +1,6 @@
-import pytest
 from datetime import datetime
 from typing import Tuple, Optional, List, Mapping
+import pytest
 from datamodel import BaseModel, Field
 from datamodel.exceptions import ValidationError
 
@@ -15,7 +15,7 @@ class TupleModel(BaseModel):
 
 def test_required_tuple_fields():
     payload = {
-        "hetero": ("test", 123), # required field
+        "hetero": ("test", 123), # homo is required field
     }
     with pytest.raises(ValueError):
         TupleModel(**payload)
@@ -49,7 +49,7 @@ def test_invalid_tuple_length():
         "hetero": ("test",),  # incorrect length
         "homo": (1.1, 2.2)
     }
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValueError):
         TupleModel(**payload)
 
 def test_optional_tuple():

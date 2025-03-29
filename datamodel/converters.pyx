@@ -518,9 +518,6 @@ encoders = {
     Decimal: to_decimal,
     bytes: to_bytes,
     Path: lambda obj: Path(obj) if isinstance(obj, str) else obj
-    # dict: to_object,
-    # list: to_object,
-    # tuple: to_object,
 }
 
 
@@ -1291,6 +1288,10 @@ cdef object _parse_union_type(
                 except Exception as exc:
                     error = f"Failed to create {arg_type.__name__} from {type(data).__name__}: {exc}"
                     continue
+    if error:
+        raise ValueError(
+            f"Invalid type for {field.name} with data={data}, error = {error}"
+        )
 
     for arg_type in targs:
         # Iterate over all subtypes of Union:

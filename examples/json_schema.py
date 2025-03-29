@@ -16,7 +16,7 @@ l18n.setup(app)
 
 class Airport(BaseModel):
     iata: str = Column(
-        primary_key=True, required=True, label="IATA"
+        primary_key=True, required=True, label="IATA", default='IATA'
     )
     airport: str = Column(
         required=True, label="airport"
@@ -25,7 +25,7 @@ class Airport(BaseModel):
         required=False, label="city", multiple=True
     )
     country: str = Column(
-        required=False, label="country"
+        required=False, label="country", default='US'
     )
     created_by: int = Column(
         required=False, label="created_by"
