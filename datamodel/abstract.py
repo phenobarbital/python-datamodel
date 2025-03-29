@@ -264,12 +264,14 @@ class ModelMeta(type):
                 _type_category = 'primitive'
             elif origin == type:
                 _type_category = 'type'
+            elif _type is set or _type is frozenset:
+                _type_category = 'set'
             elif _is_dc:
                 _type_category = 'dataclass'
             elif _is_typing or _is_alias:  # noqa
                 if df.origin is not None and (df.origin is list and df.args):
                     df._inner_targs = df.args
-                    df._inner_type = args[0]
+                    df._inner_type = args[0] if args else Any
                     df._inner_origin = get_origin(df._inner_type)
                     df._typing_args = get_args(df._inner_type)
                     df._inner_is_dc = is_dataclass(df._inner_type)
@@ -277,16 +279,56 @@ class ModelMeta(type):
                         df._encoder_fn = encoders[df._inner_type]
                     except (TypeError, KeyError):
                         df._encoder_fn = None
+                # Handle list type
                 if origin is list:
                     df._inner_targs = df.args
-                    df._inner_type = args[0]
+                    df._inner_type = args[0] if args else Any
                     try:
                         df._encoder_fn = encoders[df._inner_type]
                     except (TypeError, KeyError):
                         df._encoder_fn = None
+                # Handle set type
+                elif origin is set:
+                    df._inner_targs = df.args
+                    df._inner_type = args[0] if args else Any
+                    try:
+                        df._encoder_fn = encoders[df._inner_type]
+                    except (TypeError, KeyError):
+                        df._encoder_fn = None
+                # Handle tuple type
+                elif origin is tuple:
+                    df._inner_targs = df.args
+                    # For tuple, use first arg if no Ellipsis, otherwise use it for all elements
+                    has_ellipsis = len(args) == 2 and args[1] is Ellipsis
+                    df._inner_type = args[0] if has_ellipsis or args else Any
+                    try:
+                        df._encoder_fn = encoders[df._inner_type]
+                    except (TypeError, KeyError):
+                        df._encoder_fn = None
+                # Handle dict type
+                elif origin is dict:
+                    df._inner_targs = df.args
+                    df._key_type = args[0] if len(args) > 0 else Any
+                    df._value_type = args[1] if len(args) > 1 else Any
+                    df._inner_origin = get_origin(df._value_type)
+                    df._typing_args = get_args(df._value_type)
+                    try:
+                        df._key_encoder_fn = encoders[df._key_type]
+                    except (TypeError, KeyError):
+                        df._key_encoder_fn = None
+                    try:
+                        df._value_encoder_fn = encoders[df._value_type]
+                    except (TypeError, KeyError):
+                        df._value_encoder_fn = None
+                # Handle Union type
                 elif origin is Union:
                     df._inner_targs = df.args
-                    df._inner_type = args[0]
+                    try:
+                        df._inner_type = args[0]
+                    except IndexError as exc:
+                        raise IndexError(
+                            f"Union type {field} must have at least one type."
+                        ) from exc
                     df._inner_is_dc = is_dataclass(df._inner_type)
                     df._inner_priv = is_primitive(df._inner_type)
                     df._inner_origin = get_origin(df._inner_type)
@@ -294,8 +336,6 @@ class ModelMeta(type):
                 _type_category = 'typing'
             elif isclass(_type):
                 _type_category = 'class'
-            # elif _is_alias:
-            #    _type_category = 'typing'
             else:
                 # TODO: making parser for complex types
                 _type_category = 'complex'
@@ -360,15 +400,6 @@ class ModelMeta(type):
             _typing_args.update(new_typing_args)
             aliases.update(new_aliases)
             primary_keys.extend(nw_primary_keys)
-
-            # Store computed results in cache
-            # cls._base_class_cache[base_key] = {
-            #     'cols': cols.copy(),
-            #     'types': _types.copy(),
-            #     '_typing_args': _typing_args.copy(),
-            #     'aliases': aliases.copy(),
-            #     'primary_keys': primary_keys.copy(),
-            # }
             cache_entry = {
                 'cols': cols.copy(),
                 'types': _types.copy(),

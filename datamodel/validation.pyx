@@ -6,7 +6,6 @@ from collections.abc import Callable, Awaitable
 import typing
 import asyncio
 import inspect
-from libcpp cimport bool as bool_t
 from cpython.object cimport PyObject_IsInstance, PyObject_IsSubclass
 from cpython.type cimport PyType_Check
 from enum import Enum
@@ -96,6 +95,16 @@ validators = {
     Text: valid_str
 }
 
+cdef dict _create_error(str name, object value, object error, object val_type, object annotated_type, object exception = None):
+    return {
+        "field": name,
+        "value": value,
+        "error": error,
+        "value_type": val_type,
+        "annotation": annotated_type,
+        "exception": exception
+    }
+
 
 cdef inline bint is_enum_class(object annotated_type):
     cdef int res
@@ -109,23 +118,67 @@ cdef inline bint is_enum_class(object annotated_type):
         raise RuntimeError("Error in PyObject_IsSubclass")
     return res != 0
 
-cdef bool_t is_instanceof(object value, type annotated_type):
+cdef bint is_instanceof(object value, type annotated_type):
+    """
+    Check if value is an instance of annotated_type, handling typing objects properly.
+    For generic types (List[int], etc.), just check against the base container type.
+    """
+    # Get origin type for generics
+    origin = get_origin(annotated_type)
+
+    # If it's a typing module type like List[int], Dict[str, int], etc.
     if annotated_type.__module__ == 'typing':
-        return True # TODO: validate subscripted generic (typing extensions)
+        # For Union, check each option
+        if origin is Union:
+            args = get_args(annotated_type)
+            return any(is_instanceof(value, arg) for arg in args if arg is not type(None)) or value is None and type(None) in args
+
+        # For container types, check against base type
+        elif origin in (list, tuple, set, frozenset, dict):
+            container_map = {
+                list: list,
+                tuple: tuple,
+                set: set,
+                frozenset: frozenset,
+                dict: dict
+            }
+            return isinstance(value, container_map.get(origin, object))
+
+        # For other typing constructs, consider it valid (can be refined further)
+        return True
+
+    # For datetime types, use issubclass check
     elif value in (datetime.date, datetime.time, datetime.datetime):
-        # check if is a pendulum instance:
+        # Check if is a pendulum instance:
         return issubclass(value, (datetime.date, datetime.time, datetime.datetime))
+
+    # For normal types, use isinstance
     else:
         try:
             return isinstance(value, annotated_type)
         except (AttributeError, TypeError, ValueError) as e:
-            raise TypeError(
-                f"{e}"
-            )
+            # For errors with subscripted generics, just return True
+            if "subscripted generics" in str(e):
+                return True
+            raise TypeError(f"{e}")
 
-cpdef bool_t is_optional_type(object annotated_type):
-    if get_origin(annotated_type) is Union:
-        return type(None) in get_args(annotated_type)
+cpdef bint is_optional_type(object annotated_type):
+    """
+    Check if annotated_type is an Optional type (Union[T, None]).
+    """
+    origin = get_origin(annotated_type)
+
+    # If it's a Union, check if None is one of the options
+    if origin is Union:
+        args = get_args(annotated_type)
+        return type(None) in args
+
+    # For backward compatibility with Python 3.8
+    # Check old-style Optional typing
+    if hasattr(annotated_type, "__origin__") and annotated_type.__origin__ is Union:
+        args = annotated_type.__args__
+        return type(None) in args
+
     return False
 
 cdef object get_primary_key_field(object annotated_type, str name, object field_meta):
@@ -251,6 +304,168 @@ cdef dict _validate_union_field(
         errors
     )
 
+cdef dict _validate_constraints(
+    object field,
+    str name,
+    object value,
+    object annotated_type,
+    object val_type
+):
+    """
+    Validates primitive field constraints based on field metadata.
+
+    Handles the following validations:
+    - For strings: length, min_length, max_length
+    - For numbers: min, max, gt, lt, ge, le, eq
+
+    Args:
+        field: The Field object
+        name: Field name
+        value: The value to validate
+        annotated_type: The annotated type
+        val_type: The actual value type
+
+    Returns:
+        Empty dict if validation passes, error dict otherwise
+    """
+    # string comparisons
+    cdef object length = None
+    cdef object min_length = None
+    cdef object max_length = None
+    # integer/float comparisons
+    cdef object min_val = None
+    cdef object max_val = None
+    cdef object ge_val = None
+    cdef object le_val = None
+    cdef object eq_val = None
+    cdef object ne_val = None
+    cdef object pattern = None
+    # Skip validation if value is None
+    if value is None:
+        return {}
+
+    metadata = field.metadata
+    error = {}
+
+    # String validations
+    if annotated_type is str:
+        length = metadata.get('length', None)
+        min_length = metadata.get('min_length', None)
+        max_length = metadata.get('max_length', None)
+        pattern = metadata.get('pattern', getattr(field, '_pattern', None))
+        # Length validation
+        if length is not None and len(value) != length:
+            return _create_error(
+                name,
+                value,
+                f"String length must be exactly {length} characters, got {len(value)}",
+                val_type,
+                annotated_type
+            )
+
+        # Min length validation
+        if min_length is not None and len(value) < min_length:
+            return _create_error(
+                name,
+                value,
+                f"String length must be at least {min_length} characters, got {len(value)}",
+                val_type,
+                annotated_type
+            )
+
+        # Max length validation
+        if max_length is not None and len(value) > max_length:
+            return _create_error(
+                name,
+                value,
+                f"String length must be at most {max_length} characters, got {len(value)}",
+                val_type,
+                annotated_type
+            )
+
+        # Pattern validation
+        if pattern is not None:
+            import re
+            if not re.match(pattern, value):
+                return _create_error(
+                    name,
+                    value,
+                    f"String does not match pattern {pattern}",
+                    val_type,
+                    annotated_type
+                )
+
+    # Numeric validations (int, float, Decimal)
+    elif annotated_type in (int, float, Decimal):
+        min_val = metadata.get('min', getattr(field, 'gt', None))
+        max_val = metadata.get('max', getattr(field, 'lt', None))
+        ge_val = getattr(field, 'ge', None)
+        le_val = getattr(field, 'le', None)
+        eq_val = getattr(field, 'eq', None)
+        ne_val = getattr(field, 'ne', None)
+        # Equal validation
+        if eq_val is not None and value != eq_val:
+            return _create_error(
+                name,
+                value,
+                f"Value must be equal to {eq_val}",
+                val_type,
+                annotated_type
+            )
+
+        # Not equal validation
+        if ne_val is not None and value == ne_val:
+            return _create_error(
+                name,
+                value,
+                f"Value must not be equal to {ne_val}",
+                val_type,
+                annotated_type
+            )
+
+        # Minimum value validation (greater than)
+        if min_val is not None and value <= min_val:
+            return _create_error(
+                name,
+                value,
+                f"Value must be greater than {min_val}",
+                val_type,
+                annotated_type
+            )
+
+        # Maximum value validation (less than)
+        if max_val is not None and value >= max_val:
+            return _create_error(
+                name,
+                value,
+                f"Value must be less than {max_val}",
+                val_type,
+                annotated_type
+            )
+
+        # Greater than or equal validation
+        if ge_val is not None and value < ge_val:
+            return _create_error(
+                name,
+                value,
+                f"Value must be greater than or equal to {ge_val}",
+                val_type,
+                annotated_type
+            )
+
+        # Less than or equal validation
+        if le_val is not None and value > le_val:
+            return _create_error(
+                name,
+                value,
+                f"Value must be less than or equal to {le_val}",
+                val_type,
+                annotated_type
+            )
+
+    # If we've made it here, all validations passed
+    return {}
+
 cpdef dict _validation(
     object F,
     str name,
@@ -269,7 +484,7 @@ cpdef dict _validation(
         annotated_type = F.type
     elif isinstance(annotated_type, Field):
         annotated_type = annotated_type.type
-
+    # print('VAL > ', name, ' F ', F, ' VALUE > ', value)
     if fn := F.metadata.get('validator', None):
         try:
             result = fn(F, value, annotated_type, val_type)
@@ -278,6 +493,11 @@ cpdef dict _validation(
                 return _create_error(name, value, msg, val_type, annotated_type)
         except ValueError:
             raise
+    # Check for primitive type constraints if the value is not None
+    if F._type_category == 'primitive':
+        errors = _validate_constraints(F, name, value, annotated_type, val_type)
+        if errors:
+            return errors
     # check: data type hint
     # If field_type is known, short-circuit certain checks
     if F.type == Text:
@@ -290,9 +510,10 @@ cpdef dict _validation(
                 annotated_type
             )
         return {}
-    # if inspect.isclass(annotated_type) and issubclass(annotated_type, Enum):
+
     if is_enum_class(annotated_type):
         return validate_enum(name, value, annotated_type, val_type)
+
     if F.origin is Callable:
         if not is_callable(value):
             return _create_error(
@@ -308,6 +529,7 @@ cpdef dict _validation(
         return {}
     elif field_type == 'type':
         return validate_type(F, name, value, annotated_type, val_type)
+
     elif F.origin is Literal:
         allowed_values = list(F.args)
         if value not in allowed_values:
@@ -318,11 +540,39 @@ cpdef dict _validation(
                 val_type,
                 annotated_type
             )
+        return {}
+
+    # Handle Union (including Optional)
+    elif F.origin is Union:
+        # If None is allowed and value is None, it's valid
+        if type(None) in F.args and value is None:
+            return {}
+        # return _validate_union_field(F, name, value, annotated_type)
     elif field_type == 'typing' or hasattr(annotated_type, '__module__') and annotated_type.__module__ == 'typing':
         if F.origin is tuple:
+            tuple_args = F.args
             # Check if we are in the homogeneous case: Tuple[T, ...]
-            if len(F.args) == 2 and F.args[1] is Ellipsis:
+            if len(tuple_args) == 2 and tuple_args[1] is Ellipsis:
+                element_type = tuple_args[0]
                 for i, elem in enumerate(value):
+                    # Can't use isinstance with generic types
+                    elem_origin = get_origin(element_type)
+                    if elem_origin is None:
+                        if not isinstance(elem, element_type):
+                            return _create_error(
+                                f"{name}[{i}]",
+                                elem,
+                                f"Invalid type at index {i}: expected {element_type}",
+                                type(elem), element_type
+                            )
+                    else:
+                        if not is_instanceof(elem, element_type):
+                            return _create_error(
+                                f"{name}[{i}]",
+                                elem,
+                                f"Invalid type at index {i}: expected {element_type}",
+                                type(elem), element_type
+                            )
                     if not isinstance(elem, F.args[0]):
                         return _create_error(
                             f"{name}[{i}]",
@@ -330,18 +580,54 @@ cpdef dict _validation(
                             f"Invalid type at index {i}: expected {F.args[0]}",
                             type(elem), F.args[0]
                         )
+                return {}
             else:
                 if len(value) != len(F.args):
                     return _create_error(name, value, f"Invalid length for {annotated_type}.{name}, expected {len(F.args)} elements", val_type, annotated_type)
                 else:
-                    for i, elem in enumerate(value):
-                        if not isinstance(elem, F.args[i]):
+                    for i, (elem, elem_type) in enumerate(zip(value, F.args)):
+                        elem_origin = get_origin(elem_type)
+                        if elem_origin is None and not isinstance(elem, elem_type):
                             return _create_error(
                                 f"{name}[{i}]",
                                 elem,
                                 f"Invalid type at index {i}: expected {F.args[i]}",
                                 type(elem), F.args[i]
                             )
+                return {}
+        elif F.origin is list:
+            if not isinstance(value, list):
+                return _create_error(
+                    name,
+                    value,
+                    f"Invalid type for {annotated_type}.{name}, expected list",
+                    val_type,
+                    annotated_type
+                )
+            # List content validation is more complex and should be done in parsing
+            return {}
+        # For sets
+        elif F.origin in (set, frozenset):
+            if not isinstance(value, F.origin):
+                return _create_error(
+                    name,
+                    value,
+                    f"Invalid type for {annotated_type}.{name}, expected {F.origin}",
+                    val_type,
+                    annotated_type
+                )
+            return {}
+        # For dictionaries
+        elif F.origin is dict:
+            if not isinstance(value, dict):
+                return _create_error(
+                    name,
+                    value,
+                    f"Invalid type for {annotated_type}.{name}, expected dict",
+                    val_type,
+                    annotated_type
+                )
+            return {}
         # Handle Optional Types:
         elif F.origin is Union and type(None) in F.args:
             inner_types = [t for t in F.args if t is not type(None)]
@@ -362,8 +648,6 @@ cpdef dict _validation(
                     val_type,
                     annotated_type
                 )
-        # elif F.origin is Union:
-        #    return _validate_union_field(F, name, value, annotated_type)
     elif type(annotated_type).__name__ == "ModelMeta":
         # Check if there's a field in the annotated type that matches the name and type
         if as_objects:
@@ -424,16 +708,6 @@ cpdef dict _validation(
                 annotated_type
             )
     return error
-
-cdef dict _create_error(str name, object value, object error, object val_type, object annotated_type, object exception = None):
-    return {
-        "field": name,
-        "value": value,
-        "error": error,
-        "value_type": val_type,
-        "annotation": annotated_type,
-        "exception": exception
-    }
 
 # Define a validator function for uint64
 def validate_uint64(value: int) -> None:

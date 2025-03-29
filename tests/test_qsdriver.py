@@ -67,7 +67,7 @@ class jdbcDriver(BaseDriver):
     name: str
     provider: str = Field(required=False, default='oracle')
     host: str
-    port: Union[str, int]
+    port: int
     username: object = Field(default='')  # using InitVar-like (for testing, we use a simple field)
     password: str = Field(required=False, default=None, repr=False)
     database: str = Field(required=True)

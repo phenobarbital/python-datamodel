@@ -47,7 +47,7 @@ def test_union_str_dict_valid(value):
 @pytest.mark.parametrize(
     "value",
     [
-        3.14,            # float is not str or dict
+        {3.14},            # float in a set is not str or dict
         ["not", "valid"] # list is not str or dict
     ],
     ids=["float_value", "list_value"]

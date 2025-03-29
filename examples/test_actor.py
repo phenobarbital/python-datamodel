@@ -56,6 +56,7 @@ class Actor(BaseModel):
     userid: uuid.UUID = Field(required=False, primary_key=True, default=auto_uuid)
     name: str
     account: Union[Account, List[Account]]
+    # account: List[Account]
 
     def __str__(self) -> str:
         return f'<{self.name}: {self.userid}>'
