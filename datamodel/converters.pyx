@@ -30,6 +30,7 @@ from uuid import UUID
 import asyncpg.pgproto.pgproto as pgproto
 from .functions import is_iterable, is_primitive
 from .validation import _validation
+from .validation cimport _validate_constraints
 from .fields import Field
 # New converter:
 import datamodel.rs_parsers as rc
@@ -1883,7 +1884,6 @@ cpdef dict processing_fields(object obj, list columns):
                     errors.update(
                         _build_error(name, f"Error parsing *{name}* = *{value}*", ex)
                     )
-                    continue
             elif field_category == 'primitive':
                 try:
                     newval = parse_basic(_type, value, _encoder)
@@ -1893,7 +1893,6 @@ cpdef dict processing_fields(object obj, list columns):
                     errors.update(
                         _build_error(name, f"Error parsing {name}: ", ex)
                     )
-                    continue
             elif field_category == 'type':
                 # TODO: support multiple types
                 pass
@@ -2248,6 +2247,10 @@ cdef object _validation_(
             if error:
                 err["error"] = error
                 return err
+            else:
+                # calling validation_constraints:
+                if _type in (str, int, float):
+                    return _validate_constraints(f, name, value, _type, val_type)
             return None
         except ValueError:
             raise

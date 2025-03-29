@@ -6,8 +6,9 @@ DataModel is a reimplementation of dataclasses with true inheritance and composi
 from datamodel.fields import Field, Column, fields
 from .models import Model
 from .base import BaseModel
+from .exceptions import ValidationError
 from .version import (
     __title__, __description__, __version__, __author__, __author_email__
 )
 
-__all__ = ('fields', 'Field', 'Column', 'Model', 'BaseModel', )
+__all__ = ('fields', 'Field', 'Column', 'Model', 'BaseModel', 'ValidationError', )

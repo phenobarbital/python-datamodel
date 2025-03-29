@@ -75,15 +75,14 @@ extensions = [
         language="c",
     ),
     Extension(
-        name='datamodel.functions',
-        sources=['datamodel/functions.pyx'],
-        extra_compile_args=COMPILE_ARGS,
-        extra_link_args=EXTRA_LINK_ARGS,
-        language="c++"
-    ),
-    Extension(
         name='datamodel.validation',
         sources=['datamodel/validation.pyx'],
+        extra_compile_args=COMPILE_ARGS,
+        language="c"
+    ),
+    Extension(
+        name='datamodel.functions',
+        sources=['datamodel/functions.pyx'],
         extra_compile_args=COMPILE_ARGS,
         extra_link_args=EXTRA_LINK_ARGS,
         language="c++"

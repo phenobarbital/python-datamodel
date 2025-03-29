@@ -95,6 +95,16 @@ validators = {
     Text: valid_str
 }
 
+cdef dict _create_error(str name, object value, object error, object val_type, object annotated_type, object exception = None):
+    return {
+        "field": name,
+        "value": value,
+        "error": error,
+        "value_type": val_type,
+        "annotation": annotated_type,
+        "exception": exception
+    }
+
 
 cdef inline bint is_enum_class(object annotated_type):
     cdef int res
@@ -294,6 +304,168 @@ cdef dict _validate_union_field(
         errors
     )
 
+cdef dict _validate_constraints(
+    object field,
+    str name,
+    object value,
+    object annotated_type,
+    object val_type
+):
+    """
+    Validates primitive field constraints based on field metadata.
+
+    Handles the following validations:
+    - For strings: length, min_length, max_length
+    - For numbers: min, max, gt, lt, ge, le, eq
+
+    Args:
+        field: The Field object
+        name: Field name
+        value: The value to validate
+        annotated_type: The annotated type
+        val_type: The actual value type
+
+    Returns:
+        Empty dict if validation passes, error dict otherwise
+    """
+    # string comparisons
+    cdef object length = None
+    cdef object min_length = None
+    cdef object max_length = None
+    # integer/float comparisons
+    cdef object min_val = None
+    cdef object max_val = None
+    cdef object ge_val = None
+    cdef object le_val = None
+    cdef object eq_val = None
+    cdef object ne_val = None
+    cdef object pattern = None
+    # Skip validation if value is None
+    if value is None:
+        return {}
+
+    metadata = field.metadata
+    error = {}
+
+    # String validations
+    if annotated_type is str:
+        length = metadata.get('length', None)
+        min_length = metadata.get('min_length', None)
+        max_length = metadata.get('max_length', None)
+        pattern = metadata.get('pattern', getattr(field, '_pattern', None))
+        # Length validation
+        if length is not None and len(value) != length:
+            return _create_error(
+                name,
+                value,
+                f"String length must be exactly {length} characters, got {len(value)}",
+                val_type,
+                annotated_type
+            )
+
+        # Min length validation
+        if min_length is not None and len(value) < min_length:
+            return _create_error(
+                name,
+                value,
+                f"String length must be at least {min_length} characters, got {len(value)}",
+                val_type,
+                annotated_type
+            )
+
+        # Max length validation
+        if max_length is not None and len(value) > max_length:
+            return _create_error(
+                name,
+                value,
+                f"String length must be at most {max_length} characters, got {len(value)}",
+                val_type,
+                annotated_type
+            )
+
+        # Pattern validation
+        if pattern is not None:
+            import re
+            if not re.match(pattern, value):
+                return _create_error(
+                    name,
+                    value,
+                    f"String does not match pattern {pattern}",
+                    val_type,
+                    annotated_type
+                )
+
+    # Numeric validations (int, float, Decimal)
+    elif annotated_type in (int, float, Decimal):
+        min_val = metadata.get('min', getattr(field, 'gt', None))
+        max_val = metadata.get('max', getattr(field, 'lt', None))
+        ge_val = getattr(field, 'ge', None)
+        le_val = getattr(field, 'le', None)
+        eq_val = getattr(field, 'eq', None)
+        ne_val = getattr(field, 'ne', None)
+        # Equal validation
+        if eq_val is not None and value != eq_val:
+            return _create_error(
+                name,
+                value,
+                f"Value must be equal to {eq_val}",
+                val_type,
+                annotated_type
+            )
+
+        # Not equal validation
+        if ne_val is not None and value == ne_val:
+            return _create_error(
+                name,
+                value,
+                f"Value must not be equal to {ne_val}",
+                val_type,
+                annotated_type
+            )
+
+        # Minimum value validation (greater than)
+        if min_val is not None and value <= min_val:
+            return _create_error(
+                name,
+                value,
+                f"Value must be greater than {min_val}",
+                val_type,
+                annotated_type
+            )
+
+        # Maximum value validation (less than)
+        if max_val is not None and value >= max_val:
+            return _create_error(
+                name,
+                value,
+                f"Value must be less than {max_val}",
+                val_type,
+                annotated_type
+            )
+
+        # Greater than or equal validation
+        if ge_val is not None and value < ge_val:
+            return _create_error(
+                name,
+                value,
+                f"Value must be greater than or equal to {ge_val}",
+                val_type,
+                annotated_type
+            )
+
+        # Less than or equal validation
+        if le_val is not None and value > le_val:
+            return _create_error(
+                name,
+                value,
+                f"Value must be less than or equal to {le_val}",
+                val_type,
+                annotated_type
+            )
+
+    # If we've made it here, all validations passed
+    return {}
+
 cpdef dict _validation(
     object F,
     str name,
@@ -321,6 +493,11 @@ cpdef dict _validation(
                 return _create_error(name, value, msg, val_type, annotated_type)
         except ValueError:
             raise
+    # Check for primitive type constraints if the value is not None
+    if F._type_category == 'primitive':
+        errors = _validate_constraints(F, name, value, annotated_type, val_type)
+        if errors:
+            return errors
     # check: data type hint
     # If field_type is known, short-circuit certain checks
     if F.type == Text:
@@ -531,16 +708,6 @@ cpdef dict _validation(
                 annotated_type
             )
     return error
-
-cdef dict _create_error(str name, object value, object error, object val_type, object annotated_type, object exception = None):
-    return {
-        "field": name,
-        "value": value,
-        "error": error,
-        "value_type": val_type,
-        "annotation": annotated_type,
-        "exception": exception
-    }
 
 # Define a validator function for uint64
 def validate_uint64(value: int) -> None:
