@@ -556,8 +556,6 @@ cdef object _parse_set_type(
     cdef object converter = TYPE_PARSERS.get(key) or TYPE_PARSERS.get(arg_type)
     cdef object inner_type = field._inner_type if hasattr(field, '_inner_type') else arg_type
 
-
-    print(' CAE AQUI >> ', field)
     if data is None:
         return set()   # short-circuit
 
@@ -688,12 +686,21 @@ cdef object _parse_list_type(
                 converter(field.name, item, inner_type, _parent)
             )
     elif is_primitive(inner_type):
+        print('DATA > ', data)
         for item in data:
+            print('HERE > ', item)
             try:
                 if encoder:
                     result.append(encoder(item))
+                if inner_type == int and isinstance(item, str):
+                    result.append(int(item))
+                elif inner_type == float and isinstance(item, str):
+                    result.append(float(item))
                 else:
-                    result.append(_parse_builtin_type(field, inner_type, item, None))
+                    if inner_type in encoders:
+                        result.append(encoders[inner_type](item))
+                    else:
+                        result.append(_parse_builtin_type(field, inner_type, item, None))
             except Exception as e:
                 try:
                     result = rc.to_list(inner_type, data)
@@ -968,11 +975,14 @@ cdef object _parse_list_typing(
     Handle List[T] logic, trying to reduce overhead from repeated lookups.
     """
     cdef list result = []
+    cdef list processed_sublist = []
     cdef list out = []
     cdef object arg_type = type_args[0] if type_args else None
     cdef object arg_module = getattr(arg_type, '__module__', None)
     cdef bint is_nested_typing = (arg_module == 'typing')
 
+
+    print('CAE AQUI MISMO > ', field, arg_type, is_nested_typing)
     # If no type args, we can't proceed with further logic
     if not type_args:
         return data
@@ -985,6 +995,26 @@ cdef object _parse_list_typing(
                 for x in data:
                     result.append(_instantiate_dataclass(subT, x))
                 return result
+            elif field._inner_origin is list:
+                inner_type = subT
+                for sublist in data:
+                    if not isinstance(sublist, (list, tuple)):
+                        # Convert single items to lists if needed
+                        sublist = [sublist]
+                    processed_sublist = []
+                    for item in sublist:
+                        # Convert each item to the expected inner type
+                        if is_primitive(inner_type):
+                            if inner_type == int and isinstance(item, str):
+                                processed_sublist.append(int(item))
+                            elif inner_type == float and isinstance(item, str):
+                                processed_sublist.append(float(item))
+                            else:
+                                processed_sublist.append(item)
+                        else:
+                            processed_sublist.append(_parse_type(field, inner_type, item, encoder, False))
+                    result.append(processed_sublist)
+                return result
             else:
                 # fallback
                 return data
@@ -996,12 +1026,28 @@ cdef object _parse_list_typing(
             result.append(_instantiate_dataclass(arg_type, d))
         return result
     else:
-        # parse each item
-        for item in data:
-            result.append(
-                _parse_type(field, arg_type, item, encoder, False)
-            )
-        return result
+        # Check if we're dealing with a simple flat list of primitives
+        if is_primitive(arg_type) and all(isinstance(x, (str, int, float, bool)) for x in data):
+            # For simple primitive types, don't create nested lists
+            result = []
+            for item in data:
+                # Convert the item to the expected type
+                if arg_type == int and isinstance(item, str):
+                    result.append(int(item))
+                elif arg_type == float and isinstance(item, str):
+                    result.append(float(item))
+                elif arg_type == str:
+                    result.append(str(item))
+                elif arg_type == bool:
+                    result.append(to_boolean(item))
+                else:
+                    result.append(item)
+            return result
+        else:
+            # For more complex nested types
+            for item in data:
+                result.append(_parse_type(field, arg_type, item, encoder, False))
+            return result
 
 cdef object _instantiate_dataclass(object cls, object val):
     """
@@ -1318,8 +1364,6 @@ cdef object _parse_typing(
 
     inner_is_dc = field._inner_is_dc or is_dc(inner_type)
 
-    print('ORIGIN > ', field.name, T, origin, targs)
-    print(inner_type, inner_origin)
     # Put more frequently cases first:
     if field.is_dc or is_dc(T):
         return _handle_dataclass_type(None, name, data, T, as_objects, None)
