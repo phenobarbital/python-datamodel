@@ -31,11 +31,15 @@ class newPoint(BaseModel, intSum):
     x: int = Field(default=0, min=0, max=10)
     y: Union[int, None] = Field(default=0, min=0, max=10)
 
-a = newPoint(x=10, y=10)
-print(a)
-print(fields(a))
-print('IS a Dataclass?: ', is_dataclass(a))
-print(a.get_coordinate())
+try:
+    p = newPoint(x=10, y=10)
+except ValidationError as e:
+    print(e.payload)
+
+print(p)
+print(fields(p), ' Coords: ', p.x, p.y, type(p.x), type(p.y))
+print('IS a Dataclass?: ', is_dataclass(p))
+print(p.get_coordinate())
 
 class coordinate(BaseModel, intSum):
     latitude: float
