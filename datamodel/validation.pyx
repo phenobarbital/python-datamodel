@@ -424,7 +424,7 @@ cdef dict _validate_constraints(
             )
 
         # Minimum value validation (greater than)
-        if min_val is not None and value <= min_val:
+        if min_val is not None and value < min_val:  # inclusive
             return _create_error(
                 name,
                 value,
@@ -434,7 +434,7 @@ cdef dict _validate_constraints(
             )
 
         # Maximum value validation (less than)
-        if max_val is not None and value >= max_val:
+        if max_val is not None and value > max_val:  # inclusive
             return _create_error(
                 name,
                 value,
