@@ -32,7 +32,7 @@ class ContainerTypesModel(BaseModel):
     # Union types with containers
     union_list: Union[List[int], str] = Field(default=None)
     union_dict: Union[Dict[str, int], int] = Field(default=None)
-    union_set: Union[Set[str], str] = Field(default=None)
+    union_set: Union[Set[str], List[Set[str]]] = Field(default=None)
 
     # Optional container types
     optional_list: Optional[List[int]] = Field(default=None)
@@ -194,7 +194,7 @@ def test_union_type_behavior():
 
     # Test union with proper list
     model = ContainerTypesModel(union_list=[1, 2, 3])
-    assert model.union_list == [[1], [2], [3]]
+    assert model.union_list == [1, 2, 3]
 
     # Test union with set
     model = ContainerTypesModel(union_set="not a set")
