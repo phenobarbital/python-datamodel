@@ -1,6 +1,6 @@
 from __future__ import annotations
 import contextlib
-from typing import Any, Dict, get_args
+from typing import Any, Dict, Optional, get_args
 from enum import Enum, EnumMeta
 # Dataclass
 import inspect
@@ -210,10 +210,13 @@ class ModelMixin:
         self,
         remove_nulls: bool = False,
         convert_enums: bool = False,
-        as_values: bool = False
+        as_values: bool = False,
+        exclude: Optional[set] = None
     ) -> dict[str, Any]:
+        exclude = exclude or set()
+        exclude.add('_pgoutput')  # Always exclude _pgoutput
         if as_values:
-            return self.__collapse_as_values__(remove_nulls, convert_enums, as_values)
+            return self.__collapse_as_values__(remove_nulls, convert_enums, as_values, exclude)
         d = as_dict(self, dict_factory=dict)
         if convert_enums:
             d = self.__convert_enums__(d)
@@ -226,12 +229,21 @@ class ModelMixin:
         self,
         remove_nulls: bool = False,
         convert_enums: bool = False,
-        as_values: bool = False
+        as_values: bool = False,
+        exclude: Optional[set] = None
     ) -> dict[str, Any]:
         """Recursively converts any BaseModel instances to their primary key value."""
         out = {}
         _fields = self.columns()
         for name, field in _fields.items():
+            if name in exclude:
+                continue
+            # Skip internal or error fields
+            if name.startswith('__') or name == '__errors__':
+                continue
+            # Skip fields marked for exclusion
+            if field.metadata.get('exclude', False):
+                continue
             # datatype = field.type
             value = getattr(self, name)
             if value is None and remove_nulls:
