@@ -25,7 +25,11 @@ from cpython.object cimport (
 from dataclasses import _MISSING_TYPE, MISSING, InitVar
 from typing import Any, Union
 from decimal import Decimal
-from enum import Enum, EnumType
+from enum import Enum
+try:
+    from enum import EnumType
+except ImportError:
+    from enum import EnumMeta as EnumType
 import orjson
 from ..exceptions cimport ParserError
 from ..fields import Field
@@ -71,7 +75,6 @@ cdef inline bint is_objid(object obj):
 ORJSON_DEFAULT_OPTIONS = (
     orjson.OPT_SERIALIZE_NUMPY |
     orjson.OPT_UTC_Z
-    # orjson.OPT_NON_STR_KEYS
 )
 
 
