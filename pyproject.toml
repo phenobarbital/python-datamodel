@@ -1,63 +1,92 @@
 [build-system]
 requires = [
-    'setuptools==74.0.0',
-    'Cython==3.0.11',
-    'wheel==0.44.0',
-    "setuptools-rust==1.10.2",
-    'maturin>=1,<2',
-    'typing-extensions >=4.6.0,!=4.7.0'
+    "setuptools>=74.0.0",
+    "setuptools_scm[toml]>=8.0",
+    "Cython==3.0.11",
+    "wheel>=0.44.0",
+    "setuptools-rust>=1.10.2",
+    "pip>=24.3.1"
 ]
 build-backend = "setuptools.build_meta"
 
-[tool.flit.metadata]
-module = "python-datamodel"
-author = "Jesus Lara Gimenez"
-author-email = "jesuslarag@gmail.com"
-home-page = "https://github.com/phenobarbital/python-datamodel"
-classifiers=[
-  "Development Status :: 4 - Beta",
-  "Intended Audience :: Developers",
-  "Intended Audience :: System Administrators",
-  "Intended Audience :: Information Technology",
-  "Operating System :: OS Independent",
-  "Operating System :: POSIX :: Linux",
-  "Operating System :: Microsoft :: Windows",
-  "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
-  "Programming Language :: Python",
-  "Programming Language :: Rust",
-  "Typing :: Typed",
-  "Environment :: Web Environment",
-  "Framework :: AsyncIO",
-  "Topic :: Software Development :: Libraries :: Application Frameworks",
-  "Topic :: Software Development :: Libraries :: Python Modules",
-  "Topic :: Software Development :: Build Tools",
-  "License :: OSI Approved :: BSD License",
+[project]
+name = "python-datamodel"
+dynamic = ["version"]
+description = "simple library based on python +3.8 to use Dataclass-syntax for interacting with Data"
+authors = [
+    {name = "Jesus Lara", email = "jesuslarag@gmail.com"}
 ]
-dynamic = ['version', 'description', 'license', 'keywords', 'readme']
-description-file = "README.md"
+readme = "README.md"
+license = {text = "BSD"}
 requires-python = ">=3.10.0"
+keywords = ["asyncio", "dataclass", "dataclasses", "data models"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Framework :: AsyncIO",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
+    "Environment :: Web Environment",
+]
 
-[tool.pytest.ini_options]
-addopts = [
-  "--strict-config",
-  "--strict-markers",
+dependencies = [
+    "numpy>=1.26.4",
+    "uvloop>=0.21.0",
+    "asyncio==3.4.3",
+    "faust-cchardet==2.1.19",
+    "ciso8601==2.3.2",
+    "objectpath==0.6.1",
+    "orjson>=3.10.11",
+    "typing_extensions>=4.9.0",
+    "asyncpg>=0.29.0",
+    "python-dateutil>=2.8.2",
+    "python-slugify==8.0.1",
+    "psycopg2-binary==2.9.10",
+    "msgspec==0.19.0"
 ]
-log_cli = true
-log_cli_level = "DEBUG"
-log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
-log_cli_date_format = "%Y-%m-%d %H:%M:%S"
-filterwarnings = [
-    "error",
-    'ignore:The loop argument is deprecated since Python 3\.8, and scheduled for removal in Python 3\.10:DeprecationWarning:asyncio',
-]
+
+[project.urls]
+Homepage = "https://github.com/phenobarbital/python-datamodel"
+Source = "https://github.com/phenobarbital/python-datamodel"
+Tracker = "https://github.com/phenobarbital/python-datamodel/issues"
+Documentation = "https://datamodel.readthedocs.io/en/latest/"
+Funding = "https://paypal.me/phenobarbital"
+"Say Thanks!" = "https://saythanks.io/to/phenobarbital"
+
+[tool.setuptools]
+license-files = ["LICENSE"]
+packages = ["datamodel"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"datamodel.fields" = ["*.pyx"]
+"datamodel.converters" = ["*.pyx"]
+"datamodel.validation" = ["*.pyx"]
+"datamodel.exceptions" = ["*.pxd", "*.pyx"]
+"datamodel.functions" = ["*.pxd", "*.pyx"]
+"datamodel.libs.mapping" = ["*.pxd", "*.pyx"]
+"datamodel.typedefs.singleton" = ["*.pxd", "*.pyx"]
+"datamodel.typedefs.types" = ["*.pxd", "*.pyx"]
+"datamodel.parsers.json" = ["*.pyx"]
+
+[tool.setuptools.dynamic]
+version = {attr = "datamodel.version.__version__"}
+
+
 
 [tool.black]
 line-length = 120
-target-version = [ 'py310', 'py311', 'py312', 'py313' ]
 include = '\.pyi?$'
 exclude = '''
 /(
@@ -73,19 +102,26 @@ exclude = '''
 )/
 '''
 
-[tool.mypy]
-pretty = true
-ignore_missing_imports = true
+[tool.uv]
+override-dependencies = [
+    "setuptools-rust>=1.10.2",
+]
 
-[tool.flake8]
-ignore = 'E501,W503,E203'
-
-[tool.maturin]
-python-source = "datamodel/rs_parsers"
-module-name = "datamodel.rs_parsers"
-bindings = "pyo3"
-features = ["pyo3/extension-module"]
-
-[tool.cibuildwheel]
-build = "cp3{10,11,12,13}-*"
-skip = "pypy*"
+[tool.pytest.ini_options]
+addopts = [
+    "--strict-config",
+    "--strict-markers",
+]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+log_cli = true
+log_cli_level = "DEBUG"
+log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+filterwarnings = [
+    "error",
+]
+markers = [
+    "asyncio: mark a test as a coroutine that should be run by pytest-asyncio",
+]
