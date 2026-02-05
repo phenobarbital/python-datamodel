@@ -58,6 +58,8 @@ jobs:
 
       - name: Build wheels on Windows
         if: matrix.os == 'windows-latest'
+        env:
+          CIBW_BUILD: "cp3{10,11,12,13}-*"
         run: |
           pip install cibuildwheel maturin
           cibuildwheel --output-dir dist
