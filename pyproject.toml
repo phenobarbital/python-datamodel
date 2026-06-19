@@ -42,7 +42,7 @@ classifiers = [
 
 dependencies = [
     "numpy>=1.26.4",
-    "uvloop>=0.21.0",
+    "uvloop>=0.21.0; sys_platform != 'win32'",
     "asyncio==3.4.3",
     "faust-cchardet==2.1.19",
     "ciso8601==2.3.2",
