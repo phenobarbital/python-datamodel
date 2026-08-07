@@ -111,7 +111,7 @@ clean:
 	rm -rf *.egg-info/
 	find . -name "*.pyc" -delete
 	find . -name "*.pyo" -delete
-	find datamodel -name "*.so" -delete
+	find datamodel -name "*.so" -not -path "datamodel/rs_parsers/*" -delete
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	@echo "Clean complete."
 
