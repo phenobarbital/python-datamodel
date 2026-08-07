@@ -4,7 +4,11 @@ from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from dataclasses import dataclass, InitVar
-from psycopg2 import Binary
+try:
+    from psycopg2 import Binary
+except ImportError:
+    # psycopg 3.x — use bytes directly as binary adapter
+    Binary = bytes
 import pytest
 import numpy as np
 import orjson
@@ -158,9 +162,15 @@ def test_enum_type():
 
 def test_binary():
     # Test psycopg2.Binary object: should return str(binary_obj)
+    # Note: In psycopg3, Binary = bytes, so the behavior changes
     b_obj = Binary(b"binarydata")
     result = json_encoder(b_obj)
-    expected = str(b_obj)
+    if Binary is bytes:
+        # psycopg3: Binary is bytes, so bytes are hex-encoded
+        expected = b_obj.hex()
+    else:
+        # psycopg2: Binary is a special type, so str(Binary) is used
+        expected = str(b_obj)
     assert result.strip('"') == expected
 
 def test_field():
