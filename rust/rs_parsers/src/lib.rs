@@ -1,7 +1,5 @@
 use pyo3::prelude::*;
 use pyo3::exceptions::PyValueError;
-use pyo3::PyTypeInfo;
-use pyo3::wrap_pyfunction;
 use pyo3::types::{PyDate, PyDateTime, PyAny, PyString, PyBool, PyBytes, PyInt, PyFloat, PyList};
 use chrono::{Datelike, Timelike, NaiveDate, NaiveDateTime, DateTime};
 use speedate::Date as SpeeDate;
@@ -24,10 +22,10 @@ fn to_string(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<String>> {
             let val = py_obj.bind(py);
             if val.is_none() {
                 Ok(None)
-            } else if val.is_instance(&PyString::type_object(py))? {
+            } else if val.is_instance_of::<PyString>() {
                 // If the object is already a string, return it
                 Ok(Some(val.extract::<String>()?))
-            } else if val.is_instance(&PyBytes::type_object(py))? {
+            } else if val.is_instance_of::<PyBytes>() {
                 // If the object is bytes, decode it to a string
                 let bytes = val.downcast::<PyBytes>()?;
                 Ok(Some(String::from_utf8(bytes.as_bytes().to_vec())?))
@@ -143,9 +141,9 @@ fn to_boolean(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<bool>> {
             let val_ref = val.bind(py);
             if val_ref.is_none() {
                 Ok(None)
-            } else if val_ref.is_instance(&PyBool::type_object(py))? {
+            } else if val_ref.is_instance_of::<PyBool>() {
                 Ok(Some(val.extract::<bool>(py)?))
-            } else if val_ref.is_instance(&PyString::type_object(py))? {
+            } else if val_ref.is_instance_of::<PyString>() {
                 let py_str = val_ref.downcast::<PyString>()?;
                 Ok(Some(strtobool(py_str.to_str()?)?))
             } else if let Ok(b) = val_ref.call_method0("__bool__")?.extract::<bool>() {
@@ -435,12 +433,12 @@ fn to_integer(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> 
             let val = py_obj.bind(py);
 
             // If the object is already an integer, return it directly.
-            if val.is_instance(&PyInt::type_object(py))? {
+            if val.is_instance_of::<PyInt>() {
                 return Ok(Some(py_obj.into()));
             }
 
             // If the object is a string, attempt to parse it as an integer.
-            if val.is_instance(&PyString::type_object(py))? {
+            if val.is_instance_of::<PyString>() {
                 let py_str = val.downcast::<PyString>()?;
                 if let Ok(parsed_int) = py_str.to_str()?.parse::<i64>() {
                     // Construct a new Python integer by calling the type.
@@ -488,7 +486,7 @@ fn to_float(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> {
             }
 
             // If the object is a string, attempt to parse it as a float.
-            if val.is_instance(&PyString::type_object(py))? {
+            if val.is_instance_of::<PyString>() {
                 let py_str = val.downcast::<PyString>()?;
                 if let Ok(parsed_float) = py_str.to_str()?.parse::<f64>() {
                     // Create a Python float from the Rust f64.
@@ -535,7 +533,7 @@ fn to_decimal(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> 
             let py_decimal = py.import("decimal")?.getattr("Decimal")?;
 
             // If the object is a string, attempt to parse it as a Decimal
-            if val.is_instance(&PyString::type_object(py))? {
+            if val.is_instance_of::<PyString>() {
                 let py_str = val.downcast::<PyString>()?;
                 if let Ok(parsed_decimal) = Decimal::from_str(py_str.to_str()?) {
                     return Ok(Some(py_decimal.call1((parsed_decimal.to_string(),))?.into())); // ✅ Convert Rust Decimal to Python Decimal
@@ -571,7 +569,7 @@ fn to_decimal(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> 
 
 /// Python module declaration
 #[pymodule]
-fn rs_parsers(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn _rs_parsers(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(to_string, m)?)?;
     m.add_function(wrap_pyfunction!(strtobool, m)?)?;
     m.add_function(wrap_pyfunction!(to_boolean, m)?)?;
