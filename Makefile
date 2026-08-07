@@ -81,8 +81,7 @@ build: clean
 	@echo "Building package with uv..."
 	uv build
 
-release: lint test clean
-	uv build
+release: lint test build
 	uv publish
 
 # ---- Quality ----
