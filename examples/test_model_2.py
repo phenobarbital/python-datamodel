@@ -104,6 +104,7 @@ class Company(BaseModel):
 # print(schema)
 ### also, a sample
 # pp.pprint(Company.sample())
-a = Company(company_name='Hello World', identity_id=35)
-print(a.to_dict())
-print(a.json())
+if __name__ == '__main__':
+    a = Company(company_name='Hello World', identity_id=35)
+    print(a.to_dict())
+    print(a.json())

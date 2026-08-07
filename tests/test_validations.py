@@ -5,18 +5,23 @@ from typing import Union, List, Optional
 from dataclasses import dataclass, fields, is_dataclass
 import pytest
 import orjson
-from bson import ObjectId
+try:
+    from bson import ObjectId
+    HAS_BSON = True
+except ImportError:
+    HAS_BSON = False
 import asyncpg.pgproto.pgproto as pgproto
 from datamodel import Field, BaseModel, Column
 from datamodel.exceptions import ValidationError
 
 
-def to_objid(value):
-    return ObjectId(value.encode('ascii'))
+if HAS_BSON:
+    def to_objid(value):
+        return ObjectId(value.encode('ascii'))
 
-class Dataset(BaseModel):
-    _id: ObjectId = Field(encoder=to_objid)
-    name: str = Field(required=True)
+    class Dataset(BaseModel):
+        _id: ObjectId = Field(encoder=to_objid)
+        name: str = Field(required=True)
 
 def auto_uid():
     return uuid.uuid4()

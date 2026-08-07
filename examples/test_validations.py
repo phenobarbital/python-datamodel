@@ -1,6 +1,10 @@
 from typing import Union, List
 import uuid
-from bson import ObjectId
+try:
+    from bson import ObjectId
+    HAS_BSON = True
+except ImportError:
+    HAS_BSON = False
 from datetime import datetime
 from datamodel import BaseModel, Column, Field
 from datamodel.exceptions import ValidationError
@@ -67,14 +71,15 @@ user = {
     ]
 }
 
-def to_objid(value):
-    if isinstance(value, str):
-        return ObjectId(value.encode('ascii'))
-    return value
+if HAS_BSON:
+    def to_objid(value):
+        if isinstance(value, str):
+            return ObjectId(value.encode('ascii'))
+        return value
 
-class Dataset(BaseModel):
-    _id: ObjectId = Field(encoder=to_objid)
-    name: str = Field(required=True)
+    class Dataset(BaseModel):
+        _id: ObjectId = Field(encoder=to_objid)
+        name: str = Field(required=True)
 
 
 if __name__ == '__main__':

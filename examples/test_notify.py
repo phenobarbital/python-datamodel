@@ -109,9 +109,11 @@ def test_actor_valid():
     assert a2.accounts[0].provider == "prov2"
 
 def test_actor_invalid():
-    # Provide a wrong type for 'name'
-    actor = Actor(name={"user": 123})
-    print(actor.name, type(actor.name))
+    # Provide a wrong type for 'name' — strict mode rejects it
+    import pytest
+    from datamodel.exceptions import ValidationError
+    with pytest.raises(ValidationError):
+        Actor(name={"user": 123})
 
 if __name__ == "__main__":
     test_actor_invalid()

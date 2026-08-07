@@ -370,6 +370,13 @@ class ModelMeta(type):
             _typing_args = cached['_typing_args'].copy()
             aliases = cached['aliases'].copy()
             primary_keys = cached['primary_keys'].copy()
+            # Ensure bare annotations get their cached Field objects in
+            # attrs so that dataclass() sees them as having defaults.
+            # On a cache miss _initialize_fields does this via
+            # attrs[field] = df; replicate that for the cache-hit path.
+            for field_name in annotations:
+                if field_name not in attrs and field_name in cols:
+                    attrs[field_name] = cols[field_name]
         else:
             # Compute field from Bases:
             _types = {}

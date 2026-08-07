@@ -126,7 +126,7 @@ cdef class ClassDict(dict):
         elif attr in self._columns:
             return self.mapping[attr]
 
-        raise KeyError(
+        raise AttributeError(
             f"User Error: invalid field name {attr} on {self.mapping!r}"
         )
 

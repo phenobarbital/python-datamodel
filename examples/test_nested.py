@@ -11,9 +11,6 @@ class Country(BaseModel):
     code: str = Field(default='ES')
     iso_code: str = Field(default=country_iso_code)
 
-spain = Country(country='Spain')
-print(spain, spain.code)
-
 class Address(BaseModel):
     street: str
     zipcode: int
@@ -26,12 +23,16 @@ class User(BaseModel):
     address: Optional[Address]
 
 
-user = User(
-    id='42',
-    signup_ts='2032-06-21T12:00',
-    address={
-        "street": "Calle Mayor", "zipcode": 45510, "country": {"country": "Spain"}
-    }
-)
-# print(user, type(user.signup_ts), user.address.country.code)
-print(user)
+if __name__ == '__main__':
+    spain = Country(country='Spain')
+    print(spain, spain.code)
+
+    user = User(
+        id='42',
+        signup_ts='2032-06-21T12:00',
+        address={
+            "street": "Calle Mayor", "zipcode": 45510, "country": {"country": "Spain"}
+        }
+    )
+    # print(user, type(user.signup_ts), user.address.country.code)
+    print(user)

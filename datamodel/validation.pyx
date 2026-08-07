@@ -649,11 +649,11 @@ cpdef dict _validation(
                     annotated_type
                 )
     elif type(annotated_type).__name__ == "ModelMeta":
+        # If value is already an instance of the expected type, it's valid
+        if isinstance(value, annotated_type):
+            return {}
         # Check if there's a field in the annotated type that matches the name and type
         if as_objects:
-            if isinstance(value, annotated_type):
-                # if value is already a Object, no further check needed for columns
-                return {}
             try:
                 field = annotated_type.get_column(name)
             except AttributeError as e:
