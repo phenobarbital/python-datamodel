@@ -9,16 +9,15 @@ graft datamodel
 graft tests
 
 recursive-include datamodel *.pxd *.pyx
-recursive-include datamodel/rs_parsers *
 
-# Exclude tests, settings, env, examples, and bin folders
 global-exclude *.pyc
-recursive-exclude datamodel/rs_parsers/target *
-
 prune docs
 prune settings
 prune env
 prune examples
 prune bin
+prune rust/rs_parsers/target
+prune rust/rs_core/target
+prune rust/rs_validators/target
 recursive-exclude */__pycache__
 prune */__pycache__

@@ -6,21 +6,11 @@ See:
 https://github.com/phenobarbital/DataModel
 """
 
-
 from Cython.Build import cythonize
 from setuptools import Extension, setup
-from setuptools_rust import RustExtension
-
 
 COMPILE_ARGS = ["-O3"]
 EXTRA_LINK_ARGS = ["-lstdc++"]
-
-rust_extensions = [
-    RustExtension(
-        "datamodel.rs_parsers",
-        path="datamodel/rs_parsers/Cargo.toml"
-    ),
-]
 
 extensions = [
     Extension(
@@ -89,10 +79,9 @@ extensions = [
 ]
 
 setup(
-    ext_modules=cythonize(
-        extensions,
-        annotate=True
-    ),
+    ext_modules=cythonize(extensions, annotate=True),
+    package_data={
+        "datamodel.rs_parsers": ["*.so", "*.pyd"],
+    },
     zip_safe=False,
-    rust_extensions=rust_extensions,
 )
