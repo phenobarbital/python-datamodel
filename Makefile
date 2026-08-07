@@ -32,8 +32,9 @@ sync:
 install: build-rust
 	uv sync --frozen --no-dev
 
-develop: build-rust
+develop:
 	uv sync --frozen --extra dev
+	$(MAKE) build-rust
 	$(MAKE) build-inplace
 
 develop-fast:
