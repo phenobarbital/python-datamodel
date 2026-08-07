@@ -2,17 +2,15 @@
 requires = [
     "setuptools>=74.0.0",
     "setuptools_scm[toml]>=8.0",
-    "Cython==3.0.11",
+    "Cython>=3.0.11",
     "wheel>=0.44.0",
-    "setuptools-rust>=1.10.2",
-    "pip>=24.3.1"
 ]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "python-datamodel"
 dynamic = ["version"]
-description = "simple library based on python +3.8 to use Dataclass-syntax for interacting with Data"
+description = "simple library based on python +3.10 to use Dataclass-syntax for interacting with Data"
 authors = [
     {name = "Jesus Lara", email = "jesuslarag@gmail.com"}
 ]
@@ -32,6 +30,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Framework :: AsyncIO",
     "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent",
@@ -43,17 +42,28 @@ classifiers = [
 dependencies = [
     "numpy>=1.26.4",
     "uvloop>=0.21.0; sys_platform != 'win32'",
-    "asyncio==3.4.3",
-    "faust-cchardet==2.1.19",
-    "ciso8601==2.3.2",
-    "objectpath==0.6.1",
+    "faust-cchardet>=2.1.19",
+    "ciso8601>=2.3.2",
+    "objectpath>=0.6.1",
     "orjson>=3.10.11",
     "typing_extensions>=4.9.0",
     "asyncpg>=0.29.0",
     "python-dateutil>=2.8.2",
-    "python-slugify==8.0.1",
-    "psycopg2-binary==2.9.10",
-    "msgspec==0.19.0"
+    "python-slugify>=8.0.1",
+    "psycopg[binary]>=3.2.0",
+    "msgspec>=0.19.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "coverage>=7.0",
+    "ruff>=0.6.0",
+    "mypy>=1.0",
+    "maturin>=1.7,<2.0",
+    "Cython>=3.0.11",
+    "setuptools>=74.0.0",
 ]
 
 [project.urls]
@@ -79,33 +89,13 @@ include-package-data = true
 "datamodel.typedefs.singleton" = ["*.pxd", "*.pyx"]
 "datamodel.typedefs.types" = ["*.pxd", "*.pyx"]
 "datamodel.parsers.json" = ["*.pyx"]
+"datamodel.rs_parsers" = ["*.so", "*.pyd"]
+
+[tool.setuptools.exclude-package-data]
+"*" = ["*.c", "*.cpp"]
 
 [tool.setuptools.dynamic]
 version = {attr = "datamodel.version.__version__"}
-
-
-
-[tool.black]
-line-length = 120
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-)/
-'''
-
-[tool.uv]
-override-dependencies = [
-    "setuptools-rust>=1.10.2",
-]
 
 [tool.pytest.ini_options]
 addopts = [
@@ -125,3 +115,26 @@ filterwarnings = [
 markers = [
     "asyncio: mark a test as a coroutine that should be run by pytest-asyncio",
 ]
+
+[tool.black]
+line-length = 120
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+# ---------------------------------------------------------------------------
+# uv install settings
+# ---------------------------------------------------------------------------
+[tool.uv]
+link-mode = "copy"

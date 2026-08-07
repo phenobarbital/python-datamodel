@@ -12,7 +12,11 @@ import uuid
 from pathlib import PosixPath, PurePath, Path
 from datetime import datetime
 from asyncpg.pgproto import pgproto
-from psycopg2 import Binary
+try:
+    from psycopg2 import Binary
+except ImportError:
+    # psycopg 3.x — use bytes directly as binary adapter
+    Binary = bytes
 from cpython cimport PyErr_Clear
 from cpython.object cimport (
     PyObject_IsInstance,

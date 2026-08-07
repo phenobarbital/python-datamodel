@@ -1,0 +1,10 @@
+[workspace]
+members = [
+    "rs_parsers",
+]
+resolver = "2"
+edition = "2021"
+
+[workspace.dependencies]
+pyo3 = { version = "0.24", features = ["extension-module"] }
+rayon = "1.10"
