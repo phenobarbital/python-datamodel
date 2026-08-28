@@ -286,6 +286,81 @@ body.cython { font-family: courier; font-size: 12; }
 .cython.score-252 {background-color: #FFFF09;}
 .cython.score-253 {background-color: #FFFF09;}
 .cython.score-254 {background-color: #FFFF09;}
+pre { line-height: 125%; }
+td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+span.linenos { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+.cython .hll { background-color: #ffffcc }
+.cython { background: #f8f8f8; }
+.cython .c { color: #3D7B7B; font-style: italic } /* Comment */
+.cython .err { border: 1px solid #F00 } /* Error */
+.cython .k { color: #008000; font-weight: bold } /* Keyword */
+.cython .o { color: #666 } /* Operator */
+.cython .ch { color: #3D7B7B; font-style: italic } /* Comment.Hashbang */
+.cython .cm { color: #3D7B7B; font-style: italic } /* Comment.Multiline */
+.cython .cp { color: #9C6500 } /* Comment.Preproc */
+.cython .cpf { color: #3D7B7B; font-style: italic } /* Comment.PreprocFile */
+.cython .c1 { color: #3D7B7B; font-style: italic } /* Comment.Single */
+.cython .cs { color: #3D7B7B; font-style: italic } /* Comment.Special */
+.cython .gd { color: #A00000 } /* Generic.Deleted */
+.cython .ge { font-style: italic } /* Generic.Emph */
+.cython .ges { font-weight: bold; font-style: italic } /* Generic.EmphStrong */
+.cython .gr { color: #E40000 } /* Generic.Error */
+.cython .gh { color: #000080; font-weight: bold } /* Generic.Heading */
+.cython .gi { color: #008400 } /* Generic.Inserted */
+.cython .go { color: #717171 } /* Generic.Output */
+.cython .gp { color: #000080; font-weight: bold } /* Generic.Prompt */
+.cython .gs { font-weight: bold } /* Generic.Strong */
+.cython .gu { color: #800080; font-weight: bold } /* Generic.Subheading */
+.cython .gt { color: #04D } /* Generic.Traceback */
+.cython .kc { color: #008000; font-weight: bold } /* Keyword.Constant */
+.cython .kd { color: #008000; font-weight: bold } /* Keyword.Declaration */
+.cython .kn { color: #008000; font-weight: bold } /* Keyword.Namespace */
+.cython .kp { color: #008000 } /* Keyword.Pseudo */
+.cython .kr { color: #008000; font-weight: bold } /* Keyword.Reserved */
+.cython .kt { color: #B00040 } /* Keyword.Type */
+.cython .m { color: #666 } /* Literal.Number */
+.cython .s { color: #BA2121 } /* Literal.String */
+.cython .na { color: #687822 } /* Name.Attribute */
+.cython .nb { color: #008000 } /* Name.Builtin */
+.cython .nc { color: #00F; font-weight: bold } /* Name.Class */
+.cython .no { color: #800 } /* Name.Constant */
+.cython .nd { color: #A2F } /* Name.Decorator */
+.cython .ni { color: #717171; font-weight: bold } /* Name.Entity */
+.cython .ne { color: #CB3F38; font-weight: bold } /* Name.Exception */
+.cython .nf { color: #00F } /* Name.Function */
+.cython .nl { color: #767600 } /* Name.Label */
+.cython .nn { color: #00F; font-weight: bold } /* Name.Namespace */
+.cython .nt { color: #008000; font-weight: bold } /* Name.Tag */
+.cython .nv { color: #19177C } /* Name.Variable */
+.cython .ow { color: #A2F; font-weight: bold } /* Operator.Word */
+.cython .w { color: #BBB } /* Text.Whitespace */
+.cython .mb { color: #666 } /* Literal.Number.Bin */
+.cython .mf { color: #666 } /* Literal.Number.Float */
+.cython .mh { color: #666 } /* Literal.Number.Hex */
+.cython .mi { color: #666 } /* Literal.Number.Integer */
+.cython .mo { color: #666 } /* Literal.Number.Oct */
+.cython .sa { color: #BA2121 } /* Literal.String.Affix */
+.cython .sb { color: #BA2121 } /* Literal.String.Backtick */
+.cython .sc { color: #BA2121 } /* Literal.String.Char */
+.cython .dl { color: #BA2121 } /* Literal.String.Delimiter */
+.cython .sd { color: #BA2121; font-style: italic } /* Literal.String.Doc */
+.cython .s2 { color: #BA2121 } /* Literal.String.Double */
+.cython .se { color: #AA5D1F; font-weight: bold } /* Literal.String.Escape */
+.cython .sh { color: #BA2121 } /* Literal.String.Heredoc */
+.cython .si { color: #A45A77; font-weight: bold } /* Literal.String.Interpol */
+.cython .sx { color: #008000 } /* Literal.String.Other */
+.cython .sr { color: #A45A77 } /* Literal.String.Regex */
+.cython .s1 { color: #BA2121 } /* Literal.String.Single */
+.cython .ss { color: #19177C } /* Literal.String.Symbol */
+.cython .bp { color: #008000 } /* Name.Builtin.Pseudo */
+.cython .fm { color: #00F } /* Name.Function.Magic */
+.cython .vc { color: #19177C } /* Name.Variable.Class */
+.cython .vg { color: #19177C } /* Name.Variable.Global */
+.cython .vi { color: #19177C } /* Name.Variable.Instance */
+.cython .vm { color: #19177C } /* Name.Variable.Magic */
+.cython .il { color: #666 } /* Literal.Number.Integer.Long */
     </style>
 </head>
 <body class="cython">
@@ -295,21 +370,21 @@ body.cython { font-family: courier; font-size: 12; }
     Click on a line that starts with a "<code>+</code>" to see the C code that Cython generated for it.
 </p>
 <p>Raw output: <a href="singleton.c">singleton.c</a></p>
-<div class="cython"><pre class="cython line score-8" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">01</span>: # cython: language_level=3, embedsignature=True, boundscheck=False, wraparound=True, initializedcheck=False</pre>
+<div class="cython"><pre class="cython line score-8" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">01</span>: <span class="c"># cython: language_level=3, embedsignature=True, boundscheck=False, wraparound=True, initializedcheck=False</span></pre>
 <pre class='cython code score-8 '>  __pyx_t_2 = <span class='pyx_c_api'>__Pyx_PyDict_NewPresized</span>(0);<span class='error_goto'> if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 1, __pyx_L1_error)</span>
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_2);
   if (<span class='py_c_api'>PyDict_SetItem</span>(__pyx_mstate_global-&gt;__pyx_d, __pyx_mstate_global-&gt;__pyx_n_u_test, __pyx_t_2) &lt; (0)) <span class='error_goto'>__PYX_ERR(0, 1, __pyx_L1_error)</span>
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_2); __pyx_t_2 = 0;
-</pre><pre class="cython line score-0">&#xA0;<span class="">02</span>: # Copyright (C) 2018-present Jesus Lara</pre>
-<pre class="cython line score-0">&#xA0;<span class="">03</span>: #</pre>
-<pre class="cython line score-0">&#xA0;<span class="">04</span>: cdef class Singleton(type):</pre>
-<pre class="cython line score-0">&#xA0;<span class="">05</span>:     """Singleton.</pre>
-<pre class="cython line score-0">&#xA0;<span class="">06</span>:     Metaclass for Singleton instances.</pre>
-<pre class="cython line score-0">&#xA0;<span class="">07</span>:     Returns:</pre>
-<pre class="cython line score-0">&#xA0;<span class="">08</span>:         cls: a singleton version of the class, there are only one</pre>
-<pre class="cython line score-0">&#xA0;<span class="">09</span>:         version of the instance any time.</pre>
-<pre class="cython line score-0">&#xA0;<span class="">10</span>:     """</pre>
-<pre class="cython line score-38" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">11</span>:     def __init__(cls, name, bases, attrs, **kwargs):</pre>
+</pre><pre class="cython line score-0">&#xA0;<span class="">02</span>: <span class="c"># Copyright (C) 2018-present Jesus Lara</span></pre>
+<pre class="cython line score-0">&#xA0;<span class="">03</span>: <span class="c">#</span></pre>
+<pre class="cython line score-0">&#xA0;<span class="">04</span>: <span class="k">cdef</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">Singleton</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span></pre>
+<pre class="cython line score-0">&#xA0;<span class="">05</span>: <span class="w">    </span><span class="sd">&quot;&quot;&quot;Singleton.</span></pre>
+<pre class="cython line score-0">&#xA0;<span class="">06</span>: <span class="sd">    Metaclass for Singleton instances.</span></pre>
+<pre class="cython line score-0">&#xA0;<span class="">07</span>: <span class="sd">    Returns:</span></pre>
+<pre class="cython line score-0">&#xA0;<span class="">08</span>: <span class="sd">        cls: a singleton version of the class, there are only one</span></pre>
+<pre class="cython line score-0">&#xA0;<span class="">09</span>: <span class="sd">        version of the instance any time.</span></pre>
+<pre class="cython line score-0">&#xA0;<span class="">10</span>: <span class="sd">    &quot;&quot;&quot;</span></pre>
+<pre class="cython line score-38" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">11</span>:     <span class="k">def</span><span class="w"> </span><span class="nf">__init__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span></pre>
 <pre class='cython code score-38 '>/* Python wrapper */
 static int __pyx_pw_9datamodel_8typedefs_9singleton_9Singleton_1__init__(PyObject *__pyx_v_cls, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
 static int __pyx_pw_9datamodel_8typedefs_9singleton_9Singleton_1__init__(PyObject *__pyx_v_cls, PyObject *__pyx_args, PyObject *__pyx_kwds) {
@@ -414,7 +489,7 @@ static int __pyx_pf_9datamodel_8typedefs_9singleton_9Singleton___init__(struct _
   <span class='refnanny'>__Pyx_RefNannyFinishContext</span>();
   return __pyx_r;
 }
-</pre><pre class="cython line score-9" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">12</span>:         super().__init__(name, bases, attrs)</pre>
+</pre><pre class="cython line score-9" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">12</span>:         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span></pre>
 <pre class='cython code score-9 '>  __pyx_t_4 = NULL;
   __pyx_t_5 = 1;
   {
@@ -436,7 +511,7 @@ static int __pyx_pf_9datamodel_8typedefs_9singleton_9Singleton___init__(struct _
     <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_1);
   }
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_1); __pyx_t_1 = 0;
-</pre><pre class="cython line score-3" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">13</span>:         cls._instances = {}</pre>
+</pre><pre class="cython line score-3" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">13</span>:         <span class="bp">cls</span><span class="o">.</span><span class="n">_instances</span> <span class="o">=</span> <span class="p">{}</span></pre>
 <pre class='cython code score-3 '>  __pyx_t_1 = <span class='pyx_c_api'>__Pyx_PyDict_NewPresized</span>(0);<span class='error_goto'> if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 13, __pyx_L1_error)</span>
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_1);
   <span class='refnanny'>__Pyx_GIVEREF</span>(__pyx_t_1);
@@ -444,10 +519,10 @@ static int __pyx_pf_9datamodel_8typedefs_9singleton_9Singleton___init__(struct _
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_v_cls-&gt;_instances);
   __pyx_v_cls-&gt;_instances = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
-</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">14</span>:         cls.__initialized__ = False</pre>
+</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">14</span>:         <span class="bp">cls</span><span class="o">.</span><span class="n">__initialized__</span> <span class="o">=</span> <span class="kc">False</span></pre>
 <pre class='cython code score-0 '>  __pyx_v_cls-&gt;__pyx___initialized__ = 0;
 </pre><pre class="cython line score-0">&#xA0;<span class="">15</span>: </pre>
-<pre class="cython line score-28" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">16</span>:     def __call__(cls, *args, **kwargs):</pre>
+<pre class="cython line score-28" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">16</span>:     <span class="k">def</span><span class="w"> </span><span class="nf">__call__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span></pre>
 <pre class='cython code score-28 '>/* Python wrapper */
 static PyObject *__pyx_pw_9datamodel_8typedefs_9singleton_9Singleton_3__call__(PyObject *__pyx_v_cls, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
 static PyObject *__pyx_pw_9datamodel_8typedefs_9singleton_9Singleton_3__call__(PyObject *__pyx_v_cls, PyObject *__pyx_args, PyObject *__pyx_kwds) {
@@ -504,7 +579,7 @@ static PyObject *__pyx_pf_9datamodel_8typedefs_9singleton_9Singleton_2__call__(s
   <span class='refnanny'>__Pyx_RefNannyFinishContext</span>();
   return __pyx_r;
 }
-</pre><pre class="cython line score-7" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">17</span>:         if cls not in cls._instances:</pre>
+</pre><pre class="cython line score-7" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">17</span>:         <span class="k">if</span> <span class="bp">cls</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_instances</span><span class="p">:</span></pre>
 <pre class='cython code score-7 '>  if (unlikely(__pyx_v_cls-&gt;_instances == Py_None)) {
     <span class='py_c_api'>PyErr_SetString</span>(PyExc_TypeError, "'NoneType' object is not iterable");
     <span class='error_goto'>__PYX_ERR(0, 17, __pyx_L1_error)</span>
@@ -514,8 +589,8 @@ static PyObject *__pyx_pf_9datamodel_8typedefs_9singleton_9Singleton_2__call__(s
 /* … */
     goto __pyx_L3;
   }
-</pre><pre class="cython line score-0">&#xA0;<span class="">18</span>:             # First time creating an instance for this class</pre>
-<pre class="cython line score-26" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">19</span>:             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)</pre>
+</pre><pre class="cython line score-0">&#xA0;<span class="">18</span>:             <span class="c"># First time creating an instance for this class</span></pre>
+<pre class="cython line score-26" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">19</span>:             <span class="bp">cls</span><span class="o">.</span><span class="n">_instances</span><span class="p">[</span><span class="bp">cls</span><span class="p">]</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">Singleton</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="n">__call__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></pre>
 <pre class='cython code score-26 '>    __pyx_t_3 = NULL;
     __pyx_t_4 = 1;
     {
@@ -540,15 +615,15 @@ static PyObject *__pyx_pf_9datamodel_8typedefs_9singleton_9Singleton_2__call__(s
     }
     if (unlikely((<span class='py_c_api'>PyDict_SetItem</span>(__pyx_v_cls-&gt;_instances, ((PyObject *)__pyx_v_cls), __pyx_t_5) &lt; 0))) <span class='error_goto'>__PYX_ERR(0, 19, __pyx_L1_error)</span>
     <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_5); __pyx_t_5 = 0;
-</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">20</span>:             cls.__initialized__ = True</pre>
+</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">20</span>:             <span class="bp">cls</span><span class="o">.</span><span class="n">__initialized__</span> <span class="o">=</span> <span class="kc">True</span></pre>
 <pre class='cython code score-0 '>    __pyx_v_cls-&gt;__pyx___initialized__ = 1;
-</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">21</span>:         elif not cls.__initialized__:</pre>
+</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">21</span>:         <span class="k">elif</span> <span class="ow">not</span> <span class="bp">cls</span><span class="o">.</span><span class="n">__initialized__</span><span class="p">:</span></pre>
 <pre class='cython code score-0 '>  __pyx_t_1 = (!__pyx_v_cls-&gt;__pyx___initialized__);
   if (__pyx_t_1) {
 /* … */
   }
   __pyx_L3:;
-</pre><pre class="cython line score-15" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">22</span>:             instance = super(Singleton, cls).__call__(*args, **kwargs)</pre>
+</pre><pre class="cython line score-15" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">22</span>:             <span class="n">instance</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">Singleton</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="n">__call__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></pre>
 <pre class='cython code score-15 '>    __pyx_t_2 = NULL;
     __pyx_t_4 = 1;
     {
@@ -569,9 +644,9 @@ static PyObject *__pyx_pf_9datamodel_8typedefs_9singleton_9Singleton_2__call__(s
     <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_5); __pyx_t_5 = 0;
     __pyx_v_instance = __pyx_t_3;
     __pyx_t_3 = 0;
-</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">23</span>:             cls.__initialized__ = True</pre>
+</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">23</span>:             <span class="bp">cls</span><span class="o">.</span><span class="n">__initialized__</span> <span class="o">=</span> <span class="kc">True</span></pre>
 <pre class='cython code score-0 '>    __pyx_v_cls-&gt;__pyx___initialized__ = 1;
-</pre><pre class="cython line score-8" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">24</span>:         return cls._instances[cls]</pre>
+</pre><pre class="cython line score-8" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">24</span>:         <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_instances</span><span class="p">[</span><span class="bp">cls</span><span class="p">]</span></pre>
 <pre class='cython code score-8 '>  <span class='pyx_macro_api'>__Pyx_XDECREF</span>(__pyx_r);
   if (unlikely(__pyx_v_cls-&gt;_instances == Py_None)) {
     <span class='py_c_api'>PyErr_SetString</span>(PyExc_TypeError, "'NoneType' object is not subscriptable");

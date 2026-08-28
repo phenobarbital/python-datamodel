@@ -286,6 +286,81 @@ body.cython { font-family: courier; font-size: 12; }
 .cython.score-252 {background-color: #FFFF09;}
 .cython.score-253 {background-color: #FFFF09;}
 .cython.score-254 {background-color: #FFFF09;}
+pre { line-height: 125%; }
+td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+span.linenos { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+.cython .hll { background-color: #ffffcc }
+.cython { background: #f8f8f8; }
+.cython .c { color: #3D7B7B; font-style: italic } /* Comment */
+.cython .err { border: 1px solid #F00 } /* Error */
+.cython .k { color: #008000; font-weight: bold } /* Keyword */
+.cython .o { color: #666 } /* Operator */
+.cython .ch { color: #3D7B7B; font-style: italic } /* Comment.Hashbang */
+.cython .cm { color: #3D7B7B; font-style: italic } /* Comment.Multiline */
+.cython .cp { color: #9C6500 } /* Comment.Preproc */
+.cython .cpf { color: #3D7B7B; font-style: italic } /* Comment.PreprocFile */
+.cython .c1 { color: #3D7B7B; font-style: italic } /* Comment.Single */
+.cython .cs { color: #3D7B7B; font-style: italic } /* Comment.Special */
+.cython .gd { color: #A00000 } /* Generic.Deleted */
+.cython .ge { font-style: italic } /* Generic.Emph */
+.cython .ges { font-weight: bold; font-style: italic } /* Generic.EmphStrong */
+.cython .gr { color: #E40000 } /* Generic.Error */
+.cython .gh { color: #000080; font-weight: bold } /* Generic.Heading */
+.cython .gi { color: #008400 } /* Generic.Inserted */
+.cython .go { color: #717171 } /* Generic.Output */
+.cython .gp { color: #000080; font-weight: bold } /* Generic.Prompt */
+.cython .gs { font-weight: bold } /* Generic.Strong */
+.cython .gu { color: #800080; font-weight: bold } /* Generic.Subheading */
+.cython .gt { color: #04D } /* Generic.Traceback */
+.cython .kc { color: #008000; font-weight: bold } /* Keyword.Constant */
+.cython .kd { color: #008000; font-weight: bold } /* Keyword.Declaration */
+.cython .kn { color: #008000; font-weight: bold } /* Keyword.Namespace */
+.cython .kp { color: #008000 } /* Keyword.Pseudo */
+.cython .kr { color: #008000; font-weight: bold } /* Keyword.Reserved */
+.cython .kt { color: #B00040 } /* Keyword.Type */
+.cython .m { color: #666 } /* Literal.Number */
+.cython .s { color: #BA2121 } /* Literal.String */
+.cython .na { color: #687822 } /* Name.Attribute */
+.cython .nb { color: #008000 } /* Name.Builtin */
+.cython .nc { color: #00F; font-weight: bold } /* Name.Class */
+.cython .no { color: #800 } /* Name.Constant */
+.cython .nd { color: #A2F } /* Name.Decorator */
+.cython .ni { color: #717171; font-weight: bold } /* Name.Entity */
+.cython .ne { color: #CB3F38; font-weight: bold } /* Name.Exception */
+.cython .nf { color: #00F } /* Name.Function */
+.cython .nl { color: #767600 } /* Name.Label */
+.cython .nn { color: #00F; font-weight: bold } /* Name.Namespace */
+.cython .nt { color: #008000; font-weight: bold } /* Name.Tag */
+.cython .nv { color: #19177C } /* Name.Variable */
+.cython .ow { color: #A2F; font-weight: bold } /* Operator.Word */
+.cython .w { color: #BBB } /* Text.Whitespace */
+.cython .mb { color: #666 } /* Literal.Number.Bin */
+.cython .mf { color: #666 } /* Literal.Number.Float */
+.cython .mh { color: #666 } /* Literal.Number.Hex */
+.cython .mi { color: #666 } /* Literal.Number.Integer */
+.cython .mo { color: #666 } /* Literal.Number.Oct */
+.cython .sa { color: #BA2121 } /* Literal.String.Affix */
+.cython .sb { color: #BA2121 } /* Literal.String.Backtick */
+.cython .sc { color: #BA2121 } /* Literal.String.Char */
+.cython .dl { color: #BA2121 } /* Literal.String.Delimiter */
+.cython .sd { color: #BA2121; font-style: italic } /* Literal.String.Doc */
+.cython .s2 { color: #BA2121 } /* Literal.String.Double */
+.cython .se { color: #AA5D1F; font-weight: bold } /* Literal.String.Escape */
+.cython .sh { color: #BA2121 } /* Literal.String.Heredoc */
+.cython .si { color: #A45A77; font-weight: bold } /* Literal.String.Interpol */
+.cython .sx { color: #008000 } /* Literal.String.Other */
+.cython .sr { color: #A45A77 } /* Literal.String.Regex */
+.cython .s1 { color: #BA2121 } /* Literal.String.Single */
+.cython .ss { color: #19177C } /* Literal.String.Symbol */
+.cython .bp { color: #008000 } /* Name.Builtin.Pseudo */
+.cython .fm { color: #00F } /* Name.Function.Magic */
+.cython .vc { color: #19177C } /* Name.Variable.Class */
+.cython .vg { color: #19177C } /* Name.Variable.Global */
+.cython .vi { color: #19177C } /* Name.Variable.Instance */
+.cython .vm { color: #19177C } /* Name.Variable.Magic */
+.cython .il { color: #666 } /* Literal.Number.Integer.Long */
     </style>
 </head>
 <body class="cython">
@@ -295,17 +370,17 @@ body.cython { font-family: courier; font-size: 12; }
     Click on a line that starts with a "<code>+</code>" to see the C code that Cython generated for it.
 </p>
 <p>Raw output: <a href="exceptions.c">exceptions.c</a></p>
-<div class="cython"><pre class="cython line score-8" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">01</span>: # cython: language_level=3, embedsignature=True, boundscheck=False, wraparound=True, initializedcheck=False</pre>
+<div class="cython"><pre class="cython line score-8" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">01</span>: <span class="c"># cython: language_level=3, embedsignature=True, boundscheck=False, wraparound=True, initializedcheck=False</span></pre>
 <pre class='cython code score-8 '>  __pyx_t_2 = <span class='pyx_c_api'>__Pyx_PyDict_NewPresized</span>(0);<span class='error_goto'> if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 1, __pyx_L1_error)</span>
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_2);
   if (<span class='py_c_api'>PyDict_SetItem</span>(__pyx_mstate_global-&gt;__pyx_d, __pyx_mstate_global-&gt;__pyx_n_u_test, __pyx_t_2) &lt; (0)) <span class='error_goto'>__PYX_ERR(0, 1, __pyx_L1_error)</span>
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_2); __pyx_t_2 = 0;
-</pre><pre class="cython line score-0">&#xA0;<span class="">02</span>: # Copyright (C) 2018-present Jesus Lara</pre>
-<pre class="cython line score-0">&#xA0;<span class="">03</span>: #</pre>
-<pre class="cython line score-0">&#xA0;<span class="">04</span>: cdef class ModelException(Exception):</pre>
-<pre class="cython line score-0">&#xA0;<span class="">05</span>:     """Base class for other Data-Model exceptions"""</pre>
+</pre><pre class="cython line score-0">&#xA0;<span class="">02</span>: <span class="c"># Copyright (C) 2018-present Jesus Lara</span></pre>
+<pre class="cython line score-0">&#xA0;<span class="">03</span>: <span class="c">#</span></pre>
+<pre class="cython line score-0">&#xA0;<span class="">04</span>: <span class="k">cdef</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">ModelException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span></pre>
+<pre class="cython line score-0">&#xA0;<span class="">05</span>: <span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for other Data-Model exceptions&quot;&quot;&quot;</span></pre>
 <pre class="cython line score-0">&#xA0;<span class="">06</span>: </pre>
-<pre class="cython line score-37" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">07</span>:     def __init__(self, str message, **kwargs):</pre>
+<pre class="cython line score-37" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">07</span>:     <span class="k">def</span><span class="w"> </span><span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">str</span> <span class="n">message</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span></pre>
 <pre class='cython code score-37 '>/* Python wrapper */
 static int __pyx_pw_9datamodel_10exceptions_14ModelException_1__init__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
 static int __pyx_pw_9datamodel_10exceptions_14ModelException_1__init__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
@@ -406,7 +481,7 @@ static int __pyx_pf_9datamodel_10exceptions_14ModelException___init__(struct __p
   <span class='refnanny'>__Pyx_RefNannyFinishContext</span>();
   return __pyx_r;
 }
-</pre><pre class="cython line score-9" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">08</span>:         super().__init__(message)</pre>
+</pre><pre class="cython line score-9" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">08</span>:         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">)</span></pre>
 <pre class='cython code score-9 '>  __pyx_t_4 = NULL;
   __pyx_t_5 = 1;
   {
@@ -428,24 +503,24 @@ static int __pyx_pf_9datamodel_10exceptions_14ModelException___init__(struct __p
     <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_1);
   }
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_1); __pyx_t_1 = 0;
-</pre><pre class="cython line score-2" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">09</span>:         self.stacktrace = None</pre>
+</pre><pre class="cython line score-2" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">09</span>:         <span class="bp">self</span><span class="o">.</span><span class="n">stacktrace</span> <span class="o">=</span> <span class="kc">None</span></pre>
 <pre class='cython code score-2 '>  if (<span class='pyx_c_api'>__Pyx_PyObject_SetAttrStr</span>(((PyObject *)__pyx_v_self), __pyx_mstate_global-&gt;__pyx_n_u_stacktrace, Py_None) &lt; (0)) <span class='error_goto'>__PYX_ERR(0, 9, __pyx_L1_error)</span>
-</pre><pre class="cython line score-2" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">10</span>:         if 'stacktrace' in kwargs:</pre>
+</pre><pre class="cython line score-2" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">10</span>:         <span class="k">if</span> <span class="s">&#39;stacktrace&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span></pre>
 <pre class='cython code score-2 '>  __pyx_t_6 = (<span class='pyx_c_api'>__Pyx_PyDict_ContainsTF</span>(__pyx_mstate_global-&gt;__pyx_n_u_stacktrace, __pyx_v_kwargs, Py_EQ)); if (unlikely((__pyx_t_6 &lt; 0))) <span class='error_goto'>__PYX_ERR(0, 10, __pyx_L1_error)</span>
   if (__pyx_t_6) {
 /* … */
   }
-</pre><pre class="cython line score-5" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">11</span>:             self.stacktrace = kwargs['stacktrace']</pre>
+</pre><pre class="cython line score-5" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">11</span>:             <span class="bp">self</span><span class="o">.</span><span class="n">stacktrace</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;stacktrace&#39;</span><span class="p">]</span></pre>
 <pre class='cython code score-5 '>    __pyx_t_1 = <span class='pyx_c_api'>__Pyx_PyDict_GetItem</span>(__pyx_v_kwargs, __pyx_mstate_global-&gt;__pyx_n_u_stacktrace);<span class='error_goto'> if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 11, __pyx_L1_error)</span>
     <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_1);
     if (<span class='pyx_c_api'>__Pyx_PyObject_SetAttrStr</span>(((PyObject *)__pyx_v_self), __pyx_mstate_global-&gt;__pyx_n_u_stacktrace, __pyx_t_1) &lt; (0)) <span class='error_goto'>__PYX_ERR(0, 11, __pyx_L1_error)</span>
     <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_1); __pyx_t_1 = 0;
-</pre><pre class="cython line score-2" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">12</span>:         self.message = message</pre>
+</pre><pre class="cython line score-2" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">12</span>:         <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">message</span></pre>
 <pre class='cython code score-2 '>  if (<span class='pyx_c_api'>__Pyx_PyObject_SetAttrStr</span>(((PyObject *)__pyx_v_self), __pyx_mstate_global-&gt;__pyx_n_u_message, __pyx_v_message) &lt; (0)) <span class='error_goto'>__PYX_ERR(0, 12, __pyx_L1_error)</span>
-</pre><pre class="cython line score-2" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">13</span>:         self.args = kwargs</pre>
+</pre><pre class="cython line score-2" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">13</span>:         <span class="bp">self</span><span class="o">.</span><span class="n">args</span> <span class="o">=</span> <span class="n">kwargs</span></pre>
 <pre class='cython code score-2 '>  if (<span class='pyx_c_api'>__Pyx_PyObject_SetAttrStr</span>(((PyObject *)__pyx_v_self), __pyx_mstate_global-&gt;__pyx_n_u_args, __pyx_v_kwargs) &lt; (0)) <span class='error_goto'>__PYX_ERR(0, 13, __pyx_L1_error)</span>
 </pre><pre class="cython line score-0">&#xA0;<span class="">14</span>: </pre>
-<pre class="cython line score-6" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">15</span>:     def __repr__(self):</pre>
+<pre class="cython line score-6" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">15</span>:     <span class="k">def</span><span class="w"> </span><span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span></pre>
 <pre class='cython code score-6 '>/* Python wrapper */
 static PyObject *__pyx_pw_9datamodel_10exceptions_14ModelException_3__repr__(PyObject *__pyx_v_self); /*proto*/
 static PyObject *__pyx_pw_9datamodel_10exceptions_14ModelException_3__repr__(PyObject *__pyx_v_self) {
@@ -475,7 +550,7 @@ static PyObject *__pyx_pf_9datamodel_10exceptions_14ModelException_2__repr__(str
   <span class='refnanny'>__Pyx_RefNannyFinishContext</span>();
   return __pyx_r;
 }
-</pre><pre class="cython line score-6" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">16</span>:         return f"{self.message}"</pre>
+</pre><pre class="cython line score-6" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">16</span>:         <span class="k">return</span> <span class="n">f</span><span class="s">&quot;{self.message}&quot;</span></pre>
 <pre class='cython code score-6 '>  <span class='pyx_macro_api'>__Pyx_XDECREF</span>(__pyx_r);
   __pyx_t_1 = <span class='pyx_c_api'>__Pyx_PyObject_GetAttrStr</span>(((PyObject *)__pyx_v_self), __pyx_mstate_global-&gt;__pyx_n_u_message);<span class='error_goto'> if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 16, __pyx_L1_error)</span>
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_1);
@@ -486,7 +561,7 @@ static PyObject *__pyx_pf_9datamodel_10exceptions_14ModelException_2__repr__(str
   __pyx_t_2 = 0;
   goto __pyx_L0;
 </pre><pre class="cython line score-0">&#xA0;<span class="">17</span>: </pre>
-<pre class="cython line score-6" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">18</span>:     def __str__(self):</pre>
+<pre class="cython line score-6" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">18</span>:     <span class="k">def</span><span class="w"> </span><span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span></pre>
 <pre class='cython code score-6 '>/* Python wrapper */
 static PyObject *__pyx_pw_9datamodel_10exceptions_14ModelException_5__str__(PyObject *__pyx_v_self); /*proto*/
 static PyObject *__pyx_pw_9datamodel_10exceptions_14ModelException_5__str__(PyObject *__pyx_v_self) {
@@ -516,7 +591,7 @@ static PyObject *__pyx_pf_9datamodel_10exceptions_14ModelException_4__str__(stru
   <span class='refnanny'>__Pyx_RefNannyFinishContext</span>();
   return __pyx_r;
 }
-</pre><pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">19</span>:         return f"{self.message!s}"</pre>
+</pre><pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">19</span>:         <span class="k">return</span> <span class="n">f</span><span class="s">&quot;{self.message!s}&quot;</span></pre>
 <pre class='cython code score-11 '>  <span class='pyx_macro_api'>__Pyx_XDECREF</span>(__pyx_r);
   __pyx_t_1 = <span class='pyx_c_api'>__Pyx_PyObject_GetAttrStr</span>(((PyObject *)__pyx_v_self), __pyx_mstate_global-&gt;__pyx_n_u_message);<span class='error_goto'> if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 19, __pyx_L1_error)</span>
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_1);
@@ -527,7 +602,7 @@ static PyObject *__pyx_pf_9datamodel_10exceptions_14ModelException_4__str__(stru
   __pyx_t_2 = 0;
   goto __pyx_L0;
 </pre><pre class="cython line score-0">&#xA0;<span class="">20</span>: </pre>
-<pre class="cython line score-28" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">21</span>:     def get(self):</pre>
+<pre class="cython line score-28" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">21</span>:     <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span></pre>
 <pre class='cython code score-28 '>/* Python wrapper */
 static PyObject *__pyx_pw_9datamodel_10exceptions_14ModelException_7get(PyObject *__pyx_v_self, 
 #if CYTHON_METH_FASTCALL
@@ -592,7 +667,7 @@ static PyObject *__pyx_pf_9datamodel_10exceptions_14ModelException_6get(struct _
   #endif
   if (<span class='pyx_c_api'>__Pyx_SetItemOnTypeDict</span>(__pyx_mstate_global-&gt;__pyx_ptype_9datamodel_10exceptions_ModelException, __pyx_mstate_global-&gt;__pyx_n_u_get, __pyx_t_2) &lt; (0)) <span class='error_goto'>__PYX_ERR(0, 21, __pyx_L1_error)</span>
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_2); __pyx_t_2 = 0;
-</pre><pre class="cython line score-3" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">22</span>:         return self.message</pre>
+</pre><pre class="cython line score-3" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">22</span>:         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">message</span></pre>
 <pre class='cython code score-3 '>  <span class='pyx_macro_api'>__Pyx_XDECREF</span>(__pyx_r);
   __pyx_t_1 = <span class='pyx_c_api'>__Pyx_PyObject_GetAttrStr</span>(((PyObject *)__pyx_v_self), __pyx_mstate_global-&gt;__pyx_n_u_message);<span class='error_goto'> if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 22, __pyx_L1_error)</span>
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_1);
@@ -600,9 +675,9 @@ static PyObject *__pyx_pf_9datamodel_10exceptions_14ModelException_6get(struct _
   __pyx_t_1 = 0;
   goto __pyx_L0;
 </pre><pre class="cython line score-0">&#xA0;<span class="">23</span>: </pre>
-<pre class="cython line score-0">&#xA0;<span class="">24</span>: cdef class ValidationError(ModelException):</pre>
-<pre class="cython line score-0">&#xA0;<span class="">25</span>:     """Validation Error."""</pre>
-<pre class="cython line score-40" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">26</span>:     def __init__(self, str message, dict payload = None):</pre>
+<pre class="cython line score-0">&#xA0;<span class="">24</span>: <span class="k">cdef</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">ValidationError</span><span class="p">(</span><span class="n">ModelException</span><span class="p">):</span></pre>
+<pre class="cython line score-0">&#xA0;<span class="">25</span>: <span class="w">    </span><span class="sd">&quot;&quot;&quot;Validation Error.&quot;&quot;&quot;</span></pre>
+<pre class="cython line score-40" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">26</span>:     <span class="k">def</span><span class="w"> </span><span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">str</span> <span class="n">message</span><span class="p">,</span> <span class="nb">dict</span> <span class="n">payload</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span></pre>
 <pre class='cython code score-40 '>/* Python wrapper */
 static int __pyx_pw_9datamodel_10exceptions_15ValidationError_1__init__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
 static int __pyx_pw_9datamodel_10exceptions_15ValidationError_1__init__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
@@ -711,7 +786,7 @@ static int __pyx_pf_9datamodel_10exceptions_15ValidationError___init__(struct __
   <span class='refnanny'>__Pyx_RefNannyFinishContext</span>();
   return __pyx_r;
 }
-</pre><pre class="cython line score-9" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">27</span>:         super().__init__(message)</pre>
+</pre><pre class="cython line score-9" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">27</span>:         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">)</span></pre>
 <pre class='cython code score-9 '>  __pyx_t_4 = NULL;
   __pyx_t_5 = 1;
   {
@@ -733,7 +808,7 @@ static int __pyx_pf_9datamodel_10exceptions_15ValidationError___init__(struct __
     <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_1);
   }
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_1); __pyx_t_1 = 0;
-</pre><pre class="cython line score-10" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">28</span>:         self.payload = payload or {}</pre>
+</pre><pre class="cython line score-10" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">28</span>:         <span class="bp">self</span><span class="o">.</span><span class="n">payload</span> <span class="o">=</span> <span class="n">payload</span> <span class="ow">or</span> <span class="p">{}</span></pre>
 <pre class='cython code score-10 '>  __pyx_t_6 = <span class='pyx_c_api'>__Pyx_PyObject_IsTrue</span>(__pyx_v_payload); if (unlikely((__pyx_t_6 &lt; 0))) <span class='error_goto'>__PYX_ERR(0, 28, __pyx_L1_error)</span>
   if (!__pyx_t_6) {
   } else {
@@ -750,7 +825,7 @@ static int __pyx_pf_9datamodel_10exceptions_15ValidationError___init__(struct __
   if (<span class='pyx_c_api'>__Pyx_PyObject_SetAttrStr</span>(((PyObject *)__pyx_v_self), __pyx_mstate_global-&gt;__pyx_n_u_payload, __pyx_t_1) &lt; (0)) <span class='error_goto'>__PYX_ERR(0, 28, __pyx_L1_error)</span>
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_1); __pyx_t_1 = 0;
 </pre><pre class="cython line score-0">&#xA0;<span class="">29</span>: </pre>
-<pre class="cython line score-10" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">30</span>:     def __str__(self):</pre>
+<pre class="cython line score-10" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">30</span>:     <span class="k">def</span><span class="w"> </span><span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span></pre>
 <pre class='cython code score-10 '>/* Python wrapper */
 static PyObject *__pyx_pw_9datamodel_10exceptions_15ValidationError_3__str__(PyObject *__pyx_v_self); /*proto*/
 static PyObject *__pyx_pw_9datamodel_10exceptions_15ValidationError_3__str__(PyObject *__pyx_v_self) {
@@ -786,7 +861,7 @@ static PyObject *__pyx_pf_9datamodel_10exceptions_15ValidationError_2__str__(str
   <span class='refnanny'>__Pyx_RefNannyFinishContext</span>();
   return __pyx_r;
 }
-</pre><pre class="cython line score-8" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">31</span>:         base = super().__str__()</pre>
+</pre><pre class="cython line score-8" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">31</span>:         <span class="n">base</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__str__</span><span class="p">()</span></pre>
 <pre class='cython code score-8 '>  __pyx_t_4 = NULL;
   __pyx_t_5 = 1;
   {
@@ -809,7 +884,7 @@ static PyObject *__pyx_pf_9datamodel_10exceptions_15ValidationError_2__str__(str
   }
   __pyx_v_base = __pyx_t_1;
   __pyx_t_1 = 0;
-</pre><pre class="cython line score-5" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">32</span>:         if self.payload:</pre>
+</pre><pre class="cython line score-5" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">32</span>:         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">payload</span><span class="p">:</span></pre>
 <pre class='cython code score-5 '>  __pyx_t_1 = <span class='pyx_c_api'>__Pyx_PyObject_GetAttrStr</span>(((PyObject *)__pyx_v_self), __pyx_mstate_global-&gt;__pyx_n_u_payload);<span class='error_goto'> if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 32, __pyx_L1_error)</span>
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_1);
   __pyx_t_6 = <span class='pyx_c_api'>__Pyx_PyObject_IsTrue</span>(__pyx_t_1); if (unlikely((__pyx_t_6 &lt; 0))) <span class='error_goto'>__PYX_ERR(0, 32, __pyx_L1_error)</span>
@@ -817,8 +892,8 @@ static PyObject *__pyx_pf_9datamodel_10exceptions_15ValidationError_2__str__(str
   if (__pyx_t_6) {
 /* … */
   }
-</pre><pre class="cython line score-0">&#xA0;<span class="">33</span>:             # collect the keys that had errors</pre>
-<pre class="cython line score-13" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">34</span>:             field_names = ", ".join(self.payload.keys())</pre>
+</pre><pre class="cython line score-0">&#xA0;<span class="">33</span>:             <span class="c"># collect the keys that had errors</span></pre>
+<pre class="cython line score-13" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">34</span>:             <span class="n">field_names</span> <span class="o">=</span> <span class="s">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">payload</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></pre>
 <pre class='cython code score-13 '>    __pyx_t_2 = <span class='pyx_c_api'>__Pyx_PyObject_GetAttrStr</span>(((PyObject *)__pyx_v_self), __pyx_mstate_global-&gt;__pyx_n_u_payload);<span class='error_goto'> if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 34, __pyx_L1_error)</span>
     <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_2);
     __pyx_t_3 = __pyx_t_2;
@@ -837,8 +912,8 @@ static PyObject *__pyx_pf_9datamodel_10exceptions_15ValidationError_2__str__(str
     <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_1); __pyx_t_1 = 0;
     __pyx_v_field_names = ((PyObject*)__pyx_t_2);
     __pyx_t_2 = 0;
-</pre><pre class="cython line score-0">&#xA0;<span class="">35</span>:             # attach them to the base message so we see them in the final str</pre>
-<pre class="cython line score-17" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">36</span>:             return f"{base} (Fields with errors: {field_names})"</pre>
+</pre><pre class="cython line score-0">&#xA0;<span class="">35</span>:             <span class="c"># attach them to the base message so we see them in the final str</span></pre>
+<pre class="cython line score-17" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">36</span>:             <span class="k">return</span> <span class="n">f</span><span class="s">&quot;{base} (Fields with errors: {field_names})&quot;</span></pre>
 <pre class='cython code score-17 '>    <span class='pyx_macro_api'>__Pyx_XDECREF</span>(__pyx_r);
     __pyx_t_2 = <span class='pyx_c_api'>__Pyx_PyObject_FormatSimple</span>(__pyx_v_base, __pyx_mstate_global-&gt;__pyx_empty_unicode);<span class='error_goto'> if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 36, __pyx_L1_error)</span>
     <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_2);
@@ -856,8 +931,8 @@ static PyObject *__pyx_pf_9datamodel_10exceptions_15ValidationError_2__str__(str
     __pyx_r = __pyx_t_3;
     __pyx_t_3 = 0;
     goto __pyx_L0;
-</pre><pre class="cython line score-0">&#xA0;<span class="">37</span>:         else:</pre>
-<pre class="cython line score-2" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">38</span>:             return base</pre>
+</pre><pre class="cython line score-0">&#xA0;<span class="">37</span>:         <span class="k">else</span><span class="p">:</span></pre>
+<pre class="cython line score-2" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">38</span>:             <span class="k">return</span> <span class="n">base</span></pre>
 <pre class='cython code score-2 '>  /*else*/ {
     <span class='pyx_macro_api'>__Pyx_XDECREF</span>(__pyx_r);
     <span class='pyx_macro_api'>__Pyx_INCREF</span>(__pyx_v_base);
@@ -865,9 +940,9 @@ static PyObject *__pyx_pf_9datamodel_10exceptions_15ValidationError_2__str__(str
     goto __pyx_L0;
   }
 </pre><pre class="cython line score-0">&#xA0;<span class="">39</span>: </pre>
-<pre class="cython line score-0">&#xA0;<span class="">40</span>: cdef class ParsingError(ModelException):</pre>
-<pre class="cython line score-0">&#xA0;<span class="">41</span>:     """Parsing Error."""</pre>
-<pre class="cython line score-32" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">42</span>:     def __init__(self, str message):</pre>
+<pre class="cython line score-0">&#xA0;<span class="">40</span>: <span class="k">cdef</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">ParsingError</span><span class="p">(</span><span class="n">ModelException</span><span class="p">):</span></pre>
+<pre class="cython line score-0">&#xA0;<span class="">41</span>: <span class="w">    </span><span class="sd">&quot;&quot;&quot;Parsing Error.&quot;&quot;&quot;</span></pre>
+<pre class="cython line score-32" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">42</span>:     <span class="k">def</span><span class="w"> </span><span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">str</span> <span class="n">message</span><span class="p">):</span></pre>
 <pre class='cython code score-32 '>/* Python wrapper */
 static int __pyx_pw_9datamodel_10exceptions_12ParsingError_1__init__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
 static int __pyx_pw_9datamodel_10exceptions_12ParsingError_1__init__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
@@ -965,7 +1040,7 @@ static int __pyx_pf_9datamodel_10exceptions_12ParsingError___init__(struct __pyx
   <span class='refnanny'>__Pyx_RefNannyFinishContext</span>();
   return __pyx_r;
 }
-</pre><pre class="cython line score-6" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">43</span>:         message = f'Parsing Error: {message}'</pre>
+</pre><pre class="cython line score-6" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">43</span>:         <span class="n">message</span> <span class="o">=</span> <span class="n">f</span><span class="s">&#39;Parsing Error: {message}&#39;</span></pre>
 <pre class='cython code score-6 '>  __pyx_t_1 = <span class='pyx_c_api'>__Pyx_PyUnicode_Unicode</span>(__pyx_v_message);<span class='error_goto'> if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 43, __pyx_L1_error)</span>
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_1);
   __pyx_t_2 = <span class='pyx_c_api'>__Pyx_PyUnicode_Concat</span>(__pyx_mstate_global-&gt;__pyx_kp_u_Parsing_Error, __pyx_t_1);<span class='error_goto'> if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 43, __pyx_L1_error)</span>
@@ -973,7 +1048,7 @@ static int __pyx_pf_9datamodel_10exceptions_12ParsingError___init__(struct __pyx
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_1); __pyx_t_1 = 0;
   <span class='pyx_macro_api'>__Pyx_DECREF_SET</span>(__pyx_v_message, ((PyObject*)__pyx_t_2));
   __pyx_t_2 = 0;
-</pre><pre class="cython line score-9" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">44</span>:         super().__init__(message)</pre>
+</pre><pre class="cython line score-9" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">44</span>:         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">)</span></pre>
 <pre class='cython code score-9 '>  __pyx_t_4 = NULL;
   __pyx_t_5 = 1;
   {
@@ -996,9 +1071,9 @@ static int __pyx_pf_9datamodel_10exceptions_12ParsingError___init__(struct __pyx
   }
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_2); __pyx_t_2 = 0;
 </pre><pre class="cython line score-0">&#xA0;<span class="">45</span>: </pre>
-<pre class="cython line score-0">&#xA0;<span class="">46</span>: cdef class ParserError(ModelException):</pre>
-<pre class="cython line score-0">&#xA0;<span class="">47</span>:     """Parsing Error."""</pre>
-<pre class="cython line score-32" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">48</span>:     def __init__(self, str message):</pre>
+<pre class="cython line score-0">&#xA0;<span class="">46</span>: <span class="k">cdef</span><span class="w"> </span><span class="k">class</span><span class="w"> </span><span class="nc">ParserError</span><span class="p">(</span><span class="n">ModelException</span><span class="p">):</span></pre>
+<pre class="cython line score-0">&#xA0;<span class="">47</span>: <span class="w">    </span><span class="sd">&quot;&quot;&quot;Parsing Error.&quot;&quot;&quot;</span></pre>
+<pre class="cython line score-32" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">48</span>:     <span class="k">def</span><span class="w"> </span><span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">str</span> <span class="n">message</span><span class="p">):</span></pre>
 <pre class='cython code score-32 '>/* Python wrapper */
 static int __pyx_pw_9datamodel_10exceptions_11ParserError_1__init__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
 static int __pyx_pw_9datamodel_10exceptions_11ParserError_1__init__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
@@ -1096,7 +1171,7 @@ static int __pyx_pf_9datamodel_10exceptions_11ParserError___init__(struct __pyx_
   <span class='refnanny'>__Pyx_RefNannyFinishContext</span>();
   return __pyx_r;
 }
-</pre><pre class="cython line score-6" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">49</span>:         message = f'Parsing Error: {message}'</pre>
+</pre><pre class="cython line score-6" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">49</span>:         <span class="n">message</span> <span class="o">=</span> <span class="n">f</span><span class="s">&#39;Parsing Error: {message}&#39;</span></pre>
 <pre class='cython code score-6 '>  __pyx_t_1 = <span class='pyx_c_api'>__Pyx_PyUnicode_Unicode</span>(__pyx_v_message);<span class='error_goto'> if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 49, __pyx_L1_error)</span>
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_1);
   __pyx_t_2 = <span class='pyx_c_api'>__Pyx_PyUnicode_Concat</span>(__pyx_mstate_global-&gt;__pyx_kp_u_Parsing_Error, __pyx_t_1);<span class='error_goto'> if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 49, __pyx_L1_error)</span>
@@ -1104,7 +1179,7 @@ static int __pyx_pf_9datamodel_10exceptions_11ParserError___init__(struct __pyx_
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_1); __pyx_t_1 = 0;
   <span class='pyx_macro_api'>__Pyx_DECREF_SET</span>(__pyx_v_message, ((PyObject*)__pyx_t_2));
   __pyx_t_2 = 0;
-</pre><pre class="cython line score-9" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">50</span>:         super().__init__(message)</pre>
+</pre><pre class="cython line score-9" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">50</span>:         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">)</span></pre>
 <pre class='cython code score-9 '>  __pyx_t_4 = NULL;
   __pyx_t_5 = 1;
   {
