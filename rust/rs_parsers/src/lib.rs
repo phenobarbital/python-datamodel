@@ -7,9 +7,6 @@ use speedate::DateTime as SpeeDateTime;
 use uuid::Uuid;
 use rust_decimal::Decimal; // Rust Decimal crate
 use rust_decimal::prelude::FromStr;
-// use speedate::{Date, DateTime, ParseError};
-// use std::collections::HashMap;
-// NaiveTime
 
 
 #[pyfunction]
@@ -27,7 +24,7 @@ fn to_string(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<String>> {
                 Ok(Some(val.extract::<String>()?))
             } else if val.is_instance_of::<PyBytes>() {
                 // If the object is bytes, decode it to a string
-                let bytes = val.downcast::<PyBytes>()?;
+                let bytes = val.clone().cast_into::<PyBytes>()?;
                 Ok(Some(String::from_utf8(bytes.as_bytes().to_vec())?))
             } else if val.is_callable() {
                 // If the object is callable, call it and convert the result to a string
@@ -52,7 +49,7 @@ fn to_string(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<String>> {
 
 #[pyfunction]
 #[pyo3(signature = (py_type, input_list))]
-fn to_list(py: Python, py_type: Py<PyAny>, input_list: Py<PyList>) -> PyResult<PyObject> {
+fn to_list(py: Python, py_type: Py<PyAny>, input_list: Py<PyList>) -> PyResult<Py<PyAny>> {
     let input_list = input_list.bind(py);
 
     // Ensure py_type is callable
@@ -61,21 +58,15 @@ fn to_list(py: Python, py_type: Py<PyAny>, input_list: Py<PyList>) -> PyResult<P
         return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>("Provided type is not callable"));
     }
 
-    let mut result_list: Vec<PyObject> = Vec::new();
+    let mut result_list: Vec<Py<PyAny>> = Vec::new();
 
     for item in input_list.iter() {
-        let converted_item = Python::with_gil(|_py: Python<'_>| {
-            let py_type = py_type.clone();
-            let item_obj: PyObject = item.into();
-            py_type.call1((item_obj,)).map(|obj| obj.into())
-        });
-        result_list.push(converted_item?);
+        let converted_item = py_type.call1((item,))?;
+        result_list.push(converted_item.unbind());
     }
 
-    Python::with_gil(|py| {
-        let py_list = PyList::new(py, &result_list)?;
-        Ok(py_list.into())
-    })
+    let py_list = PyList::new(py, &result_list)?;
+    Ok(py_list.into_any().unbind())
 }
 
 #[pyfunction]
@@ -144,7 +135,7 @@ fn to_boolean(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<bool>> {
             } else if val_ref.is_instance_of::<PyBool>() {
                 Ok(Some(val.extract::<bool>(py)?))
             } else if val_ref.is_instance_of::<PyString>() {
-                let py_str = val_ref.downcast::<PyString>()?;
+                let py_str = val_ref.clone().cast_into::<PyString>()?;
                 Ok(Some(strtobool(py_str.to_str()?)?))
             } else if let Ok(b) = val_ref.call_method0("__bool__")?.extract::<bool>() {
                 Ok(Some(b))
@@ -324,7 +315,7 @@ fn to_datetime(py: Python, input: &str, custom_format: Option<&str>) -> PyResult
 
 #[pyfunction]
 #[pyo3(signature = (obj=None))]
-fn to_uuid_obj(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> {
+fn to_uuid_obj(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<Py<PyAny>>> {
     match obj {
         None => Ok(None), // If the object is None, return None
         Some(py_obj) => {
@@ -333,7 +324,7 @@ fn to_uuid_obj(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>>
 
             // If the object is already a UUID, return it immediately
             if val.get_type().name()? == "UUID" {
-                return Ok(Some(py_obj.into()));  // Directly return the Py<PyAny> object
+                return Ok(Some(py_obj));  // Directly return the Py<PyAny> object
             }
 
             // Check if it's a pgproto.UUID (asyncpg's UUID)
@@ -370,15 +361,15 @@ fn to_uuid_obj(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>>
 }
 
 /// Helper function to create a Python `uuid.UUID` object from a Rust `Uuid`
-fn python_uuid(py: Python, uuid_obj: Uuid) -> PyResult<PyObject> {
+fn python_uuid(py: Python, uuid_obj: Uuid) -> PyResult<Py<PyAny>> {
     let uuid_mod = py.import("uuid")?;
     let py_uuid = uuid_mod.getattr("UUID")?.call1((uuid_obj.to_string(),))?;
-    Ok(py_uuid.into())
+    Ok(py_uuid.unbind())
 }
 
 #[pyfunction]
 #[pyo3(signature = (obj=None))]
-fn to_uuid_str(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> {
+fn to_uuid_str(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<Py<PyAny>>> {
     match obj {
         None => Ok(None),  // If input is None, return None
         Some(py_obj) => {
@@ -386,19 +377,19 @@ fn to_uuid_str(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>>
 
             // If it's already a UUID, return it directly (avoid conversion overhead)
             if val.get_type().name()? == "UUID" {
-                return Ok(Some(py_obj.into()));  // ✅ Fastest path
+                return Ok(Some(py_obj));
             }
 
             // If it's callable, call it and use its result
             if val.is_callable() {
-                let call_result = val.call0()?;  // ✅ Only call once
-                return to_uuid(py, Some(call_result.extract()?));  // ✅ Recursively process result
+                let call_result = val.call0()?;
+                return to_uuid(py, Some(call_result.extract()?));
             }
 
             // If it's a valid UUID string, return it as a string
             if let Ok(obj_str) = val.str()?.to_str() {
                 if Uuid::parse_str(obj_str).is_ok() {
-                    return Ok(Some(PyString::new(py, obj_str).into()));  // ✅ Let Python handle conversion
+                    return Ok(Some(PyString::new(py, obj_str).into_any().unbind()));
                 }
             }
 
@@ -410,7 +401,7 @@ fn to_uuid_str(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>>
 
 #[pyfunction]
 #[pyo3(signature = (obj=None))]
-fn to_uuid(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> {
+fn to_uuid(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<Py<PyAny>>> {
     match obj {
         None => Ok(None),  // If input is None, return None
         Some(py_obj) => {
@@ -418,14 +409,14 @@ fn to_uuid(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> {
             let cython_uuid = converters.getattr("to_uuid")?;  // Get Cython function
             // Call Cython's to_uuid function and return its result
             let result = cython_uuid.call1((py_obj,))?;
-            Ok(Some(result.into()))
+            Ok(Some(result.unbind()))
         }
     }
 }
 
 #[pyfunction]
 #[pyo3(signature = (obj=None))]
-fn to_integer(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> {
+fn to_integer(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<Py<PyAny>>> {
     match obj {
         None => Ok(None), // If input is None, return None
         Some(py_obj) => {
@@ -434,16 +425,16 @@ fn to_integer(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> 
 
             // If the object is already an integer, return it directly.
             if val.is_instance_of::<PyInt>() {
-                return Ok(Some(py_obj.into()));
+                return Ok(Some(py_obj));
             }
 
             // If the object is a string, attempt to parse it as an integer.
             if val.is_instance_of::<PyString>() {
-                let py_str = val.downcast::<PyString>()?;
+                let py_str = val.clone().cast_into::<PyString>()?;
                 if let Ok(parsed_int) = py_str.to_str()?.parse::<i64>() {
                     // Construct a new Python integer by calling the type.
                     let py_int_obj = py.get_type::<PyInt>().call1((parsed_int,))?;
-                    return Ok(Some(py_int_obj.into()));
+                    return Ok(Some(py_int_obj.unbind()));
                 } else {
                     return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                         format!("Invalid integer string: {}", py_str.to_str()?),
@@ -462,7 +453,7 @@ fn to_integer(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> 
                 Ok(int_value) => {
                     // Construct a Python int by calling the Python integer type.
                     let py_int_obj = py.get_type::<PyInt>().call1((int_value,))?;
-                    Ok(Some(py_int_obj.into()))
+                    Ok(Some(py_int_obj.unbind()))
                 }
                 Err(_) => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                     format!("Invalid conversion to Integer of {}", val.str()?.to_str()?),
@@ -474,7 +465,7 @@ fn to_integer(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> 
 
 #[pyfunction]
 #[pyo3(signature = (obj=None))]
-fn to_float(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> {
+fn to_float(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<Py<PyAny>>> {
     match obj {
         None => Ok(None), // If input is None, return None
         Some(py_obj) => {
@@ -482,15 +473,15 @@ fn to_float(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> {
 
             // If the object is already a float, return it directly.
             if val.get_type().name()? == "float" {
-                return Ok(Some(py_obj.into()));
+                return Ok(Some(py_obj));
             }
 
             // If the object is a string, attempt to parse it as a float.
             if val.is_instance_of::<PyString>() {
-                let py_str = val.downcast::<PyString>()?;
+                let py_str = val.clone().cast_into::<PyString>()?;
                 if let Ok(parsed_float) = py_str.to_str()?.parse::<f64>() {
                     // Create a Python float from the Rust f64.
-                    return Ok(Some(PyFloat::new(py, parsed_float).into()));
+                    return Ok(Some(PyFloat::new(py, parsed_float).into_any().unbind()));
                 } else {
                     return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                         format!("Invalid float string: {}", py_str.to_str()?),
@@ -506,7 +497,7 @@ fn to_float(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> {
 
             // Try converting the object to an f64.
             match val.extract::<f64>() {
-                Ok(float_value) => Ok(Some(PyFloat::new(py, float_value).into())),
+                Ok(float_value) => Ok(Some(PyFloat::new(py, float_value).into_any().unbind())),
                 Err(_) => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                     format!("Invalid conversion to Float of {}", val.str()?.to_str()?),
                 )),
@@ -518,15 +509,15 @@ fn to_float(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> {
 
 #[pyfunction]
 #[pyo3(signature = (obj=None))]
-fn to_decimal(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> {
+fn to_decimal(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<Py<PyAny>>> {
     match obj {
         None => Ok(None), // If input is None, return None
         Some(py_obj) => {
-            let val = py_obj.bind(py); // Bind object in PyO3 0.23.0
+            let val = py_obj.bind(py);
 
             // If the object is already a Decimal, return it directly
             if val.get_type().name()? == "Decimal" {
-                return Ok(Some(py_obj.into())); // ✅ Return existing Decimal
+                return Ok(Some(py_obj));
             }
 
             // Import Python's `decimal.Decimal`
@@ -534,9 +525,9 @@ fn to_decimal(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> 
 
             // If the object is a string, attempt to parse it as a Decimal
             if val.is_instance_of::<PyString>() {
-                let py_str = val.downcast::<PyString>()?;
+                let py_str = val.clone().cast_into::<PyString>()?;
                 if let Ok(parsed_decimal) = Decimal::from_str(py_str.to_str()?) {
-                    return Ok(Some(py_decimal.call1((parsed_decimal.to_string(),))?.into())); // ✅ Convert Rust Decimal to Python Decimal
+                    return Ok(Some(py_decimal.call1((parsed_decimal.to_string(),))?.unbind()));
                 } else {
                     return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                         format!("Invalid decimal string: {}", py_str.to_str()?),
@@ -547,7 +538,7 @@ fn to_decimal(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> 
             // If it's callable, call it and process its result
             if val.is_callable() {
                 let call_result = val.call0()?; // Only call once
-                return to_decimal(py, Some(call_result.extract()?)); // ✅ Recursively process result
+                return to_decimal(py, Some(call_result.extract()?));
             }
 
             // Try converting to a Decimal from a float
@@ -557,7 +548,7 @@ fn to_decimal(py: Python, obj: Option<Py<PyAny>>) -> PyResult<Option<PyObject>> 
                         .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyValueError, _>(
                             format!("Invalid conversion to Decimal from float: {}", float_value),
                         ))?;
-                    return Ok(Some(py_decimal.call1((rust_decimal.to_string(),))?.into())); // ✅ Convert Rust Decimal to Python Decimal
+                    Ok(Some(py_decimal.call1((rust_decimal.to_string(),))?.unbind()))
                 }
                 Err(_) => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                     format!("Invalid conversion to Decimal of {}", val.str()?.to_str()?),
