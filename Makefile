@@ -29,8 +29,10 @@ sync:
 
 # ---- Install ----
 
-install: build-rust
+install:
 	uv sync --frozen --no-dev
+	$(MAKE) build-rust
+	$(MAKE) build-inplace
 
 develop:
 	uv sync --frozen --extra dev
@@ -145,7 +147,7 @@ bump-minor:
 help:
 	@echo "Available targets:"
 	@echo "  venv          - Create virtual environment (Python $(PYTHON_VERSION))"
-	@echo "  install       - Install production dependencies"
+	@echo "  install       - Install production dependencies + build extensions"
 	@echo "  develop       - Install dev dependencies + build extensions"
 	@echo "  build         - Full build (stage Rust + uv build)"
 	@echo "  build-rust    - Build Rust extension via maturin (dev mode)"

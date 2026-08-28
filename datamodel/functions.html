@@ -286,6 +286,81 @@ body.cython { font-family: courier; font-size: 12; }
 .cython.score-252 {background-color: #FFFF09;}
 .cython.score-253 {background-color: #FFFF09;}
 .cython.score-254 {background-color: #FFFF09;}
+pre { line-height: 125%; }
+td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+span.linenos { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+.cython .hll { background-color: #ffffcc }
+.cython { background: #f8f8f8; }
+.cython .c { color: #3D7B7B; font-style: italic } /* Comment */
+.cython .err { border: 1px solid #F00 } /* Error */
+.cython .k { color: #008000; font-weight: bold } /* Keyword */
+.cython .o { color: #666 } /* Operator */
+.cython .ch { color: #3D7B7B; font-style: italic } /* Comment.Hashbang */
+.cython .cm { color: #3D7B7B; font-style: italic } /* Comment.Multiline */
+.cython .cp { color: #9C6500 } /* Comment.Preproc */
+.cython .cpf { color: #3D7B7B; font-style: italic } /* Comment.PreprocFile */
+.cython .c1 { color: #3D7B7B; font-style: italic } /* Comment.Single */
+.cython .cs { color: #3D7B7B; font-style: italic } /* Comment.Special */
+.cython .gd { color: #A00000 } /* Generic.Deleted */
+.cython .ge { font-style: italic } /* Generic.Emph */
+.cython .ges { font-weight: bold; font-style: italic } /* Generic.EmphStrong */
+.cython .gr { color: #E40000 } /* Generic.Error */
+.cython .gh { color: #000080; font-weight: bold } /* Generic.Heading */
+.cython .gi { color: #008400 } /* Generic.Inserted */
+.cython .go { color: #717171 } /* Generic.Output */
+.cython .gp { color: #000080; font-weight: bold } /* Generic.Prompt */
+.cython .gs { font-weight: bold } /* Generic.Strong */
+.cython .gu { color: #800080; font-weight: bold } /* Generic.Subheading */
+.cython .gt { color: #04D } /* Generic.Traceback */
+.cython .kc { color: #008000; font-weight: bold } /* Keyword.Constant */
+.cython .kd { color: #008000; font-weight: bold } /* Keyword.Declaration */
+.cython .kn { color: #008000; font-weight: bold } /* Keyword.Namespace */
+.cython .kp { color: #008000 } /* Keyword.Pseudo */
+.cython .kr { color: #008000; font-weight: bold } /* Keyword.Reserved */
+.cython .kt { color: #B00040 } /* Keyword.Type */
+.cython .m { color: #666 } /* Literal.Number */
+.cython .s { color: #BA2121 } /* Literal.String */
+.cython .na { color: #687822 } /* Name.Attribute */
+.cython .nb { color: #008000 } /* Name.Builtin */
+.cython .nc { color: #00F; font-weight: bold } /* Name.Class */
+.cython .no { color: #800 } /* Name.Constant */
+.cython .nd { color: #A2F } /* Name.Decorator */
+.cython .ni { color: #717171; font-weight: bold } /* Name.Entity */
+.cython .ne { color: #CB3F38; font-weight: bold } /* Name.Exception */
+.cython .nf { color: #00F } /* Name.Function */
+.cython .nl { color: #767600 } /* Name.Label */
+.cython .nn { color: #00F; font-weight: bold } /* Name.Namespace */
+.cython .nt { color: #008000; font-weight: bold } /* Name.Tag */
+.cython .nv { color: #19177C } /* Name.Variable */
+.cython .ow { color: #A2F; font-weight: bold } /* Operator.Word */
+.cython .w { color: #BBB } /* Text.Whitespace */
+.cython .mb { color: #666 } /* Literal.Number.Bin */
+.cython .mf { color: #666 } /* Literal.Number.Float */
+.cython .mh { color: #666 } /* Literal.Number.Hex */
+.cython .mi { color: #666 } /* Literal.Number.Integer */
+.cython .mo { color: #666 } /* Literal.Number.Oct */
+.cython .sa { color: #BA2121 } /* Literal.String.Affix */
+.cython .sb { color: #BA2121 } /* Literal.String.Backtick */
+.cython .sc { color: #BA2121 } /* Literal.String.Char */
+.cython .dl { color: #BA2121 } /* Literal.String.Delimiter */
+.cython .sd { color: #BA2121; font-style: italic } /* Literal.String.Doc */
+.cython .s2 { color: #BA2121 } /* Literal.String.Double */
+.cython .se { color: #AA5D1F; font-weight: bold } /* Literal.String.Escape */
+.cython .sh { color: #BA2121 } /* Literal.String.Heredoc */
+.cython .si { color: #A45A77; font-weight: bold } /* Literal.String.Interpol */
+.cython .sx { color: #008000 } /* Literal.String.Other */
+.cython .sr { color: #A45A77 } /* Literal.String.Regex */
+.cython .s1 { color: #BA2121 } /* Literal.String.Single */
+.cython .ss { color: #19177C } /* Literal.String.Symbol */
+.cython .bp { color: #008000 } /* Name.Builtin.Pseudo */
+.cython .fm { color: #00F } /* Name.Function.Magic */
+.cython .vc { color: #19177C } /* Name.Variable.Class */
+.cython .vg { color: #19177C } /* Name.Variable.Global */
+.cython .vi { color: #19177C } /* Name.Variable.Instance */
+.cython .vm { color: #19177C } /* Name.Variable.Magic */
+.cython .il { color: #666 } /* Literal.Number.Integer.Long */
     </style>
 </head>
 <body class="cython">
@@ -295,14 +370,14 @@ body.cython { font-family: courier; font-size: 12; }
     Click on a line that starts with a "<code>+</code>" to see the C code that Cython generated for it.
 </p>
 <p>Raw output: <a href="functions.cpp">functions.cpp</a></p>
-<div class="cython"><pre class="cython line score-8" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">01</span>: # cython: language_level=3, embedsignature=True, boundscheck=False, wraparound=True, initializedcheck=False</pre>
+<div class="cython"><pre class="cython line score-8" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">01</span>: <span class="c"># cython: language_level=3, embedsignature=True, boundscheck=False, wraparound=True, initializedcheck=False</span></pre>
 <pre class='cython code score-8 '>  __pyx_t_2 = <span class='pyx_c_api'>__Pyx_PyDict_NewPresized</span>(0);<span class='error_goto'> if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 1, __pyx_L1_error)</span>
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_2);
   if (<span class='py_c_api'>PyDict_SetItem</span>(__pyx_mstate_global-&gt;__pyx_d, __pyx_mstate_global-&gt;__pyx_n_u_test, __pyx_t_2) &lt; (0)) <span class='error_goto'>__PYX_ERR(0, 1, __pyx_L1_error)</span>
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_2); __pyx_t_2 = 0;
-</pre><pre class="cython line score-0">&#xA0;<span class="">02</span>: # Copyright (C) 2018-present Jesus Lara</pre>
-<pre class="cython line score-0">&#xA0;<span class="">03</span>: #</pre>
-<pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">04</span>: from typing import get_args, get_origin, Union, Optional</pre>
+</pre><pre class="cython line score-0">&#xA0;<span class="">02</span>: <span class="c"># Copyright (C) 2018-present Jesus Lara</span></pre>
+<pre class="cython line score-0">&#xA0;<span class="">03</span>: <span class="c">#</span></pre>
+<pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">04</span>: <span class="k">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="k">import</span> <span class="n">get_args</span><span class="p">,</span> <span class="n">get_origin</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Optional</span></pre>
 <pre class='cython code score-11 '>  {
     PyObject* const __pyx_imported_names[] = {__pyx_mstate_global-&gt;__pyx_n_u_get_args,__pyx_mstate_global-&gt;__pyx_n_u_get_origin,__pyx_mstate_global-&gt;__pyx_n_u_Union,__pyx_mstate_global-&gt;__pyx_n_u_Optional};
     __pyx_t_1 = <span class='pyx_c_api'>__Pyx_Import</span>(__pyx_mstate_global-&gt;__pyx_n_u_typing, __pyx_imported_names, 4, NULL, 0);<span class='error_goto'> if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 4, __pyx_L1_error)</span>
@@ -319,7 +394,7 @@ body.cython { font-family: courier; font-size: 12; }
     }
   }
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_2); __pyx_t_2 = 0;
-</pre><pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">05</span>: from collections.abc import Iterable</pre>
+</pre><pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">05</span>: <span class="k">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="k">import</span> <span class="n">Iterable</span></pre>
 <pre class='cython code score-11 '>  {
     PyObject* const __pyx_imported_names[] = {__pyx_mstate_global-&gt;__pyx_n_u_Iterable};
     __pyx_t_1 = <span class='pyx_c_api'>__Pyx_Import</span>(__pyx_mstate_global-&gt;__pyx_n_u_collections_abc, __pyx_imported_names, 1, NULL, 0);<span class='error_goto'> if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 5, __pyx_L1_error)</span>
@@ -336,13 +411,13 @@ body.cython { font-family: courier; font-size: 12; }
     }
   }
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_2); __pyx_t_2 = 0;
-</pre><pre class="cython line score-0">&#xA0;<span class="">06</span>: from libcpp cimport bool as bool_t</pre>
-<pre class="cython line score-0">&#xA0;<span class="">07</span>: from cpython.object cimport (</pre>
-<pre class="cython line score-0">&#xA0;<span class="">08</span>:     PyObject_IsInstance,</pre>
-<pre class="cython line score-0">&#xA0;<span class="">09</span>:     PyObject_IsSubclass,</pre>
-<pre class="cython line score-0">&#xA0;<span class="">10</span>:     PyObject_HasAttr,</pre>
-<pre class="cython line score-0">&#xA0;<span class="">11</span>: )</pre>
-<pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">12</span>: from uuid import UUID</pre>
+</pre><pre class="cython line score-0">&#xA0;<span class="">06</span>: <span class="k">from</span><span class="w"> </span><span class="nn">libcpp</span><span class="w"> </span><span class="k">cimport</span> <span class="nb">bool</span> <span class="k">as</span> <span class="n">bool_t</span></pre>
+<pre class="cython line score-0">&#xA0;<span class="">07</span>: <span class="k">from</span><span class="w"> </span><span class="nn">cpython.object</span><span class="w"> </span><span class="k">cimport</span> <span class="p">(</span></pre>
+<pre class="cython line score-0">&#xA0;<span class="">08</span>:     <span class="n">PyObject_IsInstance</span><span class="p">,</span></pre>
+<pre class="cython line score-0">&#xA0;<span class="">09</span>:     <span class="n">PyObject_IsSubclass</span><span class="p">,</span></pre>
+<pre class="cython line score-0">&#xA0;<span class="">10</span>:     <span class="n">PyObject_HasAttr</span><span class="p">,</span></pre>
+<pre class="cython line score-0">&#xA0;<span class="">11</span>: <span class="p">)</span></pre>
+<pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">12</span>: <span class="k">from</span><span class="w"> </span><span class="nn">uuid</span><span class="w"> </span><span class="k">import</span> <span class="n">UUID</span></pre>
 <pre class='cython code score-11 '>  {
     PyObject* const __pyx_imported_names[] = {__pyx_mstate_global-&gt;__pyx_n_u_UUID};
     __pyx_t_1 = <span class='pyx_c_api'>__Pyx_Import</span>(__pyx_mstate_global-&gt;__pyx_n_u_uuid, __pyx_imported_names, 1, NULL, 0);<span class='error_goto'> if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 12, __pyx_L1_error)</span>
@@ -359,7 +434,7 @@ body.cython { font-family: courier; font-size: 12; }
     }
   }
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_2); __pyx_t_2 = 0;
-</pre><pre class="cython line score-12" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">13</span>: import asyncpg.pgproto.pgproto as pgproto</pre>
+</pre><pre class="cython line score-12" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">13</span>: <span class="k">import</span><span class="w"> </span><span class="nn">asyncpg.pgproto.pgproto</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pgproto</span></pre>
 <pre class='cython code score-12 '>  __pyx_t_1 = <span class='pyx_c_api'>__Pyx_Import</span>(__pyx_mstate_global-&gt;__pyx_n_u_asyncpg_pgproto_pgproto, 0, 0, NULL, 0);<span class='error_goto'> if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 13, __pyx_L1_error)</span>
   __pyx_t_5 = <span class='pyx_c_api'>__Pyx_ImportFrom</span>(__pyx_t_1, __pyx_mstate_global-&gt;__pyx_n_u_pgproto);
   Py_DECREF(__pyx_t_1);
@@ -373,7 +448,7 @@ body.cython { font-family: courier; font-size: 12; }
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_2);
   if (<span class='py_c_api'>PyDict_SetItem</span>(__pyx_mstate_global-&gt;__pyx_d, __pyx_mstate_global-&gt;__pyx_n_u_pgproto, __pyx_t_2) &lt; (0)) <span class='error_goto'>__PYX_ERR(0, 13, __pyx_L1_error)</span>
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_2); __pyx_t_2 = 0;
-</pre><pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">14</span>: from decimal import Decimal</pre>
+</pre><pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">14</span>: <span class="k">from</span><span class="w"> </span><span class="nn">decimal</span><span class="w"> </span><span class="k">import</span> <span class="n">Decimal</span></pre>
 <pre class='cython code score-11 '>  {
     PyObject* const __pyx_imported_names[] = {__pyx_mstate_global-&gt;__pyx_n_u_Decimal};
     __pyx_t_1 = <span class='pyx_c_api'>__Pyx_Import</span>(__pyx_mstate_global-&gt;__pyx_n_u_decimal, __pyx_imported_names, 1, NULL, 0);<span class='error_goto'> if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 14, __pyx_L1_error)</span>
@@ -390,19 +465,19 @@ body.cython { font-family: courier; font-size: 12; }
     }
   }
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_2); __pyx_t_2 = 0;
-</pre><pre class="cython line score-8" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">15</span>: import datetime</pre>
+</pre><pre class="cython line score-8" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">15</span>: <span class="k">import</span><span class="w"> </span><span class="nn">datetime</span></pre>
 <pre class='cython code score-8 '>  __pyx_t_1 = <span class='pyx_c_api'>__Pyx_Import</span>(__pyx_mstate_global-&gt;__pyx_n_u_datetime, 0, 0, NULL, 0);<span class='error_goto'> if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 15, __pyx_L1_error)</span>
   __pyx_t_2 = __pyx_t_1;
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_2);
   if (<span class='py_c_api'>PyDict_SetItem</span>(__pyx_mstate_global-&gt;__pyx_d, __pyx_mstate_global-&gt;__pyx_n_u_datetime, __pyx_t_2) &lt; (0)) <span class='error_goto'>__PYX_ERR(0, 15, __pyx_L1_error)</span>
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_2); __pyx_t_2 = 0;
-</pre><pre class="cython line score-8" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">16</span>: import types</pre>
+</pre><pre class="cython line score-8" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">16</span>: <span class="k">import</span><span class="w"> </span><span class="nn">types</span></pre>
 <pre class='cython code score-8 '>  __pyx_t_1 = <span class='pyx_c_api'>__Pyx_Import</span>(__pyx_mstate_global-&gt;__pyx_n_u_types, 0, 0, NULL, 0);<span class='error_goto'> if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 16, __pyx_L1_error)</span>
   __pyx_t_2 = __pyx_t_1;
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_2);
   if (<span class='py_c_api'>PyDict_SetItem</span>(__pyx_mstate_global-&gt;__pyx_d, __pyx_mstate_global-&gt;__pyx_n_u_types, __pyx_t_2) &lt; (0)) <span class='error_goto'>__PYX_ERR(0, 16, __pyx_L1_error)</span>
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_2); __pyx_t_2 = 0;
-</pre><pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">17</span>: from functools import partial</pre>
+</pre><pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">17</span>: <span class="k">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="k">import</span> <span class="n">partial</span></pre>
 <pre class='cython code score-11 '>  {
     PyObject* const __pyx_imported_names[] = {__pyx_mstate_global-&gt;__pyx_n_u_partial};
     __pyx_t_1 = <span class='pyx_c_api'>__Pyx_Import</span>(__pyx_mstate_global-&gt;__pyx_n_u_functools, __pyx_imported_names, 1, NULL, 0);<span class='error_goto'> if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 17, __pyx_L1_error)</span>
@@ -419,7 +494,7 @@ body.cython { font-family: courier; font-size: 12; }
     }
   }
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_2); __pyx_t_2 = 0;
-</pre><pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">18</span>: from dataclasses import _MISSING_TYPE</pre>
+</pre><pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">18</span>: <span class="k">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="k">import</span> <span class="n">_MISSING_TYPE</span></pre>
 <pre class='cython code score-11 '>  {
     PyObject* const __pyx_imported_names[] = {__pyx_mstate_global-&gt;__pyx_n_u_MISSING_TYPE};
     __pyx_t_1 = <span class='pyx_c_api'>__Pyx_Import</span>(__pyx_mstate_global-&gt;__pyx_n_u_dataclasses, __pyx_imported_names, 1, NULL, 0);<span class='error_goto'> if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 18, __pyx_L1_error)</span>
@@ -438,7 +513,7 @@ body.cython { font-family: courier; font-size: 12; }
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_2); __pyx_t_2 = 0;
 </pre><pre class="cython line score-0">&#xA0;<span class="">19</span>: </pre>
 <pre class="cython line score-0">&#xA0;<span class="">20</span>: </pre>
-<pre class="cython line score-50" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">21</span>: cpdef bool_t is_iterable(object value):</pre>
+<pre class="cython line score-50" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">21</span>: <span class="k">cpdef</span><span class="w"> </span><span class="kt">bool_t</span> <span class="nf">is_iterable</span><span class="p">(</span><span class="nb">object</span> <span class="n">value</span><span class="p">):</span></pre>
 <pre class='cython code score-50 '>static PyObject *__pyx_pw_9datamodel_9functions_1is_iterable(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
@@ -573,8 +648,8 @@ static PyObject *__pyx_pf_9datamodel_9functions_is_iterable(CYTHON_UNUSED PyObje
   #endif
   if (<span class='py_c_api'>PyDict_SetItem</span>(__pyx_mstate_global-&gt;__pyx_d, __pyx_mstate_global-&gt;__pyx_n_u_is_iterable, __pyx_t_2) &lt; (0)) <span class='error_goto'>__PYX_ERR(0, 21, __pyx_L1_error)</span>
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_2); __pyx_t_2 = 0;
-</pre><pre class="cython line score-0">&#xA0;<span class="">22</span>:     """Returns True if value is an iterable."""</pre>
-<pre class="cython line score-18" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">23</span>:     if isinstance(value, Iterable) and not isinstance(value, (str, bytes)):</pre>
+</pre><pre class="cython line score-0">&#xA0;<span class="">22</span>: <span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns True if value is an iterable.&quot;&quot;&quot;</span></pre>
+<pre class="cython line score-18" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">23</span>:     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">)):</span></pre>
 <pre class='cython code score-18 '>  <span class='pyx_c_api'>__Pyx_GetModuleGlobalName</span>(__pyx_t_2, __pyx_mstate_global-&gt;__pyx_n_u_Iterable);<span class='error_goto'> if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 23, __pyx_L1_error)</span>
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_2);
   __pyx_t_3 = <span class='py_c_api'>PyObject_IsInstance</span>(__pyx_v_value, __pyx_t_2);<span class='error_goto'> if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(0, 23, __pyx_L1_error)</span>
@@ -599,15 +674,15 @@ static PyObject *__pyx_pf_9datamodel_9functions_is_iterable(CYTHON_UNUSED PyObje
   if (__pyx_t_1) {
 /* … */
   }
-</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">24</span>:         return True</pre>
+</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">24</span>:         <span class="k">return</span> <span class="kc">True</span></pre>
 <pre class='cython code score-0 '>    __pyx_r = 1;
     goto __pyx_L0;
-</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">25</span>:     return False</pre>
+</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">25</span>:     <span class="k">return</span> <span class="kc">False</span></pre>
 <pre class='cython code score-0 '>  __pyx_r = 0;
   goto __pyx_L0;
 </pre><pre class="cython line score-0">&#xA0;<span class="">26</span>: </pre>
 <pre class="cython line score-0">&#xA0;<span class="">27</span>: </pre>
-<pre class="cython line score-52" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">28</span>: cpdef bool_t is_primitive(object value):</pre>
+<pre class="cython line score-52" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">28</span>: <span class="k">cpdef</span><span class="w"> </span><span class="kt">bool_t</span> <span class="nf">is_primitive</span><span class="p">(</span><span class="nb">object</span> <span class="n">value</span><span class="p">):</span></pre>
 <pre class='cython code score-52 '>static PyObject *__pyx_pw_9datamodel_9functions_3is_primitive(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
@@ -744,8 +819,8 @@ static PyObject *__pyx_pf_9datamodel_9functions_2is_primitive(CYTHON_UNUSED PyOb
   #endif
   if (<span class='py_c_api'>PyDict_SetItem</span>(__pyx_mstate_global-&gt;__pyx_d, __pyx_mstate_global-&gt;__pyx_n_u_is_primitive, __pyx_t_2) &lt; (0)) <span class='error_goto'>__PYX_ERR(0, 28, __pyx_L1_error)</span>
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_2); __pyx_t_2 = 0;
-</pre><pre class="cython line score-0">&#xA0;<span class="">29</span>:     """Returns True if value is a primitive type."""</pre>
-<pre class="cython line score-38" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">30</span>:     return value in (</pre>
+</pre><pre class="cython line score-0">&#xA0;<span class="">29</span>: <span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns True if value is a primitive type.&quot;&quot;&quot;</span></pre>
+<pre class="cython line score-38" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">30</span>:     <span class="k">return</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">(</span></pre>
 <pre class='cython code score-38 '>  <span class='pyx_macro_api'>__Pyx_INCREF</span>(__pyx_v_value);
   __pyx_t_1 = __pyx_v_value;
 /* … */
@@ -844,18 +919,18 @@ static PyObject *__pyx_pf_9datamodel_9functions_2is_primitive(CYTHON_UNUSED PyOb
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_r = __pyx_t_2;
   goto __pyx_L0;
-</pre><pre class="cython line score-5" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">31</span>:         int,</pre>
+</pre><pre class="cython line score-5" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">31</span>:         <span class="nb">int</span><span class="p">,</span></pre>
 <pre class='cython code score-5 '>  __pyx_t_3 = <span class='py_c_api'>PyObject_RichCompare</span>(__pyx_t_1, ((PyObject *)(&amp;PyLong_Type)), Py_EQ); <span class='refnanny'>__Pyx_XGOTREF</span>(__pyx_t_3);<span class='error_goto'> if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 30, __pyx_L1_error)</span>
-</pre><pre class="cython line score-5" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">32</span>:         float,</pre>
+</pre><pre class="cython line score-5" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">32</span>:         <span class="nb">float</span><span class="p">,</span></pre>
 <pre class='cython code score-5 '>  __pyx_t_3 = <span class='py_c_api'>PyObject_RichCompare</span>(__pyx_t_1, ((PyObject *)(&amp;PyFloat_Type)), Py_EQ); <span class='refnanny'>__Pyx_XGOTREF</span>(__pyx_t_3);<span class='error_goto'> if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 30, __pyx_L1_error)</span>
-</pre><pre class="cython line score-5" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">33</span>:         str,</pre>
+</pre><pre class="cython line score-5" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">33</span>:         <span class="nb">str</span><span class="p">,</span></pre>
 <pre class='cython code score-5 '>  __pyx_t_3 = <span class='py_c_api'>PyObject_RichCompare</span>(__pyx_t_1, ((PyObject *)(&amp;PyUnicode_Type)), Py_EQ); <span class='refnanny'>__Pyx_XGOTREF</span>(__pyx_t_3);<span class='error_goto'> if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 30, __pyx_L1_error)</span>
-</pre><pre class="cython line score-8" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">34</span>:         UUID,</pre>
+</pre><pre class="cython line score-8" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">34</span>:         <span class="n">UUID</span><span class="p">,</span></pre>
 <pre class='cython code score-8 '>  <span class='pyx_c_api'>__Pyx_GetModuleGlobalName</span>(__pyx_t_3, __pyx_mstate_global-&gt;__pyx_n_u_UUID);<span class='error_goto'> if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 34, __pyx_L1_error)</span>
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_3);
   __pyx_t_5 = <span class='py_c_api'>PyObject_RichCompare</span>(__pyx_t_1, __pyx_t_3, Py_EQ); <span class='refnanny'>__Pyx_XGOTREF</span>(__pyx_t_5);<span class='error_goto'> if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 30, __pyx_L1_error)</span>
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_3); __pyx_t_3 = 0;
-</pre><pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">35</span>:         pgproto.UUID,</pre>
+</pre><pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">35</span>:         <span class="n">pgproto</span><span class="o">.</span><span class="n">UUID</span><span class="p">,</span></pre>
 <pre class='cython code score-11 '>  <span class='pyx_c_api'>__Pyx_GetModuleGlobalName</span>(__pyx_t_5, __pyx_mstate_global-&gt;__pyx_n_u_pgproto);<span class='error_goto'> if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 35, __pyx_L1_error)</span>
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_5);
   __pyx_t_3 = <span class='pyx_c_api'>__Pyx_PyObject_GetAttrStr</span>(__pyx_t_5, __pyx_mstate_global-&gt;__pyx_n_u_UUID);<span class='error_goto'> if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 35, __pyx_L1_error)</span>
@@ -863,16 +938,16 @@ static PyObject *__pyx_pf_9datamodel_9functions_2is_primitive(CYTHON_UNUSED PyOb
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_5); __pyx_t_5 = 0;
   __pyx_t_5 = <span class='py_c_api'>PyObject_RichCompare</span>(__pyx_t_1, __pyx_t_3, Py_EQ); <span class='refnanny'>__Pyx_XGOTREF</span>(__pyx_t_5);<span class='error_goto'> if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 30, __pyx_L1_error)</span>
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_3); __pyx_t_3 = 0;
-</pre><pre class="cython line score-8" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">36</span>:         Decimal,</pre>
+</pre><pre class="cython line score-8" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">36</span>:         <span class="n">Decimal</span><span class="p">,</span></pre>
 <pre class='cython code score-8 '>  <span class='pyx_c_api'>__Pyx_GetModuleGlobalName</span>(__pyx_t_5, __pyx_mstate_global-&gt;__pyx_n_u_Decimal);<span class='error_goto'> if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 36, __pyx_L1_error)</span>
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_5);
   __pyx_t_3 = <span class='py_c_api'>PyObject_RichCompare</span>(__pyx_t_1, __pyx_t_5, Py_EQ); <span class='refnanny'>__Pyx_XGOTREF</span>(__pyx_t_3);<span class='error_goto'> if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 30, __pyx_L1_error)</span>
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_5); __pyx_t_5 = 0;
-</pre><pre class="cython line score-5" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">37</span>:         bool,</pre>
+</pre><pre class="cython line score-5" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">37</span>:         <span class="nb">bool</span><span class="p">,</span></pre>
 <pre class='cython code score-5 '>  __pyx_t_3 = <span class='py_c_api'>PyObject_RichCompare</span>(__pyx_t_1, ((PyObject *)(&amp;PyBool_Type)), Py_EQ); <span class='refnanny'>__Pyx_XGOTREF</span>(__pyx_t_3);<span class='error_goto'> if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 30, __pyx_L1_error)</span>
-</pre><pre class="cython line score-5" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">38</span>:         bytes,</pre>
+</pre><pre class="cython line score-5" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">38</span>:         <span class="nb">bytes</span><span class="p">,</span></pre>
 <pre class='cython code score-5 '>  __pyx_t_3 = <span class='py_c_api'>PyObject_RichCompare</span>(__pyx_t_1, ((PyObject *)(&amp;PyBytes_Type)), Py_EQ); <span class='refnanny'>__Pyx_XGOTREF</span>(__pyx_t_3);<span class='error_goto'> if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 30, __pyx_L1_error)</span>
-</pre><pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">39</span>:         datetime.date,</pre>
+</pre><pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">39</span>:         <span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="p">,</span></pre>
 <pre class='cython code score-11 '>  <span class='pyx_c_api'>__Pyx_GetModuleGlobalName</span>(__pyx_t_3, __pyx_mstate_global-&gt;__pyx_n_u_datetime);<span class='error_goto'> if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 39, __pyx_L1_error)</span>
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_3);
   __pyx_t_5 = <span class='pyx_c_api'>__Pyx_PyObject_GetAttrStr</span>(__pyx_t_3, __pyx_mstate_global-&gt;__pyx_n_u_date);<span class='error_goto'> if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 39, __pyx_L1_error)</span>
@@ -880,7 +955,7 @@ static PyObject *__pyx_pf_9datamodel_9functions_2is_primitive(CYTHON_UNUSED PyOb
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_t_3 = <span class='py_c_api'>PyObject_RichCompare</span>(__pyx_t_1, __pyx_t_5, Py_EQ); <span class='refnanny'>__Pyx_XGOTREF</span>(__pyx_t_3);<span class='error_goto'> if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 30, __pyx_L1_error)</span>
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_5); __pyx_t_5 = 0;
-</pre><pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">40</span>:         datetime.datetime,</pre>
+</pre><pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">40</span>:         <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">,</span></pre>
 <pre class='cython code score-11 '>  <span class='pyx_c_api'>__Pyx_GetModuleGlobalName</span>(__pyx_t_3, __pyx_mstate_global-&gt;__pyx_n_u_datetime);<span class='error_goto'> if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 40, __pyx_L1_error)</span>
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_3);
   __pyx_t_5 = <span class='pyx_c_api'>__Pyx_PyObject_GetAttrStr</span>(__pyx_t_3, __pyx_mstate_global-&gt;__pyx_n_u_datetime);<span class='error_goto'> if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 40, __pyx_L1_error)</span>
@@ -888,7 +963,7 @@ static PyObject *__pyx_pf_9datamodel_9functions_2is_primitive(CYTHON_UNUSED PyOb
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_t_3 = <span class='py_c_api'>PyObject_RichCompare</span>(__pyx_t_1, __pyx_t_5, Py_EQ); <span class='refnanny'>__Pyx_XGOTREF</span>(__pyx_t_3);<span class='error_goto'> if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 30, __pyx_L1_error)</span>
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_5); __pyx_t_5 = 0;
-</pre><pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">41</span>:         datetime.time,</pre>
+</pre><pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">41</span>:         <span class="n">datetime</span><span class="o">.</span><span class="n">time</span><span class="p">,</span></pre>
 <pre class='cython code score-11 '>  <span class='pyx_c_api'>__Pyx_GetModuleGlobalName</span>(__pyx_t_3, __pyx_mstate_global-&gt;__pyx_n_u_datetime);<span class='error_goto'> if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 41, __pyx_L1_error)</span>
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_3);
   __pyx_t_5 = <span class='pyx_c_api'>__Pyx_PyObject_GetAttrStr</span>(__pyx_t_3, __pyx_mstate_global-&gt;__pyx_n_u_time);<span class='error_goto'> if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 41, __pyx_L1_error)</span>
@@ -896,7 +971,7 @@ static PyObject *__pyx_pf_9datamodel_9functions_2is_primitive(CYTHON_UNUSED PyOb
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_t_3 = <span class='py_c_api'>PyObject_RichCompare</span>(__pyx_t_1, __pyx_t_5, Py_EQ); <span class='refnanny'>__Pyx_XGOTREF</span>(__pyx_t_3);<span class='error_goto'> if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 30, __pyx_L1_error)</span>
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_5); __pyx_t_5 = 0;
-</pre><pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">42</span>:         datetime.timedelta</pre>
+</pre><pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">42</span>:         <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span></pre>
 <pre class='cython code score-11 '>  <span class='pyx_c_api'>__Pyx_GetModuleGlobalName</span>(__pyx_t_3, __pyx_mstate_global-&gt;__pyx_n_u_datetime);<span class='error_goto'> if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 42, __pyx_L1_error)</span>
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_3);
   __pyx_t_5 = <span class='pyx_c_api'>__Pyx_PyObject_GetAttrStr</span>(__pyx_t_3, __pyx_mstate_global-&gt;__pyx_n_u_timedelta);<span class='error_goto'> if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 42, __pyx_L1_error)</span>
@@ -904,10 +979,10 @@ static PyObject *__pyx_pf_9datamodel_9functions_2is_primitive(CYTHON_UNUSED PyOb
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_t_3 = <span class='py_c_api'>PyObject_RichCompare</span>(__pyx_t_1, __pyx_t_5, Py_EQ); <span class='refnanny'>__Pyx_XGOTREF</span>(__pyx_t_3);<span class='error_goto'> if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 30, __pyx_L1_error)</span>
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_5); __pyx_t_5 = 0;
-</pre><pre class="cython line score-0">&#xA0;<span class="">43</span>:     )</pre>
+</pre><pre class="cython line score-0">&#xA0;<span class="">43</span>:     <span class="p">)</span></pre>
 <pre class="cython line score-0">&#xA0;<span class="">44</span>: </pre>
 <pre class="cython line score-0">&#xA0;<span class="">45</span>: </pre>
-<pre class="cython line score-53" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">46</span>: cpdef bool_t is_dataclass(object obj):</pre>
+<pre class="cython line score-53" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">46</span>: <span class="k">cpdef</span><span class="w"> </span><span class="kt">bool_t</span> <span class="nf">is_dataclass</span><span class="p">(</span><span class="nb">object</span> <span class="n">obj</span><span class="p">):</span></pre>
 <pre class='cython code score-53 '>static PyObject *__pyx_pw_9datamodel_9functions_5is_dataclass(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
@@ -1046,9 +1121,9 @@ static PyObject *__pyx_pf_9datamodel_9functions_4is_dataclass(CYTHON_UNUSED PyOb
   #endif
   if (<span class='py_c_api'>PyDict_SetItem</span>(__pyx_mstate_global-&gt;__pyx_d, __pyx_mstate_global-&gt;__pyx_n_u_is_dataclass, __pyx_t_2) &lt; (0)) <span class='error_goto'>__PYX_ERR(0, 46, __pyx_L1_error)</span>
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_2); __pyx_t_2 = 0;
-</pre><pre class="cython line score-0">&#xA0;<span class="">47</span>:     """Returns True if obj is a dataclass or an instance of a</pre>
-<pre class="cython line score-0">&#xA0;<span class="">48</span>:     dataclass."""</pre>
-<pre class="cython line score-18" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">49</span>:     cls = obj if isinstance(obj, type) and not isinstance(obj, types.GenericAlias) else type(obj)</pre>
+</pre><pre class="cython line score-0">&#xA0;<span class="">47</span>: <span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns True if obj is a dataclass or an instance of a</span></pre>
+<pre class="cython line score-0">&#xA0;<span class="">48</span>: <span class="sd">    dataclass.&quot;&quot;&quot;</span></pre>
+<pre class="cython line score-18" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">49</span>:     <span class="bp">cls</span> <span class="o">=</span> <span class="n">obj</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">GenericAlias</span><span class="p">)</span> <span class="k">else</span> <span class="nb">type</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span></pre>
 <pre class='cython code score-18 '>  __pyx_t_3 = <span class='py_c_api'>PyType_Check</span>(__pyx_v_obj); 
   if (__pyx_t_3) {
   } else {
@@ -1074,12 +1149,12 @@ static PyObject *__pyx_pf_9datamodel_9functions_4is_dataclass(CYTHON_UNUSED PyOb
   }
   __pyx_v_cls = __pyx_t_1;
   __pyx_t_1 = 0;
-</pre><pre class="cython line score-5" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">50</span>:     return PyObject_HasAttr(cls, '__dataclass_fields__')</pre>
+</pre><pre class="cython line score-5" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">50</span>:     <span class="k">return</span> <span class="n">PyObject_HasAttr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="s">&#39;__dataclass_fields__&#39;</span><span class="p">)</span></pre>
 <pre class='cython code score-5 '>  __pyx_r = <span class='py_c_api'>PyObject_HasAttr</span>(__pyx_v_cls, __pyx_mstate_global-&gt;__pyx_n_u_dataclass_fields);
   goto __pyx_L0;
 </pre><pre class="cython line score-0">&#xA0;<span class="">51</span>: </pre>
 <pre class="cython line score-0">&#xA0;<span class="">52</span>: </pre>
-<pre class="cython line score-52" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">53</span>: cpdef bool_t is_function(object value):</pre>
+<pre class="cython line score-52" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">53</span>: <span class="k">cpdef</span><span class="w"> </span><span class="kt">bool_t</span> <span class="nf">is_function</span><span class="p">(</span><span class="nb">object</span> <span class="n">value</span><span class="p">):</span></pre>
 <pre class='cython code score-52 '>static PyObject *__pyx_pw_9datamodel_9functions_7is_function(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
@@ -1216,8 +1291,8 @@ static PyObject *__pyx_pf_9datamodel_9functions_6is_function(CYTHON_UNUSED PyObj
   #endif
   if (<span class='py_c_api'>PyDict_SetItem</span>(__pyx_mstate_global-&gt;__pyx_d, __pyx_mstate_global-&gt;__pyx_n_u_is_function, __pyx_t_2) &lt; (0)) <span class='error_goto'>__PYX_ERR(0, 53, __pyx_L1_error)</span>
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_2); __pyx_t_2 = 0;
-</pre><pre class="cython line score-0">&#xA0;<span class="">54</span>:     """Returns True if value is a function."""</pre>
-<pre class="cython line score-30" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">55</span>:     return isinstance(value, (types.BuiltinFunctionType, types.FunctionType, partial))</pre>
+</pre><pre class="cython line score-0">&#xA0;<span class="">54</span>: <span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns True if value is a function.&quot;&quot;&quot;</span></pre>
+<pre class="cython line score-30" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">55</span>:     <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">BuiltinFunctionType</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">FunctionType</span><span class="p">,</span> <span class="n">partial</span><span class="p">))</span></pre>
 <pre class='cython code score-30 '>  <span class='pyx_c_api'>__Pyx_GetModuleGlobalName</span>(__pyx_t_1, __pyx_mstate_global-&gt;__pyx_n_u_types);<span class='error_goto'> if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 55, __pyx_L1_error)</span>
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_1);
   __pyx_t_2 = <span class='pyx_c_api'>__Pyx_PyObject_GetAttrStr</span>(__pyx_t_1, __pyx_mstate_global-&gt;__pyx_n_u_BuiltinFunctionType);<span class='error_goto'> if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 55, __pyx_L1_error)</span>
@@ -1252,7 +1327,7 @@ static PyObject *__pyx_pf_9datamodel_9functions_6is_function(CYTHON_UNUSED PyObj
   goto __pyx_L0;
 </pre><pre class="cython line score-0">&#xA0;<span class="">56</span>: </pre>
 <pre class="cython line score-0">&#xA0;<span class="">57</span>: </pre>
-<pre class="cython line score-51" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">58</span>: cpdef bool_t is_callable(object value):</pre>
+<pre class="cython line score-51" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">58</span>: <span class="k">cpdef</span><span class="w"> </span><span class="kt">bool_t</span> <span class="nf">is_callable</span><span class="p">(</span><span class="nb">object</span> <span class="n">value</span><span class="p">):</span></pre>
 <pre class='cython code score-51 '>static PyObject *__pyx_pw_9datamodel_9functions_9is_callable(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
@@ -1388,8 +1463,8 @@ static PyObject *__pyx_pf_9datamodel_9functions_8is_callable(CYTHON_UNUSED PyObj
   #endif
   if (<span class='py_c_api'>PyDict_SetItem</span>(__pyx_mstate_global-&gt;__pyx_d, __pyx_mstate_global-&gt;__pyx_n_u_is_callable, __pyx_t_2) &lt; (0)) <span class='error_goto'>__PYX_ERR(0, 58, __pyx_L1_error)</span>
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_2); __pyx_t_2 = 0;
-</pre><pre class="cython line score-0">&#xA0;<span class="">59</span>:     """Returns True if value is a callable object."""</pre>
-<pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">60</span>:     if value is None or value == _MISSING_TYPE:</pre>
+</pre><pre class="cython line score-0">&#xA0;<span class="">59</span>: <span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns True if value is a callable object.&quot;&quot;&quot;</span></pre>
+<pre class="cython line score-11" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">60</span>:     <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">==</span> <span class="n">_MISSING_TYPE</span><span class="p">:</span></pre>
 <pre class='cython code score-11 '>  __pyx_t_2 = (__pyx_v_value == Py_None);
   if (!__pyx_t_2) {
   } else {
@@ -1407,24 +1482,24 @@ static PyObject *__pyx_pf_9datamodel_9functions_8is_callable(CYTHON_UNUSED PyObj
   if (__pyx_t_1) {
 /* … */
   }
-</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">61</span>:         return False</pre>
+</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">61</span>:         <span class="k">return</span> <span class="kc">False</span></pre>
 <pre class='cython code score-0 '>    __pyx_r = 0;
     goto __pyx_L0;
-</pre><pre class="cython line score-5" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">62</span>:     if is_function(value):</pre>
+</pre><pre class="cython line score-5" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">62</span>:     <span class="k">if</span> <span class="n">is_function</span><span class="p">(</span><span class="n">value</span><span class="p">):</span></pre>
 <pre class='cython code score-5 '>  __pyx_t_5 = __pyx_f_9datamodel_9functions_is_function(__pyx_v_value, 0); if (unlikely(__pyx_t_5 == ((bool)-1) &amp;&amp; <span class='py_c_api'>PyErr_Occurred</span>())) <span class='error_goto'>__PYX_ERR(0, 62, __pyx_L1_error)</span>
   __pyx_t_1 = (__pyx_t_5 != 0);
   if (__pyx_t_1) {
 /* … */
   }
-</pre><pre class="cython line score-2" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">63</span>:         return callable(value)</pre>
+</pre><pre class="cython line score-2" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">63</span>:         <span class="k">return</span> <span class="nb">callable</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></pre>
 <pre class='cython code score-2 '>    __pyx_t_1 = <span class='pyx_c_api'>__Pyx_PyCallable_Check</span>(__pyx_v_value);<span class='error_goto'> if (unlikely(__pyx_t_1 == ((int)-1))) __PYX_ERR(0, 63, __pyx_L1_error)</span>
     __pyx_r = __pyx_t_1;
     goto __pyx_L0;
-</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">64</span>:     return False</pre>
+</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">64</span>:     <span class="k">return</span> <span class="kc">False</span></pre>
 <pre class='cython code score-0 '>  __pyx_r = 0;
   goto __pyx_L0;
 </pre><pre class="cython line score-0">&#xA0;<span class="">65</span>: </pre>
-<pre class="cython line score-48" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">66</span>: cpdef bool_t is_empty(object value):</pre>
+<pre class="cython line score-48" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">66</span>: <span class="k">cpdef</span><span class="w"> </span><span class="kt">bool_t</span> <span class="nf">is_empty</span><span class="p">(</span><span class="nb">object</span> <span class="n">value</span><span class="p">):</span></pre>
 <pre class='cython code score-48 '>static PyObject *__pyx_pw_9datamodel_9functions_11is_empty(PyObject *__pyx_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
@@ -1550,17 +1625,17 @@ static PyObject *__pyx_pf_9datamodel_9functions_10is_empty(CYTHON_UNUSED PyObjec
   #endif
   if (<span class='py_c_api'>PyDict_SetItem</span>(__pyx_mstate_global-&gt;__pyx_d, __pyx_mstate_global-&gt;__pyx_n_u_is_empty, __pyx_t_2) &lt; (0)) <span class='error_goto'>__PYX_ERR(0, 66, __pyx_L1_error)</span>
   <span class='pyx_macro_api'>__Pyx_DECREF</span>(__pyx_t_2); __pyx_t_2 = 0;
-</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">67</span>:     cdef bool_t result = False</pre>
+</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">67</span>:     <span class="k">cdef</span><span class="w"> </span><span class="kt">bool_t</span> <span class="nv">result</span><span class="w"> </span><span class="o">=</span> <span class="kc">False</span></pre>
 <pre class='cython code score-0 '>  __pyx_v_result = 0;
-</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">68</span>:     if value is None:</pre>
+</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">68</span>:     <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span></pre>
 <pre class='cython code score-0 '>  __pyx_t_1 = (__pyx_v_value == Py_None);
   if (__pyx_t_1) {
 /* … */
   }
-</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">69</span>:         return True</pre>
+</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">69</span>:         <span class="k">return</span> <span class="kc">True</span></pre>
 <pre class='cython code score-0 '>    __pyx_r = 1;
     goto __pyx_L0;
-</pre><pre class="cython line score-19" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">70</span>:     if isinstance(value, _MISSING_TYPE) or value == _MISSING_TYPE:</pre>
+</pre><pre class="cython line score-19" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">70</span>:     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">_MISSING_TYPE</span><span class="p">)</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">==</span> <span class="n">_MISSING_TYPE</span><span class="p">:</span></pre>
 <pre class='cython code score-19 '>  <span class='pyx_c_api'>__Pyx_GetModuleGlobalName</span>(__pyx_t_2, __pyx_mstate_global-&gt;__pyx_n_u_MISSING_TYPE);<span class='error_goto'> if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 70, __pyx_L1_error)</span>
   <span class='refnanny'>__Pyx_GOTREF</span>(__pyx_t_2);
   __pyx_t_3 = <span class='py_c_api'>PyObject_IsInstance</span>(__pyx_v_value, __pyx_t_2);<span class='error_goto'> if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(0, 70, __pyx_L1_error)</span>
@@ -1582,9 +1657,9 @@ static PyObject *__pyx_pf_9datamodel_9functions_10is_empty(CYTHON_UNUSED PyObjec
 /* … */
     goto __pyx_L4;
   }
-</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">71</span>:         result = True</pre>
+</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">71</span>:         <span class="n">result</span> <span class="o">=</span> <span class="kc">True</span></pre>
 <pre class='cython code score-0 '>    __pyx_v_result = 1;
-</pre><pre class="cython line score-7" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">72</span>:     elif isinstance(value, str) and value == '':</pre>
+</pre><pre class="cython line score-7" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">72</span>:     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span> <span class="o">==</span> <span class="s">&#39;&#39;</span><span class="p">:</span></pre>
 <pre class='cython code score-7 '>  __pyx_t_3 = <span class='py_c_api'>PyUnicode_Check</span>(__pyx_v_value); 
   if (__pyx_t_3) {
   } else {
@@ -1598,9 +1673,9 @@ static PyObject *__pyx_pf_9datamodel_9functions_10is_empty(CYTHON_UNUSED PyObjec
 /* … */
     goto __pyx_L4;
   }
-</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">73</span>:         result = True</pre>
+</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">73</span>:         <span class="n">result</span> <span class="o">=</span> <span class="kc">True</span></pre>
 <pre class='cython code score-0 '>    __pyx_v_result = 1;
-</pre><pre class="cython line score-12" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">74</span>:     elif isinstance(value, (int, float)) and value == 0:</pre>
+</pre><pre class="cython line score-12" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">74</span>:     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span> <span class="ow">and</span> <span class="n">value</span> <span class="o">==</span> <span class="mf">0</span><span class="p">:</span></pre>
 <pre class='cython code score-12 '>  __pyx_t_5 = <span class='py_c_api'>PyLong_Check</span>(__pyx_v_value); 
   if (!__pyx_t_5) {
   } else {
@@ -1622,9 +1697,9 @@ static PyObject *__pyx_pf_9datamodel_9functions_10is_empty(CYTHON_UNUSED PyObjec
 /* … */
     goto __pyx_L4;
   }
-</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">75</span>:         result = False</pre>
+</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">75</span>:         <span class="n">result</span> <span class="o">=</span> <span class="kc">False</span></pre>
 <pre class='cython code score-0 '>    __pyx_v_result = 0;
-</pre><pre class="cython line score-16" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">76</span>:     elif isinstance(value, dict) and value == {}:</pre>
+</pre><pre class="cython line score-16" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">76</span>:     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span> <span class="o">==</span> <span class="p">{}:</span></pre>
 <pre class='cython code score-16 '>  __pyx_t_3 = <span class='py_c_api'>PyDict_Check</span>(__pyx_v_value); 
   if (__pyx_t_3) {
   } else {
@@ -1643,9 +1718,9 @@ static PyObject *__pyx_pf_9datamodel_9functions_10is_empty(CYTHON_UNUSED PyObjec
 /* … */
     goto __pyx_L4;
   }
-</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">77</span>:         result = False</pre>
+</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">77</span>:         <span class="n">result</span> <span class="o">=</span> <span class="kc">False</span></pre>
 <pre class='cython code score-0 '>    __pyx_v_result = 0;
-</pre><pre class="cython line score-29" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">78</span>:     elif isinstance(value, (list, tuple, set)) and value == []:</pre>
+</pre><pre class="cython line score-29" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">78</span>:     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">,</span> <span class="nb">set</span><span class="p">))</span> <span class="ow">and</span> <span class="n">value</span> <span class="o">==</span> <span class="p">[]:</span></pre>
 <pre class='cython code score-29 '>  __pyx_t_5 = <span class='py_c_api'>PyList_Check</span>(__pyx_v_value); 
   if (!__pyx_t_5) {
   } else {
@@ -1678,18 +1753,18 @@ static PyObject *__pyx_pf_9datamodel_9functions_10is_empty(CYTHON_UNUSED PyObjec
 /* … */
     goto __pyx_L4;
   }
-</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">79</span>:         result = False</pre>
+</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">79</span>:         <span class="n">result</span> <span class="o">=</span> <span class="kc">False</span></pre>
 <pre class='cython code score-0 '>    __pyx_v_result = 0;
-</pre><pre class="cython line score-2" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">80</span>:     elif not value:</pre>
+</pre><pre class="cython line score-2" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">80</span>:     <span class="k">elif</span> <span class="ow">not</span> <span class="n">value</span><span class="p">:</span></pre>
 <pre class='cython code score-2 '>  __pyx_t_1 = <span class='pyx_c_api'>__Pyx_PyObject_IsTrue</span>(__pyx_v_value); if (unlikely((__pyx_t_1 &lt; 0))) <span class='error_goto'>__PYX_ERR(0, 80, __pyx_L1_error)</span>
   __pyx_t_3 = (!__pyx_t_1);
   if (__pyx_t_3) {
 /* … */
   }
   __pyx_L4:;
-</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">81</span>:         result = True</pre>
+</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">81</span>:         <span class="n">result</span> <span class="o">=</span> <span class="kc">True</span></pre>
 <pre class='cython code score-0 '>    __pyx_v_result = 1;
-</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">82</span>:     return result</pre>
+</pre><pre class="cython line score-0" onclick="(function(f,s,c){c=f.nodeValue=='+';s.display=c?'block':'none';f.nodeValue=c?'−':'+'})(this.firstChild,this.nextElementSibling.style)">+<span class="">82</span>:     <span class="k">return</span> <span class="n">result</span></pre>
 <pre class='cython code score-0 '>  __pyx_r = __pyx_v_result;
   goto __pyx_L0;
 </pre></div></body></html>
