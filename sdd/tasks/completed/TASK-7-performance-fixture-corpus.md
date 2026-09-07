@@ -2,7 +2,7 @@
 
 **Feature**: FEAT-2 - Compatible model execution performance
 **Spec**: `sdd/specs/compatible-model-performance.spec.md`
-**Status**: pending
+**Status**: done
 **Priority**: high
 **Estimated effort**: M (3h active engineering time; external evidence wait excluded)
 **Depends-on**: none
@@ -116,11 +116,102 @@ Tests are behavioral specifications, not permission to change the oracle. Verify
 
 ## Completion Note
 
-*(Fill in only after implementation and verification.)*
+**Completed by**: sdd-worker (Claude Opus 5)
+**Date**: 2026-09-08
+**Notes**: Implemented M1's fixture corpus exactly within the five declared
+files. `Employee` is a field-for-field port of `examples/rust_benchmark.py:35-51`
+(all 11 declarations, defaults, `age` min/max, `employee_id` primary/required),
+with both supplied input forms (`PAYLOAD` raw strings and `NATIVE_PAYLOAD`
+already-typed) as separate cases. Sixteen models and 45 cases cover
+unconstrained/constrained scalars, a 50-field model, nested ORM relationships
+(`Organization`/`Client` with `as_objects` + a model-typed alias), typed
+containers, invalid payloads, descriptors, a `super().__post_init__()` hook
+model, aliases, presence rules and native boundaries (2**96 int, 28-digit
+Decimal, bool-as-int, non-ASCII, bytes, subclasses).
 
-**Completed by**: pending
-**Date**: pending
-**Notes**: pending
-**Verification commands/results**: pending
-**Evidence paths and acceptance coverage**: pending
-**Deviations from spec**: pending
+Several expectations I initially wrote from the spec's reading were **wrong
+against the actual reference build**. Rather than assert my assumption, I
+verified each against the running code and pinned the observed behaviour as a
+`characterization`-tagged case with a `VERIFIED:` note:
+
+- `min`/`max` on a `str` field are never enforced (a 21-char value builds fine).
+  Spec §1 lists activating previously-ignored constraints as a non-goal, so the
+  corpus pins the *absence* of the check.
+- `nullable=False` raises `ValueError ':: *f* Cannot be null.'` for `''` but
+  silently falls back to the default for an explicit `None`. Both halves pinned.
+- A `date` supplied to a `datetime` field is rejected during *conversion*
+  ("argument must be str"); `validation.pyx:59`'s date-accepting datetime
+  validator is never reached.
+- A `str` subclass is rejected for a `str` field ("Expected str, got ...") —
+  the reference already performs an exact-type check there.
+- A user `validator=` on a primitive is dead (`abstract.py:257` caches
+  `validators[int]` into `f.validator`, so `converters.pyx:2354` never reaches
+  `validation.pyx:488`), and a user `encoder=` on a `str` is dead
+  (`parse_basic` short-circuits `str` before its encoder branch). Both dead
+  routes are pinned so a "unified callback" refactor cannot quietly revive them.
+  The live counterparts (`List[str]` validator, `float` encoder) are pinned too.
+
+**Verification commands/results**:
+- `.venv/bin/python -m pytest tests/compatibility/test_fixture_corpus.py -q`
+  → **156 passed, 3 skipped** (skips are the rust-absent date cases, below).
+- `.venv/bin/python -m pytest tests/ -q --ignore=tests/test_types.py`
+  → **382 passed, 2 failed, 5 skipped, 14 errors**.
+  Pre-change baseline on the same worktree/commit was **226 passed, 2 failed,
+  2 skipped, 14 errors**: identical failure set, so **no new
+  reference-relative regression**. The pre-existing failures are
+  `tests/test_data.py::test_user_model_success`,
+  `tests/test_primitives.py::test_encoders[to_date-...]`, the 14
+  `tests/test_generic.py` errors, and the `tests/test_types.py` collection
+  error — all the same root cause (below).
+- `.venv/bin/python -m ruff check --select F,E9 tests/fixtures/model_performance/
+  tests/compatibility/` → clean. (The repo has no ruff config; default rules
+  report 9 errors on pre-existing `tests/test_converter.py` too, so full-default
+  ruff is not a gate here.)
+
+**Environment**: dedicated worktree venv, CPython 3.13.11, Cython 3.2.9,
+`uv pip install -e ".[dev]"`, extensions built in place from this worktree
+(`datamodel/converters.cpython-313-x86_64-linux-gnu.so` etc. resolve to the
+worktree, verified via `datamodel.converters.__file__`).
+
+**rs_parsers-absent gap (characterized, not fixed)**: `converters.pyx:199,236`
+call `rc.to_date` / `rc.to_datetime` unconditionally, but
+`datamodel/rs_parsers/__init__.py` only defines `HAS_RUST = False` when the
+extension is missing — so every string→date/datetime conversion raises. This
+is the root cause of *all* pre-existing suite failures listed above. I verified
+via `git show d932c720...:datamodel/converters.pyx` that the engineering
+reference has the **identical** call sites, so differential parity is
+unaffected; the gap is shared. Spec §4 explicitly requires characterizing this
+separately rather than claiming the fallback works, so the corpus exposes it as
+`Case.requires_rust_parsers` plus a dedicated
+`test_rs_parsers_absent_gap_is_characterized` test, and does not fix it (spec
+§1 non-goal: "fixing incidental legacy bugs"). `cargo build --release` in
+`rust/rs_parsers` succeeds, so a rust-present configuration is available for
+later measurement tasks — but both reference and candidate must be built with
+the *same* backend availability.
+
+**Evidence paths and acceptance coverage**:
+- AC1 (deterministic compatibility corpus): `tests/fixtures/model_performance/`
+  — frozen clocks/UUIDs, `test_no_case_uses_a_nondeterministic_factory`,
+  `test_frozen_defaults_are_used_instead_of_clocks`.
+- AC2 (no new failures): full-suite run above, identical failure set to baseline.
+- AC7 (no leakage of new state into public results): the corpus adds no
+  production code at all; `test_every_model_class_is_distinct_and_provenanced`
+  and `test_case_payloads_are_independent_between_calls` guard against shared
+  class plans and shared mutables.
+- Examples coverage: `tests/fixtures/model_performance/examples_manifest.json`
+  (74 modules, 60 schema-bearing, 3 adapted, 57 excluded with reasons),
+  enforced by `test_manifest_covers_every_example_module`,
+  `test_manifest_matches_the_live_inventory` and
+  `test_every_schema_example_states_a_disposition_and_reason`.
+
+**Deviations from spec**: none in scope or file ownership. Two observations for
+the reviewer, neither acted upon:
+1. `datamodel/version.py` on `dev` is already `0.12.0`, while the spec's §8
+   resolution names **0.11.0** as the release carrying this work (and origin
+   already carries a `0.11.0` tag). This does not affect implementation, but
+   the release-documentation task (TASK-22) will need the maintainer to
+   reconcile the target version.
+2. The corpus deliberately contains no expected-value literals for behaviour;
+   the reference build is the oracle, per spec §4. `EXPECT_OK`/`EXPECT_ERROR`
+   labels are only coarse routing hints and are themselves asserted honest by
+   `test_ok_cases_build` / `test_error_cases_raise`.
