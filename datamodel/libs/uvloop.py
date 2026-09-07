@@ -15,10 +15,9 @@ On Python 3.12+, callers may prefer
 process-wide policy installed by this helper.
 """
 import sys
-from typing import Optional
 
 HAS_UVLOOP = False
-uvloop: Optional[object] = None
+uvloop: object | None = None
 
 try:
     import uvloop  # type: ignore[no-redef]
