@@ -12,7 +12,10 @@ The key features are:
 
 ## Requirements
 
-Python 3.8+
+Python 3.10+ (3.10, 3.11, 3.12, 3.13 and 3.14 are supported).
+
+Binary wheels are published for Linux (`manylinux` x86_64) and Windows
+(`win_amd64`); other platforms fall back to a source install.
 
 ## Installation
 
@@ -26,6 +29,24 @@ Successfully installed datamodel
 
 
 </div>
+
+### Optional uvloop acceleration
+
+`uvloop` is not a hard dependency: install it as the optional `uvloop`
+extra on supported non-Windows platforms:
+
+```console
+$ pip install "python-datamodel[uvloop]"
+```
+
+Importing `datamodel` never changes the application's event-loop policy.
+Opt in explicitly, typically at application startup:
+
+```python
+from datamodel.libs.uvloop import install_uvloop
+
+install_uvloop()
+```
 
 ## Quickstart
 
