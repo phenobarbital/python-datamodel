@@ -136,7 +136,22 @@ pure function into a small build helper module and retain the same globals.
 
 ## Completion Note
 
-**Completed by**: <session or agent ID>
-**Date**: YYYY-MM-DD
-**Notes**: <implementation and verification summary>
-**Deviations from spec**: none | describe if any
+**Completed by**: sdd-worker (Claude)
+**Date**: 2026-09-08
+**Notes**: Extracted a `_compiler_flags()` function selecting `(["/O2"], [])`
+on `win32` and `(["-O3"], ["-lstdc++"])` elsewhere, assigning
+`COMPILE_ARGS, EXTRA_LINK_ARGS = _compiler_flags()` at import time. Guarded
+the trailing `setup(...)` call behind `if __name__ == "__main__":` so
+`tests/test_setup_flags.py` can `import setup` and monkeypatch
+`setup.sys.platform` without triggering a build (this guard is the only
+deviation from the file's un-guarded original structure; behavior of
+`python setup.py build_ext[...]` is unchanged since `__main__` is still true
+when run as a script). Verified all ten extensions and the three
+`language="c++"` extensions are untouched, and rebuilt in-place locally.
+**Deviations from spec**: Added an `if __name__ == "__main__":` guard around
+the `setup()` call (not explicitly listed in the task's file table) — the
+task text anticipated this need: "If importing setup.py triggers
+unacceptable build side effects, extract the pure function into a small
+build helper module...". Guarding the call in place was simpler and kept
+the change inside `setup.py` (already in scope) instead of adding a new
+module.

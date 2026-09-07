@@ -52,7 +52,7 @@
       "title": "Make Cython extension flags MSVC-compatible",
       "feature_id": "FEAT-001",
       "feature": "new-infra-spec-uvloop-py314-windows",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "S",
       "depends_on": [],
@@ -61,8 +61,9 @@
       "assigned_to": "unassigned",
       "created_at": "2026-09-08T00:00:00+00:00",
       "updated_at": "2026-09-08T00:00:00+00:00",
-      "file": "sdd/tasks/active/TASK-3-msvc-build-flags.md",
-      "started_at": "2026-09-07T22:33:27+00:00"
+      "file": "sdd/tasks/completed/TASK-3-msvc-build-flags.md",
+      "started_at": "2026-09-07T22:33:27+00:00",
+      "completed_at": "2026-09-07T22:37:48+00:00"
     },
     {
       "id": "TASK-4",
