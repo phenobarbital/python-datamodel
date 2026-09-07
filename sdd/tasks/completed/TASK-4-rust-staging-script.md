@@ -166,7 +166,20 @@ The tests must not require Rust or network access.
 
 ## Completion Note
 
-**Completed by**: <session or agent ID>
-**Date**: YYYY-MM-DD
-**Notes**: <implementation and verification summary>
-**Deviations from spec**: none | describe if any
+**Completed by**: sdd-worker (Claude)
+**Date**: 2026-09-08
+**Notes**: Created `scripts/stage_rust_ext.py` with `build_wheel()`,
+`main()`, and an argparse-based `parse_args()`/`__main__` CLI entrypoint
+using `subprocess`, `tempfile.TemporaryDirectory()`, `zipfile.ZipFile`, and
+`pathlib.Path` (no bash, no `/tmp` assumption). It matches
+`_rs_parsers*` members with either `.so` or `.pyd` suffix, normalizes
+archive paths to their filename only (no directory-traversal risk), and
+returns non-zero when maturin fails, no wheel is found, or no matching
+member exists. `Makefile`'s `stage-rust` now delegates to the script with
+`-i python` preserved via `--interpreter python`; the inline
+unzip/find/cp logic was removed. Added `*.pyd` to `.gitignore` beside
+`*.so`. `tests/test_stage_rust_ext.py` covers `.so` staging, `.pyd`
+staging, missing-member/missing-wheel/maturin-failure non-zero exits, the
+`--help` CLI entrypoint, and `parse_args()` option forwarding — all without
+invoking a real maturin build or requiring network access (7/7 passing).
+**Deviations from spec**: none.
