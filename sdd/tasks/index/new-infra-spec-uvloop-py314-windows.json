@@ -91,7 +91,7 @@
       "title": "Add Windows and Python 3.14 release matrix coverage",
       "feature_id": "FEAT-001",
       "feature": "new-infra-spec-uvloop-py314-windows",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "L",
       "depends_on": [
@@ -103,8 +103,9 @@
       "assigned_to": "unassigned",
       "created_at": "2026-09-08T00:00:00+00:00",
       "updated_at": "2026-09-08T00:00:00+00:00",
-      "file": "sdd/tasks/active/TASK-5-release-workflow.md",
-      "started_at": "2026-09-07T22:33:27+00:00"
+      "file": "sdd/tasks/completed/TASK-5-release-workflow.md",
+      "started_at": "2026-09-07T22:33:27+00:00",
+      "completed_at": "2026-09-07T22:44:09+00:00"
     },
     {
       "id": "TASK-6",
