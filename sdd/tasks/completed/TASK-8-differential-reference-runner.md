@@ -2,7 +2,7 @@
 
 **Feature**: FEAT-2 - Compatible model execution performance
 **Spec**: `sdd/specs/compatible-model-performance.spec.md`
-**Status**: pending
+**Status**: done
 **Priority**: high
 **Estimated effort**: M (4h active engineering time; external evidence wait excluded)
 **Depends-on**: TASK-7
@@ -121,11 +121,127 @@ Tests are behavioral specifications, not permission to change the oracle. Verify
 
 ## Completion Note
 
-*(Fill in only after implementation and verification.)*
+**Completed by**: sdd-worker (Claude Opus 5)
+**Date**: 2026-09-08
+**Notes**: Implemented the differential harness in exactly the four declared
+files. The runner executes each environment in a **separate subprocess** using
+that environment's **own venv interpreter** against its **own built
+artifacts**. The child binds `datamodel` from the environment root first, then
+removes that root from `sys.path` and prepends this worktree so the shared
+fixture corpus imports without re-binding `datamodel` — verified by the child
+reporting `datamodel.__file__` per run.
 
-**Completed by**: pending
-**Date**: pending
-**Notes**: pending
-**Verification commands/results**: pending
-**Evidence paths and acceptance coverage**: pending
-**Deviations from spec**: pending
+**Runner interface** (documented in the module docstring so dependent tasks
+verify rather than invent): `Environment`, `ProvenanceError`, `RunnerError`,
+`RunResult`, `CaseObservation`, `candidate_environment()`,
+`reference_environment(root=None)`, `describe_environment(env)`,
+`run_environment(env, cases=None)`, `compare_runs(ref, cand)`,
+`describe_divergences(divs, limit)`, `write_manifest(envs, path=None)`,
+`load_manifest(path=None)`, `verify_manifest(manifest, envs)`,
+`DEFAULT_MANIFEST_PATH`, `REFERENCE_COMMIT`, `REFERENCE_VERSION`.
+
+**Two guards were corrected after failing against reality:**
+
+1. `Environment` originally called `Path.resolve()` on the interpreter. A
+   venv's `bin/python` is a symlink to the *base* interpreter, so resolving it
+   launched every child outside the virtualenv — site-packages vanished and
+   children died on `ModuleNotFoundError: orjson`. Now normalised with
+   `os.path.abspath` without following symlinks, and pinned by
+   `test_environment_does_not_resolve_the_venv_symlink`.
+2. The provenance guard originally *filtered out* extension modules loaded from
+   outside the environment's package directory. An editable install registers a
+   meta-path finder keyed on the full dotted name, so a decoy root could supply
+   `datamodel` while the real tree supplied `datamodel.converters` — a mixed
+   half-and-half environment that the manifest reported as simply having zero
+   binaries. It is now a hard `ProvenanceError`
+   (`test_a_mixed_environment_is_rejected`).
+
+Isolation is asserted **by path, not by digest**. With the Rust and Cython
+sources currently identical between 0.10.21 and the candidate, a reproducible
+build legitimately produces byte-identical artifacts in both trees
+(`_rs_parsers...so` digests match exactly). Treating that as a fault was a
+false positive; two environments importing the *same file* is the real one.
+
+**Verification commands/results**:
+- `.venv/bin/python -m pytest tests/compatibility/ -q` → **201 passed**
+  (41 runner + 160 corpus), 0 skipped, 0 failed.
+- `.venv/bin/python -m pytest tests/ -q` → **451 passed, 2 skipped, 0 failed**.
+- `.venv/bin/python -m ruff check --select F,E9 tests/compatibility/` → clean.
+- Live differential: `compare_runs(run_environment(ref), run_environment(cand))`
+  over all **45 cases** → **no divergences**.
+- Self-consistency: two independent reference processes compare equal
+  (`test_a_reference_run_compares_equal_to_itself`).
+- Manifest: `verify_manifest(load_manifest(), [ref, cand])` → `[]`.
+
+**Environments (recorded in `tests/compatibility/reference_manifest.json`)**:
+| | reference | candidate |
+|---|---|---|
+| commit | `d932c720` | `66a4d509` |
+| version | 0.10.21 | 0.12.0 |
+| root | `.claude/worktrees/ref-FEAT-2-d932c720` | this worktree |
+| interpreter | its own `.venv` (CPython 3.13.11) | its own `.venv` (CPython 3.13.11) |
+| extensions | 8, sha256-recorded | 8, sha256-recorded |
+| rs_parsers | built (`HAS_RUST=True`) | built (`HAS_RUST=True`) |
+
+**MAJOR FINDING — the repository baseline is green, not broken.** TASK-7
+recorded 17 pre-existing failures/errors
+(`test_types.py` collection, `test_data.py::test_user_model_success`,
+`test_primitives.py::test_encoders[to_date-...]`, 14 `test_generic.py` errors).
+Building `rs_parsers` (`cargo build --release` in `rust/rs_parsers`, copy
+`rust/target/release/lib_rs_parsers.so` to
+`datamodel/rs_parsers/_rs_parsers.<abi>.so`) makes **all of them pass**: the
+suite goes to 451 passed / 0 failed. Every one of those failures was
+`converters.pyx:199,236` dereferencing `rc.to_date`/`rc.to_datetime` on a
+module that defines only `HAS_RUST = False`. So the correct baseline
+configuration for this feature is **rs_parsers present in BOTH environments**,
+which is what the manifest now records. `uv pip install -e .` does not build
+it — the build steps are recorded in the manifest's `reproduce` field.
+
+**Harness validated against a real build difference.** Before aligning the
+backends I deliberately ran rs_parsers-present candidate vs. rs_parsers-absent
+reference. The harness reported exactly **8 divergences across exactly 2 cases**
+(`employee_raw`, `unconstrained_raw`), each with an actionable path
+(`$.cases.employee_raw.outcome: value reference='error' candidate='ok'`, plus
+the error/instance/fresh_results consequences) and no false positives among the
+other 43 cases. That is end-to-end proof the comparator detects genuine
+build-level divergence, not just synthetic fixtures.
+
+**Evidence paths and acceptance coverage**:
+- AC1 (reference artifact/provenance, freshly built matching environments):
+  `tests/compatibility/reference_manifest.json`;
+  `test_manifest_is_present_and_names_the_specified_reference`,
+  `test_manifest_records_separately_built_environments`,
+  `test_manifest_records_matching_backend_availability`,
+  `test_live_manifest_still_matches_the_built_artifacts`,
+  `test_verify_manifest_detects_a_stale_binary`.
+- AC2 (all differential cases match exactly):
+  `test_reference_and_candidate_agree_on_every_case` — 45/45, zero divergences.
+- AC4 (error payloads, order, callback counts retained):
+  `test_error_cases_carry_a_comparable_payload` (≥8 error cases compared by
+  type, message and payload order), `test_every_case_ran_exactly_once`,
+  `test_changed_callback_count_is_detected`,
+  `test_error_payload_order_is_detected`.
+- AC7 (fresh mutable results, unchanged public behaviour):
+  `test_success_results_stay_independently_mutable` (≥20 cases assert
+  `to_dict()` returns a distinct object per call on both builds),
+  `test_shared_success_result_is_detected`.
+- Seeded-divergence detection (harness trustworthiness): 20 tests in Part 1 of
+  `test_runner.py`, covering every family the task enumerates — int vs bool,
+  same-value/different-type, error order, shared-default contamination and
+  modified callback counts.
+
+**Deviations from spec**: none in scope or file ownership. Notes for the
+reviewer:
+1. The task's Codebase Contract states "datamodel/version.py:9 — current
+   version is already 0.11.0; do not bump it again." On the current `dev` it is
+   **0.12.0** (commit `1f3664b`, "new release for changes on performance", which
+   landed after this task was written). I did not touch it. TASK-22 will need
+   the maintainer to reconcile the declared 0.11.0 target with reality.
+2. The reference worktree lives at
+   `.claude/worktrees/ref-FEAT-2-d932c720` (gitignored). `reference_environment()`
+   also honours `$DATAMODEL_REFERENCE_ROOT`, and every reference-dependent test
+   skips with an explicit "a skipped comparison is NOT a passing comparison"
+   message when it is absent.
+3. Compiled artifacts (`*.so`) are gitignored, so a fresh clone must rebuild
+   both environments and regenerate the manifest before the provenance tests
+   pass. That is intentional: the manifest records what was actually measured.
