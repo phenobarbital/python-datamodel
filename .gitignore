@@ -133,3 +133,6 @@ dmypy.json
 *.c
 *.cpp
 examples/reward.py
+
+# Claude Code worktrees
+.claude/worktrees/
