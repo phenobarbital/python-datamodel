@@ -36,7 +36,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Add Rust to PATH
-        run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        shell: bash
+        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
       - name: Install dependencies
         run: |
@@ -48,6 +49,7 @@ jobs:
           CIBW_ARCHS_LINUX: x86_64
           CIBW_ARCHS_WINDOWS: AMD64
           CIBW_BUILD: ${{ matrix.cibw-build }}
+          CIBW_SKIP: "*-musllinux_*"
           CIBW_ENVIRONMENT_LINUX: "PATH=/root/.cargo/bin:$PATH"
           CIBW_BEFORE_BUILD_LINUX: >-
             curl https://sh.rustup.rs -sSf | sh -s -- -y &&
@@ -114,9 +116,11 @@ jobs:
           manylinux_count=$(ls dist/*-manylinux*_x86_64.whl 2>/dev/null | wc -l)
           windows_count=$(ls dist/*-win_amd64.whl 2>/dev/null | wc -l)
           sdist_count=$(ls dist/*.tar.gz 2>/dev/null | wc -l)
+          total_wheel_count=$(ls dist/*.whl 2>/dev/null | wc -l)
           echo "manylinux x86_64 wheels: $manylinux_count"
           echo "win_amd64 wheels: $windows_count"
           echo "sdist: $sdist_count"
+          echo "total wheels: $total_wheel_count"
           if [ "$manylinux_count" -ne 5 ]; then
             echo "ERROR: expected 5 manylinux x86_64 wheels (cp310-cp314), found $manylinux_count" >&2
             exit 1
@@ -127,6 +131,12 @@ jobs:
           fi
           if [ "$sdist_count" -ne 1 ]; then
             echo "ERROR: expected exactly one sdist, found $sdist_count" >&2
+            exit 1
+          fi
+          # Guard against unexpected extra wheels (e.g. musllinux) slipping
+          # into dist/ and being uploaded unfiltered by the publish step.
+          if [ "$total_wheel_count" -ne 10 ]; then
+            echo "ERROR: expected exactly 10 wheels total (5 manylinux + 5 win_amd64), found $total_wheel_count" >&2
             exit 1
           fi
 

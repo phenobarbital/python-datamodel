@@ -11,7 +11,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * Optional `python-datamodel[uvloop]` extra (`uvloop>=0.21.0; sys_platform != 'win32'`),
   and an explicit, opt-in `datamodel.libs.uvloop.install_uvloop()` helper. Importing
   `datamodel` never activates uvloop; callers invoke the helper themselves.
-* Python 3.14 wheels, verified end to end through the release workflow.
+* Python 3.14 build target added to the release workflow (pending a live
+  `workflow_dispatch` verification run before the first 0.11.0 release).
 * Windows (`win_amd64`) wheels for cp310-cp314, built with the Rust extension
   (`_rs_parsers*.pyd`) included; the release job fails if the Rust build fails.
 * `scripts/stage_rust_ext.py`, a cross-platform staging script (replaces the previous

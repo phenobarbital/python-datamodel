@@ -32,10 +32,17 @@ def build_wheel(
     out_dir: str,
     interpreter: str,
     manylinux: str | None,
+    maturin_bin: str = "maturin",
 ) -> int:
-    """Run `maturin build --release` for `manifest`, writing to `out_dir`."""
+    """Run `maturin build --release` for `manifest`, writing to `out_dir`.
+
+    `maturin_bin` defaults to the bare `"maturin"` command (resolved via
+    PATH, as CI does after `pip install maturin`), but accepts a full path
+    so callers such as `Makefile`'s `stage-rust` target can pin the exact
+    venv-local binary instead of relying on ambient PATH resolution.
+    """
     command = [
-        "maturin",
+        maturin_bin,
         "build",
         "--release",
         "--interpreter",
@@ -91,13 +98,14 @@ def main(
     out_dir: str = "rust/target/wheels",
     interpreter: str = "python",
     manylinux: str | None = None,
+    maturin_bin: str = "maturin",
 ) -> int:
     """Build the Rust extension and stage it into `dest`.
 
     Returns 0 on success. Returns non-zero when Maturin fails, no wheel is
     produced, or no `_rs_parsers*.so`/`.pyd` member is found in the wheel.
     """
-    return_code = build_wheel(manifest, out_dir, interpreter, manylinux)
+    return_code = build_wheel(manifest, out_dir, interpreter, manylinux, maturin_bin)
     if return_code != 0:
         print(f"ERROR: maturin build failed (exit {return_code})", file=sys.stderr)
         return return_code
@@ -145,6 +153,15 @@ def parse_args(argv: list[str] | None = None) -> dict:
         default=None,
         help="Value forwarded to `maturin build --manylinux` (e.g. 'off'); omitted when unset",
     )
+    parser.add_argument(
+        "--maturin-bin",
+        default="maturin",
+        help=(
+            "Maturin executable to invoke; pass a full path (e.g. "
+            "'.venv/bin/maturin') to pin a specific venv instead of "
+            "resolving 'maturin' via PATH (default: %(default)s)"
+        ),
+    )
     args = parser.parse_args(argv)
     return {
         "manifest": args.manifest,
@@ -152,6 +169,7 @@ def parse_args(argv: list[str] | None = None) -> dict:
         "out_dir": args.out_dir,
         "interpreter": args.interpreter,
         "manylinux": args.manylinux,
+        "maturin_bin": args.maturin_bin,
     }
 
 

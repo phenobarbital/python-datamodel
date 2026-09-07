@@ -104,6 +104,8 @@ def test_parse_args_forwards_options():
             "python3.14",
             "--manylinux",
             "off",
+            "--maturin-bin",
+            ".venv/bin/maturin",
         ]
     )
     assert parsed == {
@@ -112,4 +114,28 @@ def test_parse_args_forwards_options():
         "out_dir": "custom/out",
         "interpreter": "python3.14",
         "manylinux": "off",
+        "maturin_bin": ".venv/bin/maturin",
     }
+
+
+def test_stage_rust_ext_forwards_maturin_bin(tmp_path, monkeypatch):
+    """`--maturin-bin` must reach `build_wheel()` so `make stage-rust` can
+    pin the venv-local Maturin instead of resolving it via ambient PATH."""
+    out_dir = tmp_path / "wheels"
+    out_dir.mkdir()
+    dest = tmp_path / "dest"
+    _write_fake_wheel(out_dir, "_rs_parsers.cpython-312-x86_64-linux-gnu.so", b"so-bytes")
+
+    seen = {}
+
+    def fake_build_wheel(manifest, out_dir_arg, interpreter, manylinux, maturin_bin="maturin"):
+        seen["maturin_bin"] = maturin_bin
+        return 0
+
+    monkeypatch.setattr(stage, "build_wheel", fake_build_wheel)
+
+    assert (
+        stage.main(out_dir=str(out_dir), dest=str(dest), maturin_bin=".venv/bin/maturin")
+        == 0
+    )
+    assert seen["maturin_bin"] == ".venv/bin/maturin"

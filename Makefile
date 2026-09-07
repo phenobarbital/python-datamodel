@@ -56,7 +56,8 @@ build-rust:
 # extension.
 stage-rust:
 	python scripts/stage_rust_ext.py --manifest rust/rs_parsers/Cargo.toml \
-	  --dest datamodel/rs_parsers --out-dir $(RUST_WHEEL_OUT) --interpreter python
+	  --dest datamodel/rs_parsers --out-dir $(RUST_WHEEL_OUT) --interpreter python \
+	  --maturin-bin $(MATURIN)
 
 # ---- Cython ----
 
