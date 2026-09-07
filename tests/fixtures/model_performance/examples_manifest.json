@@ -1,0 +1,839 @@
+{
+  "feature": "FEAT-2",
+  "task": "TASK-7",
+  "spec": "sdd/specs/compatible-model-performance.spec.md",
+  "source_root": "examples",
+  "policy": "The compatibility corpus re-declares schemas instead of importing examples/. Importing an example module runs its top-level code: most schema-bearing examples construct models, print, or exercise drivers at module scope, which would make fixture collection order-dependent and could execute side effects. Every module below is inventoried by AST only (never imported); `schema_bearing`, `models` and `executes_at_import` are re-derived by tests/compatibility/test_fixture_corpus.py and must keep matching this file. `disposition` records whether a schema example was adapted into tests/fixtures/model_performance/models.py or deliberately excluded, with the reason.",
+  "counts": {
+    "modules": 74,
+    "schema_bearing": 60,
+    "schema_bearing_executing_at_import": 42,
+    "adapted": 3,
+    "excluded": 57
+  },
+  "examples": {
+    "examples/__init__.py": {
+      "schema_bearing": false,
+      "models": [],
+      "executes_at_import": false,
+      "disposition": "not_applicable",
+      "adapted_as": [],
+      "reason": "Declares no BaseModel subclass, so it contributes no schema to the compatibility corpus."
+    },
+    "examples/basic.py": {
+      "schema_bearing": true,
+      "models": [
+        "newPoint",
+        "coordinate",
+        "Country",
+        "Address",
+        "Account",
+        "Actor"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 6 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/checks.py": {
+      "schema_bearing": true,
+      "models": [
+        "Contact",
+        "User",
+        "Animal"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 3 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/containers.py": {
+      "schema_bearing": true,
+      "models": [
+        "Account",
+        "User"
+      ],
+      "executes_at_import": false,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 2 model(s) with no module-level execution, but its declaration shapes duplicate corpus families already covered (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries). Excluded to keep the differential corpus minimal and each case's behaviour attributable."
+    },
+    "examples/dashboard.py": {
+      "schema_bearing": true,
+      "models": [
+        "Dashboard",
+        "Widget"
+      ],
+      "executes_at_import": false,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 2 model(s) with no module-level execution, but its declaration shapes duplicate corpus families already covered (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries). Excluded to keep the differential corpus minimal and each case's behaviour attributable."
+    },
+    "examples/dict_model.py": {
+      "schema_bearing": true,
+      "models": [
+        "QObject"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 1 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/dynamic.py": {
+      "schema_bearing": true,
+      "models": [
+        "AuthBackend",
+        "Identity",
+        "AuthUser"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 3 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/employee.py": {
+      "schema_bearing": true,
+      "models": [
+        "User",
+        "Employee"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 2 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/environment.py": {
+      "schema_bearing": true,
+      "models": [
+        "Environment"
+      ],
+      "executes_at_import": false,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 1 model(s) with no module-level execution, but its declaration shapes duplicate corpus families already covered (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries). Excluded to keep the differential corpus minimal and each case's behaviour attributable."
+    },
+    "examples/example.py": {
+      "schema_bearing": true,
+      "models": [
+        "Country",
+        "Address",
+        "User",
+        "Employee",
+        "Country",
+        "Address",
+        "User",
+        "Employee"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 8 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/form_schema.py": {
+      "schema_bearing": true,
+      "models": [
+        "Reward",
+        "Employee",
+        "BadgeAssign"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 3 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/inherit.py": {
+      "schema_bearing": true,
+      "models": [
+        "HazelPortable",
+        "Customer"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 2 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/json_ld.py": {
+      "schema_bearing": true,
+      "models": [
+        "Product",
+        "Person",
+        "Rating",
+        "Organization",
+        "Review",
+        "Restaurant",
+        "PostalAddress",
+        "Place",
+        "QuantitativeValue",
+        "MonetaryAmount",
+        "Organization",
+        "JobPosting"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 12 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/json_schema.py": {
+      "schema_bearing": true,
+      "models": [
+        "Airport"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 1 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/lead_model.py": {
+      "schema_bearing": true,
+      "models": [
+        "Contact",
+        "Lead"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 2 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/meta.py": {
+      "schema_bearing": false,
+      "models": [],
+      "executes_at_import": true,
+      "disposition": "not_applicable",
+      "adapted_as": [],
+      "reason": "Declares no BaseModel subclass, so it contributes no schema to the compatibility corpus."
+    },
+    "examples/model.py": {
+      "schema_bearing": true,
+      "models": [
+        "Contact",
+        "User"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 2 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/mutables.py": {
+      "schema_bearing": false,
+      "models": [],
+      "executes_at_import": true,
+      "disposition": "not_applicable",
+      "adapted_as": [],
+      "reason": "Declares no BaseModel subclass, so it contributes no schema to the compatibility corpus."
+    },
+    "examples/nn/examples.py": {
+      "schema_bearing": true,
+      "models": [
+        "Organization",
+        "Client",
+        "Form",
+        "FormMetadata",
+        "User"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 5 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/nn/stores.py": {
+      "schema_bearing": false,
+      "models": [],
+      "executes_at_import": false,
+      "disposition": "not_applicable",
+      "adapted_as": [],
+      "reason": "Declares no BaseModel subclass, so it contributes no schema to the compatibility corpus."
+    },
+    "examples/payroll.py": {
+      "schema_bearing": true,
+      "models": [
+        "User",
+        "Employee",
+        "MonthlySalary",
+        "HourlySalary",
+        "CommissionPolicy",
+        "Manager",
+        "SalesPerson",
+        "Secretary",
+        "FactoryWorker"
+      ],
+      "executes_at_import": false,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 9 model(s) with no module-level execution, but its declaration shapes duplicate corpus families already covered (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries). Excluded to keep the differential corpus minimal and each case's behaviour attributable."
+    },
+    "examples/person.py": {
+      "schema_bearing": true,
+      "models": [
+        "Persona"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 1 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/polymorph.py": {
+      "schema_bearing": true,
+      "models": [
+        "Animal",
+        "Snake",
+        "Mammal",
+        "Tiger",
+        "Elephant",
+        "Zoo"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 6 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/primer.py": {
+      "schema_bearing": true,
+      "models": [
+        "Coordinate",
+        "Country",
+        "Address",
+        "Account"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 4 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/profile_model.py": {
+      "schema_bearing": true,
+      "models": [
+        "NewUser"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 1 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/rust_benchmark.py": {
+      "schema_bearing": true,
+      "models": [
+        "Employee"
+      ],
+      "executes_at_import": true,
+      "disposition": "adapted",
+      "adapted_as": [
+        "Employee"
+      ],
+      "reason": "Source of the proposal's benchmark model. Ported field-for-field into models.Employee; the surrounding module builds models, imports pydantic and prints a benchmark table at module scope, so it is never imported."
+    },
+    "examples/schema.py": {
+      "schema_bearing": true,
+      "models": [
+        "Address",
+        "User"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 2 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/test_actor.py": {
+      "schema_bearing": true,
+      "models": [
+        "Account",
+        "Actor"
+      ],
+      "executes_at_import": false,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 2 model(s) with no module-level execution, but its declaration shapes duplicate corpus families already covered (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries). Excluded to keep the differential corpus minimal and each case's behaviour attributable."
+    },
+    "examples/test_adaptive.py": {
+      "schema_bearing": false,
+      "models": [],
+      "executes_at_import": true,
+      "disposition": "not_applicable",
+      "adapted_as": [],
+      "reason": "Declares no BaseModel subclass, so it contributes no schema to the compatibility corpus."
+    },
+    "examples/test_adaptive_export.py": {
+      "schema_bearing": true,
+      "models": [
+        "UserInfo"
+      ],
+      "executes_at_import": false,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 1 model(s) with no module-level execution, but its declaration shapes duplicate corpus families already covered (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries). Excluded to keep the differential corpus minimal and each case's behaviour attributable."
+    },
+    "examples/test_adaptive_form.py": {
+      "schema_bearing": false,
+      "models": [],
+      "executes_at_import": true,
+      "disposition": "not_applicable",
+      "adapted_as": [],
+      "reason": "Declares no BaseModel subclass, so it contributes no schema to the compatibility corpus."
+    },
+    "examples/test_alias.py": {
+      "schema_bearing": true,
+      "models": [
+        "Store"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 1 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/test_aliases.py": {
+      "schema_bearing": true,
+      "models": [
+        "Store",
+        "ExampleModel"
+      ],
+      "executes_at_import": false,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 2 model(s) with no module-level execution, but its declaration shapes duplicate corpus families already covered (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries). Excluded to keep the differential corpus minimal and each case's behaviour attributable."
+    },
+    "examples/test_assignment.py": {
+      "schema_bearing": true,
+      "models": [
+        "Account",
+        "Actor"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 2 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/test_basic_validations.py": {
+      "schema_bearing": true,
+      "models": [
+        "UserProfile",
+        "Product"
+      ],
+      "executes_at_import": false,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 2 model(s) with no module-level execution, but its declaration shapes duplicate corpus families already covered (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries). Excluded to keep the differential corpus minimal and each case's behaviour attributable."
+    },
+    "examples/test_callables.py": {
+      "schema_bearing": true,
+      "models": [
+        "ExampleModel"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 1 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/test_classdict.py": {
+      "schema_bearing": false,
+      "models": [],
+      "executes_at_import": true,
+      "disposition": "not_applicable",
+      "adapted_as": [],
+      "reason": "Declares no BaseModel subclass, so it contributes no schema to the compatibility corpus."
+    },
+    "examples/test_client.py": {
+      "schema_bearing": true,
+      "models": [
+        "Organization",
+        "Client"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 2 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/test_containers.py": {
+      "schema_bearing": true,
+      "models": [
+        "ContainerTypesModel"
+      ],
+      "executes_at_import": false,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 1 model(s) with no module-level execution, but its declaration shapes duplicate corpus families already covered (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries). Excluded to keep the differential corpus minimal and each case's behaviour attributable."
+    },
+    "examples/test_converters.py": {
+      "schema_bearing": true,
+      "models": [
+        "User"
+      ],
+      "executes_at_import": false,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 1 model(s) with no module-level execution, but its declaration shapes duplicate corpus families already covered (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries). Excluded to keep the differential corpus minimal and each case's behaviour attributable."
+    },
+    "examples/test_datadriver.py": {
+      "schema_bearing": true,
+      "models": [
+        "DataDriver"
+      ],
+      "executes_at_import": true,
+      "disposition": "adapted",
+      "adapted_as": [
+        "HookModel"
+      ],
+      "reason": "Donor of the `super().__post_init__()` hook pattern now carried by models.HookModel. The module has module-level code and an InitVar-based driver, so the pattern was re-declared rather than imported."
+    },
+    "examples/test_descriptor.py": {
+      "schema_bearing": true,
+      "models": [
+        "InventoryItem"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 1 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/test_driver.py": {
+      "schema_bearing": true,
+      "models": [
+        "BaseDriver",
+        "jdbcDriver"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 2 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/test_dynamic.py": {
+      "schema_bearing": true,
+      "models": [
+        "Identity",
+        "BaseUser"
+      ],
+      "executes_at_import": false,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 2 model(s) with no module-level execution, but its declaration shapes duplicate corpus families already covered (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries). Excluded to keep the differential corpus minimal and each case's behaviour attributable."
+    },
+    "examples/test_enum.py": {
+      "schema_bearing": true,
+      "models": [
+        "User"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 1 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/test_factory.py": {
+      "schema_bearing": true,
+      "models": [
+        "Environment"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 1 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/test_field.py": {
+      "schema_bearing": false,
+      "models": [],
+      "executes_at_import": true,
+      "disposition": "not_applicable",
+      "adapted_as": [],
+      "reason": "Declares no BaseModel subclass, so it contributes no schema to the compatibility corpus."
+    },
+    "examples/test_init.py": {
+      "schema_bearing": true,
+      "models": [
+        "OtherUser"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 1 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/test_ld_creation.py": {
+      "schema_bearing": false,
+      "models": [],
+      "executes_at_import": true,
+      "disposition": "not_applicable",
+      "adapted_as": [],
+      "reason": "Declares no BaseModel subclass, so it contributes no schema to the compatibility corpus."
+    },
+    "examples/test_many.py": {
+      "schema_bearing": true,
+      "models": [
+        "Account",
+        "User"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 2 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/test_methods.py": {
+      "schema_bearing": true,
+      "models": [
+        "InventoryItem",
+        "Foo",
+        "Bar"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 3 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/test_model.py": {
+      "schema_bearing": true,
+      "models": [
+        "WidgetTemplate"
+      ],
+      "executes_at_import": false,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 1 model(s) with no module-level execution, but its declaration shapes duplicate corpus families already covered (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries). Excluded to keep the differential corpus minimal and each case's behaviour attributable."
+    },
+    "examples/test_model_2.py": {
+      "schema_bearing": true,
+      "models": [
+        "Address",
+        "User",
+        "UserIdentity",
+        "Company"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 4 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/test_models.py": {
+      "schema_bearing": true,
+      "models": [
+        "Address",
+        "User",
+        "Program",
+        "Reward"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 4 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/test_msteams.py": {
+      "schema_bearing": true,
+      "models": [
+        "TeamsChannel",
+        "TeamsChat",
+        "TeamsWebhook",
+        "TeamsTarget",
+        "TeamsAction",
+        "TeamsSection",
+        "CardAction",
+        "TeamsCard"
+      ],
+      "executes_at_import": false,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 8 model(s) with no module-level execution, but its declaration shapes duplicate corpus families already covered (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries). Excluded to keep the differential corpus minimal and each case's behaviour attributable."
+    },
+    "examples/test_nested.py": {
+      "schema_bearing": true,
+      "models": [
+        "Country",
+        "Address",
+        "User"
+      ],
+      "executes_at_import": false,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 3 model(s) with no module-level execution, but its declaration shapes duplicate corpus families already covered (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries). Excluded to keep the differential corpus minimal and each case's behaviour attributable."
+    },
+    "examples/test_notify.py": {
+      "schema_bearing": true,
+      "models": [
+        "Account",
+        "Actor",
+        "Message",
+        "Attachment",
+        "BlockMessage"
+      ],
+      "executes_at_import": false,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 5 model(s) with no module-level execution, but its declaration shapes duplicate corpus families already covered (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries). Excluded to keep the differential corpus minimal and each case's behaviour attributable."
+    },
+    "examples/test_nulls.py": {
+      "schema_bearing": true,
+      "models": [
+        "QueryModel"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 1 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/test_optlist.py": {
+      "schema_bearing": true,
+      "models": [
+        "TestOptional"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 1 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/test_pydantic.py": {
+      "schema_bearing": true,
+      "models": [
+        "Account",
+        "User",
+        "Account",
+        "User",
+        "Account",
+        "NewUser"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 6 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/test_qsmodel.py": {
+      "schema_bearing": true,
+      "models": [
+        "QueryModel"
+      ],
+      "executes_at_import": true,
+      "disposition": "adapted",
+      "adapted_as": [
+        "BigContainer"
+      ],
+      "reason": "Donor of the optional-nested-container/tuple/mapping shapes now carried by models.BigContainer. The module constructs QueryModel instances at module scope, so only its declarations were adapted."
+    },
+    "examples/test_safedict.py": {
+      "schema_bearing": false,
+      "models": [],
+      "executes_at_import": true,
+      "disposition": "not_applicable",
+      "adapted_as": [],
+      "reason": "Declares no BaseModel subclass, so it contributes no schema to the compatibility corpus."
+    },
+    "examples/test_singleton.py": {
+      "schema_bearing": false,
+      "models": [],
+      "executes_at_import": false,
+      "disposition": "not_applicable",
+      "adapted_as": [],
+      "reason": "Declares no BaseModel subclass, so it contributes no schema to the compatibility corpus."
+    },
+    "examples/test_ticket.py": {
+      "schema_bearing": true,
+      "models": [
+        "ZammadCatalog",
+        "TicketAttachment",
+        "AbstractTicket"
+      ],
+      "executes_at_import": false,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 3 model(s) with no module-level execution, but its declaration shapes duplicate corpus families already covered (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries). Excluded to keep the differential corpus minimal and each case's behaviour attributable."
+    },
+    "examples/test_type_user.py": {
+      "schema_bearing": true,
+      "models": [
+        "User",
+        "BasicUser",
+        "ProUser",
+        "Employee"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 4 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/test_types.py": {
+      "schema_bearing": true,
+      "models": [
+        "Account",
+        "User"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 2 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/test_user.py": {
+      "schema_bearing": true,
+      "models": [
+        "Address",
+        "NewUser"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 2 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/test_validations.py": {
+      "schema_bearing": true,
+      "models": [
+        "Account",
+        "Actor",
+        "Dataset"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 3 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    },
+    "examples/tests/sp_types.py": {
+      "schema_bearing": false,
+      "models": [],
+      "executes_at_import": true,
+      "disposition": "not_applicable",
+      "adapted_as": [],
+      "reason": "Declares no BaseModel subclass, so it contributes no schema to the compatibility corpus."
+    },
+    "examples/tests/speed_dates.py": {
+      "schema_bearing": false,
+      "models": [],
+      "executes_at_import": true,
+      "disposition": "not_applicable",
+      "adapted_as": [],
+      "reason": "Declares no BaseModel subclass, so it contributes no schema to the compatibility corpus."
+    },
+    "examples/time.py": {
+      "schema_bearing": false,
+      "models": [],
+      "executes_at_import": true,
+      "disposition": "not_applicable",
+      "adapted_as": [],
+      "reason": "Declares no BaseModel subclass, so it contributes no schema to the compatibility corpus."
+    },
+    "examples/timezone.py": {
+      "schema_bearing": true,
+      "models": [
+        "DateTest"
+      ],
+      "executes_at_import": false,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 1 model(s) with no module-level execution, but its declaration shapes duplicate corpus families already covered (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries). Excluded to keep the differential corpus minimal and each case's behaviour attributable."
+    },
+    "examples/traveler.py": {
+      "schema_bearing": true,
+      "models": [
+        "Location",
+        "StoreLocation",
+        "TravelerSearch",
+        "StoreTravelerSearch"
+      ],
+      "executes_at_import": false,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 4 model(s) with no module-level execution, but its declaration shapes duplicate corpus families already covered (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries). Excluded to keep the differential corpus minimal and each case's behaviour attributable."
+    },
+    "examples/validate_user.py": {
+      "schema_bearing": true,
+      "models": [
+        "User",
+        "Group",
+        "UserGroup",
+        "UserAttributes"
+      ],
+      "executes_at_import": true,
+      "disposition": "excluded",
+      "adapted_as": [],
+      "reason": "Declares 4 model(s) but executes code at module scope (constructs models, calls helpers or prints), so importing it would run example behaviour and could raise during collection. Its declaration shapes are already represented by the corpus families (scalars, constraints, containers, nesting, aliases, presence rules, callbacks, descriptors, hooks, boundaries); no distinct observable behaviour would be added by adapting it."
+    }
+  }
+}
