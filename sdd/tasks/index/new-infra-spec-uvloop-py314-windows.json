@@ -5,7 +5,7 @@
   "type": "feature",
   "base_branch": "dev",
   "created_at": "2026-09-08T00:00:00+00:00",
-  "completed_at": null,
+  "completed_at": "2026-09-07T23:02:23+00:00",
   "tasks": [
     {
       "id": "TASK-1",
@@ -13,7 +13,7 @@
       "title": "Add the optional uvloop helper and packaging constraints",
       "feature_id": "FEAT-001",
       "feature": "new-infra-spec-uvloop-py314-windows",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "M",
       "depends_on": [],
@@ -22,8 +22,10 @@
       "assigned_to": "unassigned",
       "created_at": "2026-09-08T00:00:00+00:00",
       "updated_at": "2026-09-08T00:00:00+00:00",
-      "file": "sdd/tasks/active/TASK-1-uvloop-packaging-helper.md",
-      "started_at": "2026-09-07T22:33:27+00:00"
+      "file": "sdd/tasks/completed/TASK-1-uvloop-packaging-helper.md",
+      "started_at": "2026-09-07T22:33:27+00:00",
+      "completed_at": "2026-09-07T22:36:20+00:00",
+      "verification": "verified"
     },
     {
       "id": "TASK-2",
@@ -31,7 +33,7 @@
       "title": "Test uvloop fallback, activation, and wheel packaging",
       "feature_id": "FEAT-001",
       "feature": "new-infra-spec-uvloop-py314-windows",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "M",
       "depends_on": [
@@ -42,8 +44,10 @@
       "assigned_to": "unassigned",
       "created_at": "2026-09-08T00:00:00+00:00",
       "updated_at": "2026-09-08T00:00:00+00:00",
-      "file": "sdd/tasks/active/TASK-2-uvloop-helper-tests.md",
-      "started_at": "2026-09-07T22:33:27+00:00"
+      "file": "sdd/tasks/completed/TASK-2-uvloop-helper-tests.md",
+      "started_at": "2026-09-07T22:33:27+00:00",
+      "completed_at": "2026-09-07T22:41:40+00:00",
+      "verification": "verified"
     },
     {
       "id": "TASK-3",
@@ -51,7 +55,7 @@
       "title": "Make Cython extension flags MSVC-compatible",
       "feature_id": "FEAT-001",
       "feature": "new-infra-spec-uvloop-py314-windows",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "S",
       "depends_on": [],
@@ -60,8 +64,10 @@
       "assigned_to": "unassigned",
       "created_at": "2026-09-08T00:00:00+00:00",
       "updated_at": "2026-09-08T00:00:00+00:00",
-      "file": "sdd/tasks/active/TASK-3-msvc-build-flags.md",
-      "started_at": "2026-09-07T22:33:27+00:00"
+      "file": "sdd/tasks/completed/TASK-3-msvc-build-flags.md",
+      "started_at": "2026-09-07T22:33:27+00:00",
+      "completed_at": "2026-09-07T22:37:48+00:00",
+      "verification": "verified"
     },
     {
       "id": "TASK-4",
@@ -69,7 +75,7 @@
       "title": "Add cross-platform Rust extension staging",
       "feature_id": "FEAT-001",
       "feature": "new-infra-spec-uvloop-py314-windows",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "M",
       "depends_on": [],
@@ -78,8 +84,10 @@
       "assigned_to": "unassigned",
       "created_at": "2026-09-08T00:00:00+00:00",
       "updated_at": "2026-09-08T00:00:00+00:00",
-      "file": "sdd/tasks/active/TASK-4-rust-staging-script.md",
-      "started_at": "2026-09-07T22:33:27+00:00"
+      "file": "sdd/tasks/completed/TASK-4-rust-staging-script.md",
+      "started_at": "2026-09-07T22:33:27+00:00",
+      "completed_at": "2026-09-07T22:39:33+00:00",
+      "verification": "verified"
     },
     {
       "id": "TASK-5",
@@ -87,7 +95,7 @@
       "title": "Add Windows and Python 3.14 release matrix coverage",
       "feature_id": "FEAT-001",
       "feature": "new-infra-spec-uvloop-py314-windows",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "L",
       "depends_on": [
@@ -99,8 +107,10 @@
       "assigned_to": "unassigned",
       "created_at": "2026-09-08T00:00:00+00:00",
       "updated_at": "2026-09-08T00:00:00+00:00",
-      "file": "sdd/tasks/active/TASK-5-release-workflow.md",
-      "started_at": "2026-09-07T22:33:27+00:00"
+      "file": "sdd/tasks/completed/TASK-5-release-workflow.md",
+      "started_at": "2026-09-07T22:33:27+00:00",
+      "completed_at": "2026-09-07T22:44:09+00:00",
+      "verification": "verified"
     },
     {
       "id": "TASK-6",
@@ -108,7 +118,7 @@
       "title": "Document the install path and publish version metadata",
       "feature_id": "FEAT-001",
       "feature": "new-infra-spec-uvloop-py314-windows",
-      "status": "in-progress",
+      "status": "done",
       "priority": "medium",
       "effort": "M",
       "depends_on": [
@@ -120,8 +130,10 @@
       "assigned_to": "unassigned",
       "created_at": "2026-09-08T00:00:00+00:00",
       "updated_at": "2026-09-08T00:00:00+00:00",
-      "file": "sdd/tasks/active/TASK-6-documentation-version-changelog.md",
-      "started_at": "2026-09-07T22:33:27+00:00"
+      "file": "sdd/tasks/completed/TASK-6-documentation-version-changelog.md",
+      "started_at": "2026-09-07T22:33:27+00:00",
+      "completed_at": "2026-09-07T22:45:55+00:00",
+      "verification": "verified"
     }
   ]
 }

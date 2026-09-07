@@ -176,7 +176,16 @@ def test_install_uvloop_idempotent():
 
 ## Completion Note
 
-**Completed by**: <session or agent ID>
-**Date**: YYYY-MM-DD
-**Notes**: <implementation and verification summary>
-**Deviations from spec**: none | describe if any
+**Completed by**: sdd-worker (Claude)
+**Date**: 2026-09-08
+**Notes**: Created `tests/test_uvloop_helper.py` with a
+`restore_event_loop_policy` fixture, fallback/Windows-gating/activation/
+idempotency tests, a subprocess-based no-eager-import assertion, and a
+subprocess smoke test importing `datamodel.libs.uvloop` directly (packaging
+regression guard). All 6 tests pass locally with uvloop installed
+(`asyncio.new_event_loop()` yields `uvloop.Loop`); activation tests use
+`pytest.importorskip("uvloop")` so they skip cleanly when uvloop is absent.
+Ran the full suite (`pytest tests/ -v`, 251 passed) after locally building
+the Cython extensions and the Rust extension (`maturin develop --release`)
+in the worktree to match the main checkout's environment.
+**Deviations from spec**: none.

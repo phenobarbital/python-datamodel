@@ -158,7 +158,43 @@ output; YAML parsing alone is insufficient.
 
 ## Completion Note
 
-**Completed by**: <session or agent ID>
-**Date**: YYYY-MM-DD
-**Notes**: <implementation and workflow-run summary>
-**Deviations from spec**: none | describe if any
+**Completed by**: sdd-worker (Claude)
+**Date**: 2026-09-08
+**Notes**: Added `workflow_dispatch:` alongside `release: types: [created]`;
+added `os: [ubuntu-latest, windows-latest]` to the matrix (`fail-fast: false`
+so one OS/version failure doesn't cancel the other nine legs) crossed with
+the unchanged five-Python-version `cibw-build` include list, giving exactly
+ten build legs; `runs-on: ${{ matrix.os }}`. Set `CIBW_ARCHS_LINUX: x86_64`
+and `CIBW_ARCHS_WINDOWS: AMD64`; scoped the previous PATH override to
+`CIBW_ENVIRONMENT_LINUX` (was the OS-agnostic `CIBW_ENVIRONMENT`, which
+would have wrongly applied `/root/.cargo/bin` on Windows). Replaced the
+single `CIBW_BEFORE_BUILD` with `CIBW_BEFORE_BUILD_LINUX` (keeps the
+existing rustup curl install needed inside the manylinux container, then
+calls `scripts/stage_rust_ext.py --manylinux off` in place of the old
+inline zipfile one-liner) and `CIBW_BEFORE_BUILD_WINDOWS` (`pip install
+maturin && python scripts/stage_rust_ext.py`, relying on the
+windows-latest runner's preinstalled MSVC Rust toolchain plus the job's
+own "Install Rust"/"Add Rust to PATH" steps, exactly as sketched in the
+task). Added `CIBW_TEST_COMMAND` asserting `datamodel.rs_parsers.HAS_RUST`
+in every wheel. Dropped the explicit `--platform linux` from the
+`cibuildwheel` invocation. Artifact name is now
+`wheels-${{ matrix.os }}-py${{ matrix.python-version }}`; deploy's download
+`pattern` is `wheels-*`. Added a `Verify wheel inventory` step in `deploy`
+that fails unless `dist/` has exactly 5 manylinux x86_64 wheels, 5
+win_amd64 wheels, and 1 sdist. Verified: YAML parses cleanly; `rg` for
+`workflow_dispatch|windows-latest|CIBW_TEST_COMMAND|wheels-` matches the
+new lines; no `macos`/`arm`/`aarch64` string anywhere in the file.
+**Not verified** (cannot be done outside GitHub Actions, per the spec's own
+"No PR-time CI" risk note): an actual `workflow_dispatch` dry run showing
+all ten legs green with `HAS_RUST` true in each wheel, and the deploy
+inventory step passing against real artifacts (AC6 static structure is
+verified; AC7/AC8's live-CI assertions are not). A dispatch run on the
+pushed branch is recommended before merging, per the spec.
+**Deviations from spec**: none in workflow structure. The Linux
+`CIBW_BEFORE_BUILD_LINUX` keeps the pre-existing `curl | sh` rustup install
+that the task's abbreviated example omitted, because the manylinux
+container has no Rust preinstalled — dropping it would break the Linux
+leg entirely; the task's own Codebase Contract's "Verified Existing
+Blocks" documents this curl install as pre-existing and Module 5's scope
+is "Wire Linux staging with `--manylinux off`", not removing the
+toolchain bootstrap.

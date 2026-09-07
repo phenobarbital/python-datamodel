@@ -154,7 +154,15 @@ The wheel-content assertion is completed by TASK-2.
 
 ## Completion Note
 
-**Completed by**: <session or agent ID>
-**Date**: YYYY-MM-DD
-**Notes**: <implementation and verification summary>
-**Deviations from spec**: none | describe if any
+**Completed by**: sdd-worker (Claude)
+**Date**: 2026-09-08
+**Notes**: Removed `uvloop` from `[project].dependencies`, added the
+`uvloop` optional extra with the `sys_platform != 'win32'` marker, raised
+both Cython floors to `>=3.2.8`, added `datamodel.libs` to
+`[tool.setuptools].packages`, created `datamodel/libs/uvloop.py`
+(`HAS_UVLOOP`, `install_uvloop()`) following the `rs_parsers` optional-import
+pattern, and regenerated `uv.lock` via `uv lock`. Verified the TOML
+assertions, that `datamodel.libs.uvloop` imports independently of
+`datamodel/__init__.py`, and that `import datamodel` leaves `uvloop` out of
+`sys.modules`.
+**Deviations from spec**: none
