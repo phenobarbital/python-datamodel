@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "feat_id": "FEAT-002",
+  "mode": "enrichment",
+  "phase": "review",
+  "status": "discussion",
+  "proposal": "sdd/proposals/compatible-model-performance.proposal.md",
+  "source_kind": "inline",
+  "created": "2026-09-08",
+  "updated": "2026-09-08",
+  "baseline_commit": "dbaac838117c615c17b7c12460ba6f3e21d5232e",
+  "baseline_provisional": true,
+  "budget": {"profile":"loose","max_files":100,"max_greps":60,"max_git":20,"max_depth":3,"max_seconds":900},
+  "budget_status": {"exhausted":false,"truncated":false,"notes":"Selected instruction files read fully. Large batched diagnostic output was truncated; relevant source sections re-read. Native profiling and downstream corpus validation deferred."},
+  "verification": {"targeted_tests_passed":69,"benchmark_iterations":10000,"implementation_changed":false},
+  "review_gate": {"status":"awaiting discussion","accepted":false},
+  "pending_input": "Deployed version/commit and representative company ORM models/tests"
+}

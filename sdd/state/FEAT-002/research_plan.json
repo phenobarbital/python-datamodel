@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "mode_hint": "enrichment",
+  "budget_profile": "loose",
+  "rationale": "Investigate a compatibility-preserving performance architecture before implementation.",
+  "wiki_status": "wikitoolkit unavailable; source inspection used",
+  "queries": [
+    {"id":"Q001","type":"read","priority":1,"intent":"Trace construction, assignment and existing caches","params":{"paths":["datamodel/abstract.py","datamodel/base.py","datamodel/fields.pyx"]}},
+    {"id":"Q002","type":"read","priority":1,"intent":"Trace conversion and validation work and Rust dispatch","params":{"paths":["datamodel/converters.pyx","datamodel/rs_parsers/__init__.py","rust/rs_parsers/src/lib.rs"]}},
+    {"id":"Q003","type":"read","priority":1,"intent":"Inspect and run the supplied benchmark and profile construction","params":{"path":"examples/rust_benchmark.py"}},
+    {"id":"Q004","type":"read","priority":2,"intent":"Inspect serialization and observable ORM contracts","params":{"paths":["datamodel/models.py","datamodel/parsers/json.pyx","tests/test_field.py","tests/test_descriptors.py"]}},
+    {"id":"Q005","type":"git_log","priority":2,"intent":"Record baseline, local work and recent relevant changes","params":{"paths":["datamodel/abstract.py","datamodel/converters.pyx","rust/rs_parsers"]}},
+    {"id":"Q006","type":"read","priority":2,"intent":"Verify Pydantic design principles using official documentation","params":{"urls":["https://docs.pydantic.dev/latest/internals/architecture/","https://docs.pydantic.dev/latest/concepts/performance/"]}}
+  ],
+  "expected_findings": ["Measured baseline", "Per-instance work", "Cache validity constraints", "Rust semantic differences", "Compatibility coverage and unknowns"]
+}
