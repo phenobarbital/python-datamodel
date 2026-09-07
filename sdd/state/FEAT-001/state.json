@@ -3,24 +3,84 @@
   "feat_id": "FEAT-001",
   "phase": "committed",
   "started_at": "2026-09-07T21:25:00Z",
-  "updated_at": "2026-09-07T21:40:00Z",
+  "updated_at": "2026-09-07T22:10:00Z",
   "mode": "enrichment",
   "mode_source": "auto",
-  "flags": {"no_gate": false, "budget": "default", "autonomous_run": true},
+  "flags": {
+    "no_gate": false,
+    "budget": "default",
+    "autonomous_run": true
+  },
   "wiki_available": false,
-  "source": {"kind": "inline", "jira_key": null, "path": "sdd/state/FEAT-001/source.md", "summary_oneline": "Make uvloop optional (lazy-import, auto-use), add Python 3.14 build, add Windows wheels in release.yml"},
-  "budget": {"files_read": 40, "grep_calls": 25, "git_calls": 10, "max_depth": 2, "max_wall_seconds": 300},
-  "consumed": {"files_read": 16, "grep_calls": 14, "git_calls": 8, "depth_reached": 0, "wall_seconds": 240},
+  "source": {
+    "kind": "inline",
+    "jira_key": null,
+    "path": "sdd/state/FEAT-001/source.md",
+    "summary_oneline": "Make uvloop optional (lazy-import, auto-use), add Python 3.14 build, add Windows wheels in release.yml"
+  },
+  "budget": {
+    "files_read": 40,
+    "grep_calls": 25,
+    "git_calls": 10,
+    "max_depth": 2,
+    "max_wall_seconds": 300
+  },
+  "consumed": {
+    "files_read": 16,
+    "grep_calls": 14,
+    "git_calls": 8,
+    "depth_reached": 0,
+    "wall_seconds": 240
+  },
   "truncated": false,
   "truncation_reason": null,
   "phases": {
-    "plan": {"status": "complete", "approved_by_user": false, "auto_approved": true, "note": "Session ran unattended; plan gate auto-approved. Plan persisted at research_plan.json for review.", "queries_planned": 15},
-    "research": {"status": "complete", "completed_at": "2026-09-07T21:32:00Z", "duration_seconds": 240, "queries_executed": 15, "queries_skipped": 0, "findings": 15},
-    "synthesis": {"status": "complete", "overall_confidence": "medium", "claims": {"high": 5, "medium": 2, "low": 1}, "unknowns": 4, "lint": "pass", "lint_notes": "All localization/constraint paths trace to finding citations; overall_confidence bounded to medium by C6/C7."},
-    "review_gate": {"status": "auto_approved", "note": "Unattended run; user validation deferred to proposal status=discussion."},
-    "qa": {"status": "skipped", "reason": "unattended run; 4 unknowns recorded as unresolved in proposal §5", "questions_total": 4, "questions_answered": 0},
-    "output": {"proposal_path": "sdd/proposals/new-infra-spec-uvloop-py314-windows.proposal.md", "commit_sha": "b3719cd"}
+    "plan": {
+      "status": "complete",
+      "approved_by_user": false,
+      "auto_approved": true,
+      "note": "Session ran unattended; plan gate auto-approved. Plan persisted at research_plan.json for review.",
+      "queries_planned": 15
+    },
+    "research": {
+      "status": "complete",
+      "completed_at": "2026-09-07T21:32:00Z",
+      "duration_seconds": 240,
+      "queries_executed": 15,
+      "queries_skipped": 0,
+      "findings": 15
+    },
+    "synthesis": {
+      "status": "complete",
+      "overall_confidence": "medium",
+      "claims": {
+        "high": 5,
+        "medium": 2,
+        "low": 1
+      },
+      "unknowns": 4,
+      "lint": "pass",
+      "lint_notes": "All localization/constraint paths trace to finding citations; overall_confidence bounded to medium by C6/C7."
+    },
+    "review_gate": {
+      "status": "auto_approved",
+      "note": "Unattended run; user validation deferred to proposal status=discussion."
+    },
+    "qa": {
+      "status": "complete",
+      "reason": null,
+      "questions_total": 4,
+      "questions_answered": 4,
+      "answered_at": "2026-09-07"
+    },
+    "output": {
+      "proposal_path": "sdd/proposals/new-infra-spec-uvloop-py314-windows.proposal.md",
+      "commit_sha": "b3719cd"
+    }
   },
   "errors": [],
-  "resume_hint": {"next_phase": "committed", "next_action": "commit proposal + state; then answer U1-U4 and run /sdd-spec FEAT-001"}
+  "resume_hint": {
+    "next_phase": "spec",
+    "next_action": "run /sdd-spec FEAT-001"
+  }
 }

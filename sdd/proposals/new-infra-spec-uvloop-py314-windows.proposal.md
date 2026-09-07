@@ -4,7 +4,7 @@ title: Make uvloop an optional lazy-import speedup, finish the Python 3.14 build
 slug: new-infra-spec-uvloop-py314-windows
 type: feature
 mode: enrichment
-status: discussion
+status: review
 source:
   kind: inline
   jira_key: null
@@ -147,12 +147,14 @@ No commit has touched Windows CI or uvloop import behaviour. *Evidence*: F008
 
 - **uvloop helper** (proposed `datamodel/libs/uvloop.py`) exposing
   `HAS_UVLOOP` and an explicit `install_uvloop()` that sets the uvloop policy
-  only if the import succeeds and the platform is not Windows.
-- **`[project.optional-dependencies].uvloop` extra** (name subject to U2),
-  keeping the `sys_platform != 'win32'` marker so the extra is a no-op on
-  Windows.
+  only if the import succeeds and the platform is not Windows. No import-time
+  side effect (U1).
+- **`[project.optional-dependencies].uvloop` extra** (U2), keeping the
+  `sys_platform != 'win32'` marker so the extra is a no-op on Windows.
 - **`windows-latest` leg in the release matrix** producing cp310–cp314
-  `win_amd64` wheels, with the Rust `.pyd` staged into `datamodel/rs_parsers/`.
+  `win_amd64` wheels that **must** contain the Rust `_rs_parsers*.pyd`; the
+  build job fails if maturin fails (U3). Matrix stays manylinux + Windows,
+  no macOS (U4).
 - **A skip-if-missing pytest** that exercises the helper.
 - **Optional:** `workflow_dispatch` trigger on `release.yml` for dry runs.
 
@@ -175,11 +177,12 @@ No commit has touched Windows CI or uvloop import behaviour. *Evidence*: F008
 
 ### What's Untouched (Non-Goals)
 
-- macOS wheels (not requested; natural follow-up leg in the same matrix).
-- Making the Rust extension mandatory on Windows: the `HAS_RUST=False`
-  fallback remains acceptable if the `.pyd` build proves flaky (see U3).
-- Auto-installing uvloop at `import datamodel` time (rejected on
-  library-hygiene grounds unless U1 says otherwise).
+- macOS wheels: explicitly out of scope; release matrix is manylinux x86_64 +
+  win_amd64 only (U4).
+- Shipping Windows wheels without the Rust extension: rejected (U3). The
+  `HAS_RUST=False` fallback stays only as a runtime safety net for source
+  installs.
+- Auto-installing uvloop at `import datamodel` time: rejected (U1).
 - Removing other heavy dependencies (numpy, asyncpg, psycopg).
 - Rewriting `tox.ini` or adding a full PR test matrix (recommended, but a
   separate change).
@@ -209,41 +212,36 @@ No commit has touched Windows CI or uvloop import behaviour. *Evidence*: F008
 | C8 | The stale `migrate-uv-python314` worktree can be deleted safely | high | F010 |
 
 **Overall confidence: medium.** Localization and the CI facts are directly
-cited. Bounded to medium because the uvloop "automatic usage" semantics are a
-design choice the codebase cannot answer (U1) and MSVC compilation of the
-Cython sources is untested (C7).
+cited, and all four design unknowns were resolved by the user (§5). Still
+bounded to medium because MSVC compilation of the Cython sources (C7) and the
+Rust `.pyd` build on `windows-latest` (C4, now a hard requirement) are
+untested.
 
 ---
 
 ## 5. Open Questions
 
-### Resolved (during proposal phase)
+### Resolved (during proposal phase, 2026-09-07)
 
-_None — this run was unattended; the Q&A gate was skipped._
+- [x] **U1: Where should "automatic usage" of uvloop take effect?** — *Resolved*: an
+  explicit `install_uvloop()` helper that callers invoke; no import-time side effect.
+  *Resolves claims*: C6
+
+- [x] **U2: Should uvloop be exposed as a pip extra, and under what name?** — *Resolved*:
+  yes, `python-datamodel[uvloop]`.
+  *Resolves claims*: C1
+
+- [x] **U3: Must the Rust `.pyd` ship in Windows wheels?** — *Resolved*: yes, ship the
+  Rust extension for Windows; the release job must fail if the Rust build fails.
+  *Resolves claims*: C4 (now a hard requirement to verify on `windows-latest`)
+
+- [x] **U4: Add macOS wheels while the matrix is being restructured?** — *Resolved*:
+  Windows only. The release matrix stays manylinux x86_64 + win_amd64. No macOS
+  wheels exist today (release.yml is Linux-only, F004), so nothing needs removing.
 
 ### Unresolved (defer to spec / implementation)
 
-- [ ] **U1: Where should "automatic usage" of uvloop take effect?** — *Owner*: tbd
-  *Blocks claims*: C6
-  *Plausible answers*: a) opt-in helper `install_uvloop()` that callers invoke
-  explicitly (recommended) · b) helper plus an env var such as
-  `DATAMODEL_USE_UVLOOP=1` checked at import · c) set the policy
-  unconditionally at `import datamodel` when uvloop is importable
-
-- [ ] **U2: Should uvloop be exposed as a pip extra, and under what name?** — *Owner*: tbd
-  *Blocks claims*: C1
-  *Plausible answers*: a) `python-datamodel[uvloop]` · b) `python-datamodel[speedups]`
-  (room for future optional accelerators) · c) no extra; users install uvloop themselves
-
-- [ ] **U3: On Windows, must the Rust `.pyd` ship in the wheel, or is the pure-Python fallback acceptable for the first release?** — *Owner*: tbd
-  *Blocks claims*: C4
-  *Plausible answers*: a) ship the `.pyd`; fail the release if the Rust build
-  fails · b) best-effort: build `.pyd` but allow fallback · c) Cython-only
-  Windows wheels for now
-
-- [ ] **U4: Add macOS wheels while the matrix is being restructured?** — *Owner*: tbd
-  *Blocks claims*: —
-  *Plausible answers*: a) no, Windows only as requested · b) yes, add `macos-latest`
+_None._
 
 ---
 
@@ -286,8 +284,8 @@ in the spec.
 additions, no failure/negation language in source).
 
 **Gates**: the session ran unattended, so the plan gate and review gate were
-auto-approved and the Q&A gate was skipped; all four unknowns are recorded
-above for the user to answer before `/sdd-spec`.
+auto-approved. The Q&A gate was completed afterwards: all four unknowns were
+answered by the user on 2026-09-07 (§5).
 
 ---
 
