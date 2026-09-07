@@ -67,6 +67,12 @@ Benchmark warm construction, class creation, assignment, serialization, failures
 
 ### Phase B — Cache executable decisions and simplify success paths
 
+**First optimization: gate `_validation_` at the conversion loop using precomputed remaining validation work.** The user reports 220,000 calls for 20,000 Employee builds and estimates about 15 µs in this stage. Source inspection confirms the unconditional dispatch for fields reaching that stage, but the removable portion requires measurement. Nine Employee fields have built-in validators and the other two use generic validation; absence of an explicit user validator or constraints is insufficient to skip checks. F008.
+
+Use a conservative per-field mode/work mask for presence, residual type/structure validation, constraints and custom behavior. The loop may skip the generic dispatcher only after a successful conversion branch establishes the required type/structure guarantee and no checks remain. Use cheap inline guards for proven common cases and the existing dispatcher for unknown cases. Empty/missing values, parser errors and callback results must retain existing checks and exception ordering. A single `needs_validation` flag is acceptable only if it expresses this full contract, with a safe default and valid mutation handling. F001–F002, F008.
+
+Acceptance for this experiment: differential behavior matches the reference, intended fast paths eliminate dispatcher calls, failures retain their payloads/order, and repeated uninstrumented benchmarks show the actual latency/allocation change. Explicitly cover parser/validator and metadata mutation, inheritance, required/null/default behavior, strict/non-strict errors and nested/container values. Report how many calls remain and why; do not claim the full estimated 15 µs as savings before measurement. F008.
+
 Proposed new internal class-owned plan: ordered field operations with precomputed dispatch/constraints and references to existing Python behavior. Candidate changes include avoiding per-instance column-list reconstruction, removing unused metadata reads, delaying error allocation until failure, and reducing Python dispatch for safe primitive cases. These are experiments, not promised gains. F001–F002.
 
 Typed input must still run required checks, constraints and custom behavior. Equality-based writeback, subclass acceptance, callable behavior and observable object identity require parity, even when a simpler rule appears more correct. F001–F002, F004, F007.
@@ -112,6 +118,8 @@ Investigate a reusable serialization plan or compatible traversal to avoid unnec
 | Claim | Evidence | Confidence |
 |---|---|---|
 | Existing Cython and metadata caches leave repeated per-instance work | F001–F003 | High |
+| Validation dispatch is unconditional for fields reaching the loop's validation stage | F008 | High |
+| A precomputed gate plus conversion postconditions can target unnecessary dispatch | F008 | Medium; implementation and savings unmeasured |
 | Current local benchmark reproduces roughly the reported gap | F003 | High, limited to this workload |
 | Existing Rust scalar functions are not universally interchangeable | F002 | High, runtime counterexample |
 | Class-owned execution plans are a promising optimization direction | F001–F003, F006 | Medium, not implemented |
@@ -133,7 +141,7 @@ Review the architecture options and settle the compatibility baseline, then writ
 
 ## 7. Research audit
 
-State: [FEAT-002](../state/FEAT-002/). Findings F001–F007, exact source, research plan and synthesis are persisted there. Source slices, a local benchmark, cProfile and 69 targeted tests were used. No production implementation or Rust build was performed. The wiki command was unavailable. Research used the loose budget; deep company integration and native profiling are intentionally deferred, not claimed complete.
+State: [FEAT-002](../state/FEAT-002/). Findings F001–F008, exact source, research plan and synthesis are persisted there. Source slices, a local benchmark, cProfile and 69 targeted tests were used in the initial research. The validation-gating follow-up adds source inspection and read-only runtime probes; it does not claim new benchmark savings. No production implementation or Rust build was performed. The wiki command was unavailable. Research used the loose budget; deep company integration and native profiling are intentionally deferred, not claimed complete.
 
 ## 8. Provenance
 

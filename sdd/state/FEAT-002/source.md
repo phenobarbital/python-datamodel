@@ -13,3 +13,7 @@ python-datamodel borns as a drop-in replacement for dataclasses (used in ORM) se
 ## Follow-up
 
 maybe one aggresive idea is migrating _validation_ to rust and executes the validation in parallel?
+
+## Follow-up: gate repeated validation dispatch
+
+but also: The structural cost is that _validation_ is invoked for all 11 fields unconditionally, even when a field has no validator and no constraints — the profile shows 220,000 calls for 20,000 builds. Gating that call at the loop on a precomputed per-field flag is where the remaining ~15 µs lives, we need to also do some refactor for optimization there.

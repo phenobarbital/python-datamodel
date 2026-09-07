@@ -19,8 +19,8 @@
   ],
   "investigation": null,
   "enrichment": {
-    "scope":"Differential baseline, class-owned execution plan, sequential Cython/Rust comparison, selective bulk parallelism and independent serialization experiment.",
-    "evidence":["F001","F002","F003","F004","F006","F007"],
+    "scope":"Differential baseline, loop-level validation gating using precomputed remaining work and proven conversion postconditions, class-owned execution plan, sequential Cython/Rust comparison, selective bulk parallelism and independent serialization experiment.",
+    "evidence":["F001","F002","F003","F004","F006","F007","F008"],
     "confidence":"medium"
   },
   "confidence_map": [
@@ -29,7 +29,9 @@
     {"id":"C3","statement":"Rust integer substitution can break compatibility","evidence":["F002"],"confidence":"high"},
     {"id":"C4","statement":"Class-owned plans and coarse sequential execution are promising","evidence":["F001","F002","F006","F007"],"confidence":"medium"},
     {"id":"C5","statement":"Larger pure workloads are better parallel candidates","evidence":["F007"],"confidence":"medium"},
-    {"id":"C6","statement":"Specific speedup and full company compatibility remain unestablished","evidence":["F003","F004","F005"],"confidence":"low"}
+    {"id":"C6","statement":"Specific speedup and full company compatibility remain unestablished","evidence":["F003","F004","F005"],"confidence":"low"},
+    {"id":"C7","statement":"Validation dispatch is unconditional for fields reaching the validation stage; absent user options do not remove implicit checks","evidence":["F008"],"confidence":"high"},
+    {"id":"C8","statement":"A conservative precomputed work mask and proven conversion postconditions can target unnecessary dispatch","evidence":["F008"],"confidence":"medium"}
   ],
   "unknowns": [
     {"id":"U1","question":"Which deployed version and company ORM corpus define compatibility?","ask_user":true,"answer":null},
@@ -38,5 +40,5 @@
   ],
   "recommended_next_command":{"command":"sdd-brainstorm","rationale":"Baseline ownership and execution-boundary choices need discussion before a scoped specification."},
   "overall_confidence":"medium",
-  "meta":{"findings_used":["F001","F002","F003","F004","F005","F006","F007"],"findings_unused":[],"notes":"Native internals unprofiled; no implementation or speedup claimed. User parallelism suggestion included."}
+  "meta":{"findings_used":["F001","F002","F003","F004","F005","F006","F007","F008"],"findings_unused":[],"notes":"Native internals unprofiled; no implementation or speedup claimed. User parallelism and loop-level gating suggestions included. The reported 220000 calls and approximately 15 microseconds are user-provided; safe removable work remains to be measured."}
 }

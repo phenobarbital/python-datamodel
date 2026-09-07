@@ -3,7 +3,7 @@ type: feature
 base_branch: dev
 id: FEAT-2
 slug: compatible-model-performance
-status: review
+status: approved
 isolation: per-spec
 source: sdd/proposals/compatible-model-performance.proposal.md
 research_state: sdd/state/FEAT-002/
@@ -364,10 +364,10 @@ No dependency upgrade is required to begin M1–M3. Pin actual resolved versions
 - [x] Compatibility requirement — user: “we need to preserve the complete backward compatibility with current codebase.” Applied to G1, the differential corpus and AC2/AC4/AC7/AC12.
 - [x] Rust/parallelism exploration — user: “maybe one aggresive idea is migrating _validation_ to rust and executes the validation in parallel?” Included as M5–M6; no automatic promotion is inferred.
 - [x] Structural refactor — user: “Gating that call at the loop on a precomputed per-field flag is where the remaining ~15 µs lives, we need to also do some refactor for optimization there.” Included as the first production optimization, M2–M3, with the estimate retained as unverified attribution.
-- [ ] Which deployed version/commit and company ORM model/test corpus define compatibility? — Owner: Jesus Lara/company maintainers. Engineering reference specified in §1; blocks company release certification, not initial harness/gate implementation.
-- [ ] Which workloads and latency/throughput targets have business priority? — Owner: Jesus Lara. Current review proposal prioritizes constructor/ORM hydration; quantitative engineering targets are AC3/AC5/AC6.
-- [ ] Which deployment Python/platform combinations must support acceleration? — Owner: release maintainer. Preserve the current supported matrix and integrate FEAT-001 coverage; certify actual company platforms before rollout.
-- [ ] What release number and rollout date should carry the compatible Cython optimization? — Owner: release maintainer. Does not affect implementation architecture or authorize a version bump here.
+- [x] Which deployed version/commit and company ORM model/test corpus define compatibility? — Owner: Jesus Lara/company maintainers. Engineering reference specified in §1; blocks company release certification, not initial harness/gate implementation.: schema examples in examples/ folder and asyncdb.models (that uses under-the-hood python-datamodel) requires strict compat.
+- [x] Which workloads and latency/throughput targets have business priority? — Owner: Jesus Lara. Current review proposal prioritizes constructor/ORM hydration; quantitative engineering targets are AC3/AC5/AC6: The idea is not be a "pydantic" equivalent, is preserve current compatibility with asyncdb.models but adding speed up improvement.
+- [x] Which deployment Python/platform combinations must support acceleration? — Owner: release maintainer. Preserve the current supported matrix and integrate FEAT-001 coverage; certify actual company platforms before rollout: yes, all in FEAT-001 matrix.
+- [x] What release number and rollout date should carry the compatible Cython optimization? — Owner: release maintainer. Does not affect implementation architecture or authorize a version bump here: 0.11.0 will be released with these changes.
 
 ## Revision History
 
