@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "feat_id": "FEAT-001",
-  "phase": "proposal_drafted",
+  "phase": "committed",
   "started_at": "2026-09-07T21:25:00Z",
   "updated_at": "2026-09-07T21:40:00Z",
   "mode": "enrichment",
@@ -19,7 +19,7 @@
     "synthesis": {"status": "complete", "overall_confidence": "medium", "claims": {"high": 5, "medium": 2, "low": 1}, "unknowns": 4, "lint": "pass", "lint_notes": "All localization/constraint paths trace to finding citations; overall_confidence bounded to medium by C6/C7."},
     "review_gate": {"status": "auto_approved", "note": "Unattended run; user validation deferred to proposal status=discussion."},
     "qa": {"status": "skipped", "reason": "unattended run; 4 unknowns recorded as unresolved in proposal §5", "questions_total": 4, "questions_answered": 0},
-    "output": {"proposal_path": "sdd/proposals/new-infra-spec-uvloop-py314-windows.proposal.md", "commit_sha": null}
+    "output": {"proposal_path": "sdd/proposals/new-infra-spec-uvloop-py314-windows.proposal.md", "commit_sha": "b3719cd"}
   },
   "errors": [],
   "resume_hint": {"next_phase": "committed", "next_action": "commit proposal + state; then answer U1-U4 and run /sdd-spec FEAT-001"}
