@@ -2,7 +2,7 @@
 requires = [
     "setuptools>=74.0.0",
     "setuptools_scm[toml]>=8.0",
-    "Cython>=3.0.11",
+    "Cython>=3.2.8",
     "wheel>=0.44.0",
 ]
 build-backend = "setuptools.build_meta"
@@ -41,7 +41,6 @@ classifiers = [
 
 dependencies = [
     "numpy>=1.26.4",
-    "uvloop>=0.21.0; sys_platform != 'win32'",
     "faust-cchardet>=2.1.19",
     "ciso8601>=2.3.2",
     "objectpath>=0.6.1",
@@ -55,6 +54,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+uvloop = [
+    "uvloop>=0.21.0; sys_platform != 'win32'",
+]
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
@@ -62,7 +64,7 @@ dev = [
     "ruff>=0.6.0",
     "mypy>=1.0",
     "maturin>=1.7,<2.0",
-    "Cython>=3.0.11",
+    "Cython>=3.2.8",
     "setuptools>=74.0.0",
     "pydantic>=2.0",
     "PyYAML>=6.0",
@@ -78,7 +80,7 @@ Funding = "https://paypal.me/phenobarbital"
 
 [tool.setuptools]
 license-files = ["LICENSE"]
-packages = ["datamodel"]
+packages = ["datamodel", "datamodel.libs"]
 include-package-data = true
 
 [tool.setuptools.package-data]
