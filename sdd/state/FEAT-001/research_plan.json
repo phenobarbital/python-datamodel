@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "feat_id": "FEAT-001",
+  "mode_detected": "enrichment",
+  "mode_rationale": "Source describes infrastructure additions (optional dep, new build target, new platform) with no failure/negation language.",
+  "wiki_available": false,
+  "budget_profile": "default",
+  "budget": {"files_read": 40, "grep_calls": 25, "git_calls": 10, "max_depth": 2, "max_wall_seconds": 300},
+  "queries": [
+    {"id": "Q001", "type": "grep", "priority": 1, "intent": "Locate every uvloop reference (code, build config, docs)", "params": {"pattern": "uvloop", "paths": ["."], "exclude": [".venv", ".git", "dist"]}},
+    {"id": "Q002", "type": "read", "priority": 1, "intent": "Inspect declared dependencies, python_requires, classifiers, package-data", "params": {"path": "pyproject.toml"}},
+    {"id": "Q003", "type": "read", "priority": 1, "intent": "Inspect Cython extension build flags for Windows/MSVC portability", "params": {"path": "setup.py"}},
+    {"id": "Q004", "type": "read", "priority": 1, "intent": "Inspect release workflow: OS matrix, Python matrix, cibuildwheel config", "params": {"path": ".github/workflows/release.yml"}},
+    {"id": "Q005", "type": "grep", "priority": 1, "intent": "Find where an asyncio event loop is created/configured (candidate site for uvloop auto-use)", "params": {"pattern": "set_event_loop_policy|get_event_loop|new_event_loop|EventLoopPolicy|asyncio\\.run|import asyncio", "paths": ["datamodel/"]}},
+    {"id": "Q006", "type": "read", "priority": 2, "intent": "Check how the Rust extension is loaded and whether it degrades gracefully (Windows fallback)", "params": {"path": "datamodel/rs_parsers/__init__.py"}},
+    {"id": "Q007", "type": "read", "priority": 2, "intent": "Inspect Rust workspace + maturin config (PyO3 version for 3.14, platform cfg)", "params": {"paths": ["rust/Cargo.toml", "rust/rs_parsers/Cargo.toml", "rust/rs_parsers/pyproject.toml"]}},
+    {"id": "Q008", "type": "git_log", "priority": 2, "intent": "Recent history on build/CI config", "params": {"paths": ["pyproject.toml", ".github/workflows/release.yml", "setup.py", "rust/", "datamodel/rs_parsers/"], "since": "180 days"}},
+    {"id": "Q009", "type": "read", "priority": 2, "intent": "Read the prior uv + Python 3.14 migration plan to avoid duplicating scope", "params": {"path": "docs/superpowers/plans/2026-08-07-migrate-uv-python314.md"}},
+    {"id": "Q010", "type": "git_log", "priority": 3, "intent": "State of the migrate-uv-python314 worktree/branch relative to main", "params": {"cmd": "git worktree list; git rev-list --count"}},
+    {"id": "Q011", "type": "grep", "priority": 2, "intent": "Resolved versions of build-critical deps in uv.lock (Cython/uvloop/numpy for 3.14 support)", "params": {"pattern": "^name = \"(cython|uvloop|numpy|asyncpg|msgspec|orjson|ciso8601|faust-cchardet|psycopg)\"$", "paths": ["uv.lock"]}},
+    {"id": "Q012", "type": "grep", "priority": 2, "intent": "Test suite event loop usage and pytest config (asyncio mode, warnings)", "params": {"pattern": "uvloop|event_loop|asyncio", "paths": ["tests/", "pytest.ini", "pyproject.toml"]}},
+    {"id": "Q013", "type": "grep", "priority": 2, "intent": "Existing platform-conditional code (sys.platform/os.name/win32) and C++ stdlib usage in .pyx", "params": {"pattern": "sys\\.platform|platform\\.system|os\\.name|win32|libcpp", "paths": ["datamodel/", "setup.py"]}},
+    {"id": "Q014", "type": "tree", "priority": 3, "intent": "CI surface: other workflows, tox config, Makefile targets", "params": {"paths": [".github/", "tox.ini", "Makefile"]}},
+    {"id": "Q015", "type": "grep", "priority": 3, "intent": "User-facing docs mentioning uvloop, Windows, install instructions", "params": {"pattern": "uvloop|windows|pip install", "paths": ["README.md", "INSTALL.md", "CHANGELOG.md", "docs/"]}}
+  ]
+}
