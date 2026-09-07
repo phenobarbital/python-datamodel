@@ -13,7 +13,7 @@
       "title": "Add the optional uvloop helper and packaging constraints",
       "feature_id": "FEAT-001",
       "feature": "new-infra-spec-uvloop-py314-windows",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "M",
       "depends_on": [],
@@ -22,8 +22,9 @@
       "assigned_to": "unassigned",
       "created_at": "2026-09-08T00:00:00+00:00",
       "updated_at": "2026-09-08T00:00:00+00:00",
-      "file": "sdd/tasks/active/TASK-1-uvloop-packaging-helper.md",
-      "started_at": "2026-09-07T22:33:27+00:00"
+      "file": "sdd/tasks/completed/TASK-1-uvloop-packaging-helper.md",
+      "started_at": "2026-09-07T22:33:27+00:00",
+      "completed_at": "2026-09-07T22:36:20+00:00"
     },
     {
       "id": "TASK-2",
