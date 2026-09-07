@@ -11,7 +11,7 @@ base_branch: dev
 **Feature ID**: FEAT-001
 **Date**: 2026-09-07
 **Author**: Jesus Lara (spec drafted by Claude from `sdd/proposals/new-infra-spec-uvloop-py314-windows.proposal.md`)
-**Status**: draft
+**Status**: approved
 **Target version**: 0.11.0 (current `datamodel/version.py` is `0.10.21`; a dependency removal and a new platform justify a minor bump)
 **Proposal**: `sdd/proposals/new-infra-spec-uvloop-py314-windows.proposal.md` · research audit `sdd/state/FEAT-001/`
 
@@ -77,7 +77,10 @@ Three independent workstreams touch three surfaces.
 **Packaging (uvloop).** `uvloop` moves from `dependencies` to a new
 `[project.optional-dependencies].uvloop` extra, keeping the
 `sys_platform != 'win32'` marker so the extra is a harmless no-op on Windows.
-A new pure-Python module `datamodel/libs/uvloop.py` mirrors the optional-import
+Because the current setuptools configuration explicitly packages only
+`datamodel`, the change also includes `datamodel.libs` in the wheel package
+list; otherwise the helper would work from a checkout but be absent from
+installed wheels. A new pure-Python module `datamodel/libs/uvloop.py` mirrors the optional-import
 pattern of `datamodel/rs_parsers/__init__.py`: a `try/except ImportError` sets
 `HAS_UVLOOP`, and `install_uvloop()` installs the uvloop event-loop policy and
 returns `True`, or returns `False` without raising when uvloop is unavailable
@@ -96,7 +99,10 @@ per-platform pre-build hooks. The Rust extension staging (build wheel with
 maturin, extract `_rs_parsers*.so|.pyd` into `datamodel/rs_parsers/`) moves
 from an inline shell one-liner into a small cross-platform Python script,
 `scripts/stage_rust_ext.py`, invoked by both `CIBW_BEFORE_BUILD_LINUX` and
-`CIBW_BEFORE_BUILD_WINDOWS` and by the Makefile. A `CIBW_TEST_COMMAND` imports
+`CIBW_BEFORE_BUILD_WINDOWS` and by the Makefile. The script has an executable
+CLI entrypoint, accepts the target interpreter and optional Linux
+`--manylinux off` policy explicitly, and preserves the current Linux build
+behavior while allowing Windows to omit that flag. A `CIBW_TEST_COMMAND` imports
 `datamodel.rs_parsers` and asserts `HAS_RUST is True` inside every built
 wheel; this is what enforces G4 on both platforms. Artifact names become
 `wheels-<os>-py<version>` so the two OS legs no longer collide, and the deploy
@@ -131,14 +137,16 @@ release.yml  (on: release created | workflow_dispatch)
 |---|---|---|
 | `pyproject.toml` `[project].dependencies` (lines 42-55) | modifies | drop `uvloop` line 44 |
 | `pyproject.toml` `[project.optional-dependencies]` (line 57) | extends | add `uvloop = [...]` extra next to `dev` |
-| `pyproject.toml` `[build-system].requires` (lines 2-7) | modifies | raise `Cython>=3.0.11` to a 3.14-capable floor (`>=3.1.0`) |
+| `pyproject.toml` `[build-system].requires` (lines 2-7) | modifies | raise `Cython>=3.0.11` to the verified 3.14-capable floor (`>=3.2.8`) |
+| `pyproject.toml` `[project.optional-dependencies].dev` (lines 58-69) | modifies | align the development Cython floor at `>=3.2.8` |
+| `pyproject.toml` `[tool.setuptools].packages` (lines 79-82) | modifies | include `datamodel.libs` so `datamodel.libs.uvloop` is shipped in wheels |
 | `datamodel/libs/__init__.py` (line 1) | untouched | helper lives in `datamodel.libs.uvloop`; not re-exported to avoid eager import |
 | `datamodel/rs_parsers/__init__.py` `HAS_RUST` (lines 8-30) | pattern reuse + CI assertion | template for `HAS_UVLOOP`; `HAS_RUST` is asserted by `CIBW_TEST_COMMAND` |
 | `setup.py` `COMPILE_ARGS` / `EXTRA_LINK_ARGS` (lines 12-13) | modifies | platform-conditional values |
 | `.github/workflows/release.yml` `jobs.build` (lines 8-64) | restructures | os matrix, per-OS CIBW env, artifact names, staging script |
 | `.github/workflows/release.yml` `jobs.deploy` (lines 66-116) | modifies | `pattern: wheels-*` |
 | `Makefile` `stage-rust` (lines 57-66) | modifies | delegate to `scripts/stage_rust_ext.py` (handles `.pyd`) |
-| `README.md` (line 22), `INSTALL.md` (line 17), `CHANGELOG.md` | documents | extra, Windows wheels, 3.14; fix stale `setuptools-rust` |
+| `README.md` (line 22), `INSTALL.md` (line 17), `CHANGELOG.md` (new) | documents | extra, Windows wheels, 3.14; fix stale `setuptools-rust` |
 | `datamodel/version.py` (line 9) | bumps | `0.10.21` → `0.11.0` |
 
 ### Data Models
@@ -165,10 +173,16 @@ def install_uvloop() -> bool:
 # scripts/stage_rust_ext.py  (new, build tooling — not part of the wheel)
 def main(manifest: str = "rust/rs_parsers/Cargo.toml",
          dest: str = "datamodel/rs_parsers",
-         out_dir: str = "rust/target/wheels") -> int:
+         out_dir: str = "rust/target/wheels",
+         interpreter: str = "python",
+         manylinux: str | None = None) -> int:
     """Run `maturin build --release` for the manifest, then copy every
     `_rs_parsers*.so` / `_rs_parsers*.pyd` found in the newest wheel into
-    `dest`. Exit non-zero if maturin fails or no extension file was found."""
+    `dest`. Pass `--interpreter interpreter` to maturin and pass
+    `--manylinux manylinux` only when requested. Exit non-zero if maturin fails
+    or no extension file was found. When run as a script, execute
+    `raise SystemExit(main())` and expose CLI options for all non-default paths
+    and build-policy arguments."""
 ```
 
 Command-line surface added to the package: `pip install python-datamodel[uvloop]`.
@@ -181,7 +195,9 @@ Command-line surface added to the package: `pip install python-datamodel[uvloop]
 - **Path**: `pyproject.toml`, `datamodel/libs/uvloop.py` (new)
 - **Responsibility**: remove the hard dependency; add the `uvloop` extra with the
   `sys_platform != 'win32'` marker; implement `HAS_UVLOOP` and
-  `install_uvloop()` following the `rs_parsers` optional-import pattern.
+  `install_uvloop()` following the `rs_parsers` optional-import pattern; add
+  `datamodel.libs` to the setuptools package list so the helper is present in
+  built wheels; align both Cython constraints at `>=3.2.8`.
   Regenerate `uv.lock` (`uv lock`).
 - **Depends on**: nothing.
 
@@ -208,8 +224,11 @@ Command-line surface added to the package: `pip install python-datamodel[uvloop]
 - **Responsibility**: replace the inline `python3 -c "import zipfile,..."`
   one-liner in `release.yml` and the `find … '_rs_parsers*.so'` in the Makefile
   with one script that handles both `.so` and `.pyd`, uses `tempfile` instead
-  of `/tmp/_rs`, and exits non-zero when nothing was staged. Makefile
-  `stage-rust` calls it.
+  of `/tmp/_rs`, preserves `--manylinux off` for Linux and passes the active
+  target interpreter explicitly, and exits non-zero when nothing was staged.
+  The script's `__main__` entrypoint must expose these options. Makefile
+  `stage-rust` calls it with the local interpreter and no Linux-only manylinux
+  flag.
 - **Depends on**: nothing (Module 5 consumes it).
 
 ### Module 5: Release workflow — OS matrix, Windows leg, 3.14 verification
@@ -220,9 +239,9 @@ Command-line surface added to the package: `pip install python-datamodel[uvloop]
   `cibuildwheel --output-dir dist` (no `--platform`);
   `CIBW_ARCHS_LINUX: x86_64`, `CIBW_ARCHS_WINDOWS: AMD64`;
   `CIBW_BEFORE_BUILD_LINUX` (rustup via curl as today, then
-  `pip install maturin && python scripts/stage_rust_ext.py`);
+  `pip install maturin && python scripts/stage_rust_ext.py --manylinux off`);
   `CIBW_BEFORE_BUILD_WINDOWS` (`pip install maturin && python scripts/stage_rust_ext.py`,
-  relying on the runner's preinstalled MSVC Rust toolchain);
+  relying on the runner's preinstalled MSVC Rust toolchain; no `--manylinux`);
   `CIBW_TEST_COMMAND: python -c "import datamodel.rs_parsers as r; assert r.HAS_RUST"`;
   artifact `name: wheels-${{ matrix.os }}-py${{ matrix.python-version }}`;
   deploy `pattern: wheels-*`; deploy step listing `dist/` must show both
@@ -231,7 +250,7 @@ Command-line surface added to the package: `pip install python-datamodel[uvloop]
 - **Depends on**: Module 3, Module 4.
 
 ### Module 6: Docs, version, changelog
-- **Path**: `README.md`, `INSTALL.md`, `CHANGELOG.md`, `datamodel/version.py`
+- **Path**: `README.md`, `INSTALL.md`, `CHANGELOG.md` (new), `datamodel/version.py`
 - **Responsibility**: document `pip install python-datamodel[uvloop]` and the
   `install_uvloop()` call; state Windows (`win_amd64`) and Python 3.14
   support; replace the stale `setuptools-rust` instruction with maturin;
@@ -253,6 +272,7 @@ Command-line surface added to the package: `pip install python-datamodel[uvloop]
 | `test_import_datamodel_does_not_import_uvloop` | 2 | Subprocess `python -c "import datamodel, sys; assert 'uvloop' not in sys.modules"` exits 0 |
 | `test_setup_flags_per_platform` | 3 | Import `setup.py` flag selection with `sys.platform` patched to `win32` / `linux`; assert `/O2` + no link args vs `-O3` + `-lstdc++` (only if flag selection is factored into an importable function; otherwise verified by CI build) |
 | `test_stage_rust_ext_copies_pyd_and_so` | 4 | Given a fake wheel zip containing `_rs_parsers.cp312-win_amd64.pyd` (and one with `.so`), the script copies it into a temp `dest` and returns 0; returns non-zero for a wheel with neither |
+| `test_stage_rust_ext_cli_invokes_main` | 4 | Running the script as a subprocess exercises the `__main__` entrypoint and forwards manifest, output, interpreter, and manylinux options |
 
 ### Integration Tests
 | Test | Description |
@@ -305,16 +325,22 @@ module unless a conftest is introduced by the implementer.
   unique per (os, python).
 - [ ] AC9. `scripts/stage_rust_ext.py` is the single staging path used by
   `CIBW_BEFORE_BUILD_LINUX`, `CIBW_BEFORE_BUILD_WINDOWS` and `make stage-rust`;
-  it handles `.so` and `.pyd` and exits non-zero when nothing is staged.
-- [ ] AC10. `[build-system].requires` pins `Cython>=3.1.0` (or later) and
-  `uv.lock` is regenerated and committed.
+  it handles `.so` and `.pyd`, exposes a working CLI entrypoint, forwards the
+  target interpreter, preserves `--manylinux off` on Linux, and exits non-zero
+  when nothing is staged.
+- [ ] AC10. Both `[build-system].requires` and the `dev` extra pin
+  `Cython>=3.2.8`, and `uv.lock` is regenerated and committed.
 - [ ] AC11. `pytest tests/ -v` passes locally (3.12) with the new
   `tests/test_uvloop_helper.py`; uvloop-dependent tests skip cleanly when
   uvloop is absent.
 - [ ] AC12. README, INSTALL and CHANGELOG document the extra, Windows wheels
-  and 3.14; INSTALL no longer mentions `setuptools-rust`; version is `0.11.0`.
+  and 3.14; `CHANGELOG.md` is created with an entry for 0.11.0; INSTALL no
+  longer mentions `setuptools-rust`; version is `0.11.0`.
 - [ ] AC13. No change to the public API of `datamodel` other than the new
   `datamodel.libs.uvloop` module.
+- [ ] AC14. A built wheel contains `datamodel/libs/__init__.py` and
+  `datamodel/libs/uvloop.py`, and a fresh wheel installation can import
+  `datamodel.libs.uvloop`.
 
 ---
 
@@ -356,12 +382,13 @@ EXTRA_LINK_ARGS = ["-lstdc++"]            # line 13
 ```toml
 # pyproject.toml
 [build-system]                            # line 1
-requires = [ ... "Cython>=3.0.11", ... ]  # lines 2-7 (Cython at line 5)
+requires = [ ... "Cython>=3.0.11", ... ]  # lines 2-7 before this feature (Cython at line 5)
 requires-python = ">=3.10.0"              # line 19
-"Programming Language :: Python :: 3.14"  # line 31 (already present)
+"Programming Language :: Python :: 3.14"  # line 33 (already present)
 dependencies = [ ... ]                    # lines 42-55; uvloop at line 44
 [project.optional-dependencies]           # line 57
-dev = [ ... ]                             # lines 58-69 (pytest, pytest-asyncio, maturin>=1.7,<2.0, Cython>=3.0.11 at 65)
+dev = [ ... ]                             # lines 58-69 before this feature (pytest, pytest-asyncio, maturin>=1.7,<2.0, Cython>=3.0.11 at 65)
+packages = ["datamodel"]                  # line 81; Module 1 adds "datamodel.libs"
 "datamodel.rs_parsers" = ["*.so", "*.pyd"] # package-data, line ~90
 [tool.pytest.ini_options] filterwarnings = ["error"]  # lines ~111-122 — INERT: pytest.ini takes precedence (F012)
 [tool.uv] link-mode = "copy"              # line 141
@@ -407,13 +434,14 @@ filterwarnings = ignore::DeprecationWarning
 |---|---|---|---|
 | `datamodel/libs/uvloop.py` | `datamodel.libs` package | new sibling module; **not** added to `__init__.py` exports | `datamodel/libs/__init__.py:1` |
 | `pyproject` extra `uvloop` | `[project.optional-dependencies]` | new key beside `dev` | `pyproject.toml:57-69` |
-| `scripts/stage_rust_ext.py` | `Makefile stage-rust`, `release.yml CIBW_BEFORE_BUILD_*` | subprocess `maturin build --release --manifest-path rust/rs_parsers/Cargo.toml --out rust/target/wheels` then copy into `datamodel/rs_parsers/` | `Makefile:57-66`, `release.yml:46-54` |
+| `scripts/stage_rust_ext.py` | `Makefile stage-rust`, `release.yml CIBW_BEFORE_BUILD_*` | subprocess `maturin build --release --interpreter <target> --manifest-path rust/rs_parsers/Cargo.toml --out rust/target/wheels`, with `--manylinux off` on Linux only, then copy into `datamodel/rs_parsers/` | `Makefile:57-66`, `release.yml:46-54` |
 | `CIBW_TEST_COMMAND` | `datamodel.rs_parsers.HAS_RUST` | `python -c` assertion inside each wheel's test env | `datamodel/rs_parsers/__init__.py:8,28` |
 | `setup.py` platform flags | ten `Extension(...)` entries | `extra_compile_args` / `extra_link_args` | `setup.py:12-13, 15-94` |
 
 ### Does NOT Exist (Anti-Hallucination)
 - ~~`datamodel/libs/uvloop.py`~~, ~~`datamodel.libs.uvloop.install_uvloop`~~, ~~`HAS_UVLOOP`~~ — to be created by Module 1; no `uvloop` import exists anywhere in `datamodel/` or `tests/` today.
 - ~~`scripts/stage_rust_ext.py`~~ — to be created by Module 4. `scripts/` currently holds only `scripts/sdd/` tooling.
+- ~~`CHANGELOG.md`~~ — does not exist yet; Module 6 creates the initial changelog with the 0.11.0 entry.
 - ~~`tests/conftest.py`~~, ~~`tests/unit/`~~, ~~`tests/integration/`~~ — the suite is flat under `tests/` (`test_*.py`); the template's `pytest tests/unit/` commands do not apply.
 - ~~`CIBW_BEFORE_BUILD_WINDOWS`~~, ~~`CIBW_ARCHS_WINDOWS`~~, ~~`CIBW_TEST_COMMAND`~~, ~~`workflow_dispatch`~~ — none present in `release.yml` yet.
 - ~~`.github/workflows/ci.yml`~~ or any PR/test workflow — only `release.yml` and `dependabot.yml` exist.
@@ -472,8 +500,8 @@ filterwarnings = ignore::DeprecationWarning
   `/tmp/_rs` and filters `.endswith('.so')`; on Windows the extension is
   `_rs_parsers.cp3XX-win_amd64.pyd`. `scripts/stage_rust_ext.py` must match
   `_rs_parsers*` with either suffix and use `tempfile.mkdtemp()`.
-- **`git status` noise**: the staged `.so`/`.pyd` files are gitignored (`*.so`)
-  — confirm `*.pyd` is also ignored or add it to `.gitignore`.
+- **`git status` noise**: add `*.pyd` beside `*.so` in `.gitignore` so local
+  Windows staging artifacts do not appear as untracked files.
 - **Stale worktree**: `.claude/worktrees/migrate-uv-python314` is fully merged
   and 8 commits behind (F010); remove it (`/remove-worktree`) before creating
   the FEAT-001 worktree to avoid duplicate grep hits.
@@ -485,7 +513,7 @@ filterwarnings = ignore::DeprecationWarning
 | Package | Version | Reason |
 |---|---|---|
 | `uvloop` | `>=0.21.0; sys_platform != 'win32'` | moves to optional extra `uvloop` (0.22.1 currently locked) |
-| `Cython` | `>=3.1.0` (build-system) | first line with Python 3.14 support; lock already at 3.2.9 |
+| `Cython` | `>=3.2.8` (build-system and dev extra) | verified Python 3.14-compatible floor; lock already at 3.2.9 |
 | `maturin` | `>=1.7,<2.0` | unchanged; builds `rs_parsers` on both OS legs |
 | `cibuildwheel` | latest (CI only) | Windows + manylinux wheels |
 | `pyo3` (Rust) | `0.29` | unchanged; already 3.14-capable |
@@ -502,9 +530,9 @@ filterwarnings = ignore::DeprecationWarning
 - [x] Should uvloop be exposed as a pip extra, and under what name? — *Resolved in proposal*: yes, `python-datamodel[uvloop]`. (→ §2 Integration Points, AC1)
 - [x] Must the Rust `.pyd` ship in Windows wheels? — *Resolved in proposal*: yes, ship the Rust extension for Windows; the release job must fail if the Rust build fails. (→ §3 Module 5 `CIBW_TEST_COMMAND`, AC7)
 - [x] Add macOS wheels while the matrix is being restructured? — *Resolved in proposal*: Windows only; matrix stays manylinux x86_64 + win_amd64. (→ §1 Non-Goals, AC6)
-- [ ] Should `install_uvloop()` also be re-exported from `datamodel.libs` for discoverability, or stay reachable only as `datamodel.libs.uvloop.install_uvloop`? Default: stay in the submodule (keeps `datamodel.libs` import cheap). — *Owner: Jesus* (decide during implementation; non-blocking)
-- [ ] Should `*.pyd` be added to `.gitignore` alongside `*.so`? Default: yes. — *Owner: implementer* (non-blocking)
-- [ ] Should the `workflow_dispatch` dry run also upload wheels as artifacts for manual inspection without publishing? Default: yes, deploy job stays gated on `github.event_name == 'release'`. — *Owner: implementer* (non-blocking)
+- [x] Should `install_uvloop()` also be re-exported from `datamodel.libs` for discoverability, or stay reachable only as `datamodel.libs.uvloop.install_uvloop`? — *Resolved by default*: stay in the submodule to keep `datamodel.libs` imports cheap.
+- [x] Should `*.pyd` be added to `.gitignore` alongside `*.so`? — *Resolved by default*: yes; add the ignore rule in Module 4.
+- [x] Should the `workflow_dispatch` dry run also upload wheels as artifacts without publishing? — *Resolved by default*: yes; keep deploy gated on `github.event_name == 'release'`.
 
 ---
 
@@ -530,3 +558,4 @@ filterwarnings = ignore::DeprecationWarning
 | Version | Date | Author | Change |
 |---|---|---|---|
 | 0.1 | 2026-09-07 | Claude (for Jesus Lara) | Initial draft from FEAT-001 proposal; all four proposal unknowns carried forward as resolved |
+| 0.2 | 2026-09-08 | Jesus Lara | Addressed review findings; resolved implementation defaults; marked approved |
