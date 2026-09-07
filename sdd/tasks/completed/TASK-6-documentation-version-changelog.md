@@ -139,7 +139,20 @@ python -c 'from datamodel.version import __version__; assert __version__ == "0.1
 
 ## Completion Note
 
-**Completed by**: <session or agent ID>
-**Date**: YYYY-MM-DD
-**Notes**: <implementation and verification summary>
-**Deviations from spec**: none | describe if any
+**Completed by**: sdd-worker (Claude)
+**Date**: 2026-09-08
+**Notes**: Bumped `datamodel/version.py` `__version__` to `0.11.0`. Updated
+`README.md` with supported-Python/platform wheel coverage and a new
+"Optional uvloop acceleration" section documenting the `[uvloop]` extra and
+the explicit `install_uvloop()` call. Replaced the stale
+`setuptools-rust` pip install line in `INSTALL.md` with a Maturin-based
+`make stage-rust` instruction. All grep checks from the task's Test
+Specification pass, and `__version__ == "0.11.0"`.
+**Deviations from spec**: The task's Codebase Contract listed
+`CHANGELOG.md` under "Does NOT Exist", but the file already existed at
+HEAD (pre-dating this feature, with entries up to 0.0.15) — this was a
+stale contract entry. Rather than overwrite project history, a new
+`## [0.11.0]` section was inserted above the existing `## [0.0.15]` entry,
+preserving the file's original preamble and all prior entries; this still
+satisfies AC12 ("CHANGELOG.md exists with a 0.11.0 entry and breaking
+install note").

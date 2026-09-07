@@ -113,7 +113,7 @@
       "title": "Document the install path and publish version metadata",
       "feature_id": "FEAT-001",
       "feature": "new-infra-spec-uvloop-py314-windows",
-      "status": "in-progress",
+      "status": "done",
       "priority": "medium",
       "effort": "M",
       "depends_on": [
@@ -125,8 +125,9 @@
       "assigned_to": "unassigned",
       "created_at": "2026-09-08T00:00:00+00:00",
       "updated_at": "2026-09-08T00:00:00+00:00",
-      "file": "sdd/tasks/active/TASK-6-documentation-version-changelog.md",
-      "started_at": "2026-09-07T22:33:27+00:00"
+      "file": "sdd/tasks/completed/TASK-6-documentation-version-changelog.md",
+      "started_at": "2026-09-07T22:33:27+00:00",
+      "completed_at": "2026-09-07T22:45:55+00:00"
     }
   ]
 }
