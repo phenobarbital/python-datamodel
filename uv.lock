@@ -1323,7 +1323,6 @@ dependencies = [
     { name = "python-dateutil" },
     { name = "python-slugify" },
     { name = "typing-extensions" },
-    { name = "uvloop", marker = "sys_platform != 'win32'" },
 ]
 
 [package.optional-dependencies]
@@ -1339,13 +1338,16 @@ dev = [
     { name = "ruff" },
     { name = "setuptools" },
 ]
+uvloop = [
+    { name = "uvloop", marker = "sys_platform != 'win32'" },
+]
 
 [package.metadata]
 requires-dist = [
     { name = "asyncpg", specifier = ">=0.29.0" },
     { name = "ciso8601", specifier = ">=2.3.2" },
     { name = "coverage", marker = "extra == 'dev'", specifier = ">=7.0" },
-    { name = "cython", marker = "extra == 'dev'", specifier = ">=3.0.11" },
+    { name = "cython", marker = "extra == 'dev'", specifier = ">=3.2.8" },
     { name = "faust-cchardet", specifier = ">=2.1.19" },
     { name = "maturin", marker = "extra == 'dev'", specifier = ">=1.7,<2.0" },
     { name = "msgspec", specifier = ">=0.19.0" },
@@ -1363,9 +1365,9 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6.0" },
     { name = "setuptools", marker = "extra == 'dev'", specifier = ">=74.0.0" },
     { name = "typing-extensions", specifier = ">=4.9.0" },
-    { name = "uvloop", marker = "sys_platform != 'win32'", specifier = ">=0.21.0" },
+    { name = "uvloop", marker = "sys_platform != 'win32' and extra == 'uvloop'", specifier = ">=0.21.0" },
 ]
-provides-extras = ["dev"]
+provides-extras = ["uvloop", "dev"]
 
 [[package]]
 name = "python-dateutil"

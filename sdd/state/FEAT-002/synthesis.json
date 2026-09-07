@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0",
+  "feat_id": "FEAT-002",
+  "mode": "enrichment",
+  "summary_oneline": "Reuse model execution plans; evaluate sequential Rust and selective bulk parallelism with behavioral parity.",
+  "localization": [
+    {"path":"datamodel/abstract.py","symbol":"ModelMeta","evidence":["F001"]},
+    {"path":"datamodel/base.py","symbol":"BaseModel.__post_init__","evidence":["F001"]},
+    {"path":"datamodel/converters.pyx","symbol":"processing_fields","evidence":["F002"]},
+    {"path":"datamodel/validation.pyx","symbol":"_validate_constraints","evidence":["F007"]},
+    {"path":"datamodel/models.py","symbol":"json","evidence":["F004"]},
+    {"path":"rust/rs_core/src/lib.rs","symbol":"parse_datamodel","evidence":["F007"]}
+  ],
+  "constraints": [
+    {"statement":"Complete backward compatibility required; deployed baseline not yet identified","evidence":["F004","F005"]},
+    {"statement":"Dynamic fields and metadata prevent naive permanent schema snapshots","evidence":["F001"]},
+    {"statement":"Rust scalar implementations already differ from legacy numeric behavior","evidence":["F002"]},
+    {"statement":"Parallel work must preserve callback and exception ordering","evidence":["F007"]}
+  ],
+  "investigation": null,
+  "enrichment": {
+    "scope":"Differential baseline, loop-level validation gating using precomputed remaining work and proven conversion postconditions, class-owned execution plan, sequential Cython/Rust comparison, selective bulk parallelism and independent serialization experiment.",
+    "evidence":["F001","F002","F003","F004","F006","F007","F008"],
+    "confidence":"medium"
+  },
+  "confidence_map": [
+    {"id":"C1","statement":"Per-instance overhead remains despite existing caches","evidence":["F001","F002","F003"],"confidence":"high"},
+    {"id":"C2","statement":"Local benchmark reproduces the reported order of slowdown","evidence":["F003"],"confidence":"high"},
+    {"id":"C3","statement":"Rust integer substitution can break compatibility","evidence":["F002"],"confidence":"high"},
+    {"id":"C4","statement":"Class-owned plans and coarse sequential execution are promising","evidence":["F001","F002","F006","F007"],"confidence":"medium"},
+    {"id":"C5","statement":"Larger pure workloads are better parallel candidates","evidence":["F007"],"confidence":"medium"},
+    {"id":"C6","statement":"Specific speedup and full company compatibility remain unestablished","evidence":["F003","F004","F005"],"confidence":"low"},
+    {"id":"C7","statement":"Validation dispatch is unconditional for fields reaching the validation stage; absent user options do not remove implicit checks","evidence":["F008"],"confidence":"high"},
+    {"id":"C8","statement":"A conservative precomputed work mask and proven conversion postconditions can target unnecessary dispatch","evidence":["F008"],"confidence":"medium"}
+  ],
+  "unknowns": [
+    {"id":"U1","question":"Which deployed version and company ORM corpus define compatibility?","ask_user":true,"answer":null},
+    {"id":"U2","question":"Which workloads and performance targets have priority?","ask_user":false,"answer":null},
+    {"id":"U3","question":"Which Python/platform deployments require acceleration?","ask_user":false,"answer":null}
+  ],
+  "recommended_next_command":{"command":"sdd-brainstorm","rationale":"Baseline ownership and execution-boundary choices need discussion before a scoped specification."},
+  "overall_confidence":"medium",
+  "meta":{"findings_used":["F001","F002","F003","F004","F005","F006","F007","F008"],"findings_unused":[],"notes":"Native internals unprofiled; no implementation or speedup claimed. User parallelism and loop-level gating suggestions included. The reported 220000 calls and approximately 15 microseconds are user-provided; safe removable work remains to be measured."}
+}

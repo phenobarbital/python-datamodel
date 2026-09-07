@@ -1,0 +1,485 @@
+{
+  "schema_version": "1.0",
+  "feat_id": "FEAT-001",
+  "mode": "enrichment",
+  "summary_oneline": "Make uvloop an optional, lazily-imported speedup; finish the Python 3.14 build; add Windows wheels to release.yml",
+  "summary": "The request bundles three infrastructure changes. (1) uvloop is a hard runtime dependency on non-Windows platforms yet is never imported anywhere in the package, so it is pure install weight; the fix is to drop it from `dependencies`, expose it as an optional extra, and add a small helper that installs the uvloop policy only when the module is importable, mirroring the `HAS_RUST` fallback already used by `datamodel/rs_parsers/__init__.py`. (2) Python 3.14 is already present in classifiers, the release matrix (`cp314-*`), and the locked toolchain (Cython 3.2.9, PyO3 0.29); what remains is verifying the build end to end, tightening the Cython floor, and bumping Makefile/uv defaults. (3) Windows is blocked by two things only: GCC-specific flags in `setup.py` (`-O3`, `-lstdc++`) and a Linux-only cibuildwheel job in `release.yml` whose Rust pre-build step assumes bash, `/root/.cargo` and `.so` files. The Rust crate itself has no platform-specific code.",
+  "localization": [
+    {
+      "path": "pyproject.toml",
+      "symbol": "[project].dependencies",
+      "lines": "42-55",
+      "role": "remove uvloop hard dep; add [project.optional-dependencies].uvloop extra",
+      "evidence": [
+        "F001",
+        "F002"
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "pyproject.toml",
+      "symbol": "[build-system].requires",
+      "lines": "1-8",
+      "role": "raise Cython floor to a 3.14-capable release",
+      "evidence": [
+        "F002",
+        "F011"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "path": "datamodel/rs_parsers/__init__.py",
+      "symbol": "HAS_RUST",
+      "lines": "8-30",
+      "role": "pattern to replicate for optional uvloop import (new helper module)",
+      "evidence": [
+        "F006"
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "datamodel/validation.pyx",
+      "symbol": "asyncio usage",
+      "lines": "7,524",
+      "role": "only asyncio touchpoint; confirms no loop is created by the library",
+      "evidence": [
+        "F005"
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "setup.py",
+      "symbol": "COMPILE_ARGS / EXTRA_LINK_ARGS",
+      "lines": "12-13",
+      "role": "make flags compiler-conditional (MSVC vs GCC/Clang)",
+      "evidence": [
+        "F003",
+        "F013"
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "symbol": "jobs.build",
+      "lines": "8-64",
+      "role": "add os to matrix (ubuntu-latest, windows-latest), per-OS CIBW_BEFORE_BUILD, .pyd extraction, OS-qualified artifact names",
+      "evidence": [
+        "F004"
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "symbol": "jobs.deploy",
+      "lines": "66-116",
+      "role": "artifact download pattern must match new names",
+      "evidence": [
+        "F004"
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "Makefile",
+      "symbol": "stage-rust / PYTHON_VERSION",
+      "lines": "8-9,55-63",
+      "role": "copy *.pyd as well as *.so; consider 3.14 default",
+      "evidence": [
+        "F007"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "path": "rust/Cargo.toml",
+      "symbol": "[workspace.dependencies].pyo3",
+      "lines": "1-12",
+      "role": "already 0.29 (3.14-capable); no change expected",
+      "evidence": [
+        "F007"
+      ],
+      "confidence": "high"
+    },
+    {
+      "path": "tests/test_valid_callables.py",
+      "symbol": "event loop usage",
+      "lines": "38-40",
+      "role": "reference for a new skip-if-missing uvloop test",
+      "evidence": [
+        "F012"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "path": "README.md",
+      "symbol": "install section",
+      "lines": "22",
+      "role": "document the new extra and Windows support",
+      "evidence": [
+        "F015"
+      ],
+      "confidence": "medium"
+    }
+  ],
+  "constraints": [
+    {
+      "title": "uvloop has no call site",
+      "statement": "The package never imports uvloop or configures an event loop; 'automatic usage' must be a new, explicit helper, not a change to existing code.",
+      "implication": "Design decision needed on where the helper lives and whether it runs on import (see U1).",
+      "evidence": [
+        "F001",
+        "F005"
+      ],
+      "confidence": "high"
+    },
+    {
+      "title": "Library must not hijack the caller's loop policy",
+      "statement": "datamodel is a library consumed by other asyncio apps (asyncpg-based). Installing a global event loop policy at import time is a side effect that can break callers already using a different loop.",
+      "implication": "Prefer an opt-in function (e.g. `install_uvloop()`) plus a documented env-var or explicit call; never auto-run at `import datamodel`.",
+      "evidence": [
+        "F005",
+        "F002"
+      ],
+      "confidence": "medium"
+    },
+    {
+      "title": "GCC-only flags in setup.py",
+      "statement": "`-O3` and `-lstdc++` are passed unconditionally; MSVC rejects `-lstdc++`.",
+      "implication": "Flags must be selected per compiler (`sys.platform == 'win32'` → `/O2`, no libstdc++ link).",
+      "evidence": [
+        "F003",
+        "F013"
+      ],
+      "confidence": "high"
+    },
+    {
+      "title": "Rust pre-build step is bash/Linux-specific",
+      "statement": "CIBW_BEFORE_BUILD uses `curl | sh`, `/root/.cargo/bin`, `/tmp/_rs` and filters `.so` only.",
+      "implication": "Windows needs its own CIBW_BEFORE_BUILD_WINDOWS (rustup already present on GitHub runners) and `.pyd` extraction; package-data already accepts `*.pyd`.",
+      "evidence": [
+        "F004",
+        "F002",
+        "F007"
+      ],
+      "confidence": "high"
+    },
+    {
+      "title": "Artifact naming collision",
+      "statement": "Artifacts are named `wheels-py<version>`; a second OS in the matrix produces duplicate names.",
+      "implication": "Rename to `wheels-<os>-py<version>` and keep the `wheels-*` download pattern.",
+      "evidence": [
+        "F004"
+      ],
+      "confidence": "high"
+    },
+    {
+      "title": "3.14 is mostly done",
+      "statement": "Classifier, release matrix entry, PyO3 0.29 and Cython 3.2.9 are all in place; only verification and the `Cython>=3.0.11` floor remain.",
+      "implication": "Scope 3.14 work as 'finish and verify', not 'add'.",
+      "evidence": [
+        "F002",
+        "F004",
+        "F007",
+        "F011"
+      ],
+      "confidence": "high"
+    },
+    {
+      "title": "No PR-time CI",
+      "statement": "Only release.yml exists; a broken Windows or 3.14 build surfaces only when a release is cut.",
+      "implication": "Consider a lightweight build-only workflow on PR, or at least `workflow_dispatch` on release.yml for dry runs.",
+      "evidence": [
+        "F014"
+      ],
+      "confidence": "high"
+    },
+    {
+      "title": "Stale worktree",
+      "statement": "`.claude/worktrees/migrate-uv-python314` is fully merged and 8 commits behind main.",
+      "implication": "Remove it before starting a new worktree to avoid duplicate grep hits and confusion.",
+      "evidence": [
+        "F010"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "recent_history": [
+    {
+      "commit": "9ab4e63",
+      "date": "2026-08-28",
+      "author": "Jesus",
+      "message": "security: fix all Dependabot vulnerabilities",
+      "files": [
+        "rust/Cargo.toml",
+        "rust/Cargo.lock",
+        "rust/rs_parsers/src/lib.rs"
+      ],
+      "evidence": [
+        "F008"
+      ]
+    },
+    {
+      "commit": "f90ea81",
+      "date": "2026-08-07",
+      "author": "Jesus",
+      "message": "fix: Makefile develop ordering and missing Cython/setuptools",
+      "files": [
+        "Makefile",
+        "pyproject.toml"
+      ],
+      "evidence": [
+        "F008"
+      ]
+    },
+    {
+      "commit": "3d2ee73",
+      "date": "2026-08-07",
+      "author": "Jesus",
+      "message": "ci: update release workflow for maturin + uv + Python 3.14",
+      "files": [
+        ".github/workflows/release.yml"
+      ],
+      "evidence": [
+        "F008"
+      ]
+    },
+    {
+      "commit": "f6a863d",
+      "date": "2026-08-07",
+      "author": "Jesus",
+      "message": "build: update config for uv + maturin",
+      "files": [
+        "pyproject.toml",
+        "setup.py"
+      ],
+      "evidence": [
+        "F008"
+      ]
+    },
+    {
+      "commit": "a7fe091",
+      "date": "2026-06-19",
+      "author": "Jesus Lara",
+      "message": "fix: make uvloop a non-Windows-only dependency",
+      "files": [
+        "pyproject.toml"
+      ],
+      "evidence": [
+        "F008"
+      ]
+    }
+  ],
+  "scope": {
+    "whats_new": [
+      "`datamodel/libs/uvloop.py` (or equivalent) exposing `HAS_UVLOOP` and an explicit `install_uvloop()` that sets the uvloop event-loop policy only if the import succeeds and the platform is not Windows. No import-time side effect (U1).",
+      "`[project.optional-dependencies].uvloop` extra: `uvloop>=0.21.0; sys_platform != 'win32'` (U2).",
+      "A `windows-latest` leg in the release matrix producing cp310–cp314 win_amd64 wheels that MUST contain the Rust `_rs_parsers*.pyd`; the build job fails if maturin fails (U3).",
+      "A skip-if-missing pytest that exercises the uvloop helper."
+    ],
+    "what_changes": [
+      {
+        "path": "pyproject.toml",
+        "symbol": "[project].dependencies",
+        "change": "drop the uvloop line; add the extra; raise Cython build floor",
+        "evidence": [
+          "F002",
+          "F011"
+        ]
+      },
+      {
+        "path": "setup.py",
+        "symbol": "COMPILE_ARGS / EXTRA_LINK_ARGS",
+        "change": "select `/O2` on MSVC and drop `-lstdc++`; keep `-O3 -lstdc++` elsewhere",
+        "evidence": [
+          "F003"
+        ]
+      },
+      {
+        "path": ".github/workflows/release.yml",
+        "symbol": "jobs.build",
+        "change": "matrix over os × python; per-OS CIBW_BEFORE_BUILD; `.so`/`.pyd` extraction; `CIBW_ARCHS` per OS (x86_64 / AMD64); artifact names include os",
+        "evidence": [
+          "F004"
+        ]
+      },
+      {
+        "path": ".github/workflows/release.yml",
+        "symbol": "jobs.deploy",
+        "change": "download pattern `wheels-*`; sanity check that win_amd64 wheels exist",
+        "evidence": [
+          "F004"
+        ]
+      },
+      {
+        "path": "Makefile",
+        "symbol": "stage-rust",
+        "change": "copy `_rs_parsers*.so` **and** `_rs_parsers*.pyd`",
+        "evidence": [
+          "F007"
+        ]
+      },
+      {
+        "path": "README.md / INSTALL.md / CHANGELOG.md",
+        "symbol": "install docs",
+        "change": "document `pip install python-datamodel[uvloop]`, Windows wheels, 3.14 support; fix stale setuptools-rust mention",
+        "evidence": [
+          "F015"
+        ]
+      }
+    ],
+    "non_goals": [
+      "macOS wheels: explicitly out of scope; the release matrix is manylinux x86_64 + win_amd64 only (U4).",
+      "Shipping Windows wheels without the Rust extension: rejected (U3); the HAS_RUST fallback remains only as a runtime safety net for source installs.",
+      "Auto-installing uvloop at `import datamodel` time: rejected (U1).",
+      "Removing other heavy dependencies (numpy, asyncpg, psycopg) — out of scope.",
+      "Rewriting tox.ini or adding a full PR test matrix (recommend, but separate)."
+    ],
+    "patterns_to_follow": [
+      "Optional native import with a boolean flag, as in `datamodel/rs_parsers/__init__.py` (F006).",
+      "Environment-marker style already used for uvloop (`sys_platform != 'win32'`) — keep it on the extra so `pip install python-datamodel[uvloop]` is a no-op on Windows (F002).",
+      "cibuildwheel matrix `include` blocks as in current release.yml (F004)."
+    ]
+  },
+  "confidence_map": [
+    {
+      "id": "C1",
+      "claim": "uvloop is declared but never imported; removing it is safe for the library and its tests",
+      "confidence": "high",
+      "evidence": [
+        "F001",
+        "F005",
+        "F012"
+      ]
+    },
+    {
+      "id": "C2",
+      "claim": "Python 3.14 is already wired into classifiers, the release matrix and the locked toolchain; remaining work is verification",
+      "confidence": "high",
+      "evidence": [
+        "F002",
+        "F004",
+        "F007",
+        "F011"
+      ]
+    },
+    {
+      "id": "C3",
+      "claim": "The Windows blocker for the Cython layer is limited to the `-O3`/`-lstdc++` flags in setup.py",
+      "confidence": "high",
+      "evidence": [
+        "F003",
+        "F013"
+      ]
+    },
+    {
+      "id": "C4",
+      "claim": "The Rust extension will build on windows-latest with MSVC without source changes",
+      "confidence": "medium",
+      "evidence": [
+        "F007"
+      ]
+    },
+    {
+      "id": "C5",
+      "claim": "release.yml needs an OS matrix, a Windows-specific pre-build step, `.pyd` handling and OS-qualified artifact names",
+      "confidence": "high",
+      "evidence": [
+        "F004",
+        "F002"
+      ]
+    },
+    {
+      "id": "C6",
+      "claim": "The right place for 'automatic usage' is an opt-in helper, not an import-time side effect",
+      "confidence": "medium",
+      "evidence": [
+        "F005",
+        "F002"
+      ]
+    },
+    {
+      "id": "C7",
+      "claim": "Ten Cython extensions compile cleanly under MSVC once flags are fixed (no POSIX-only C calls)",
+      "confidence": "low",
+      "evidence": [
+        "F013"
+      ]
+    },
+    {
+      "id": "C8",
+      "claim": "The stale migrate-uv-python314 worktree can be deleted safely",
+      "confidence": "high",
+      "evidence": [
+        "F010"
+      ]
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Where should 'automatic usage' of uvloop take effect?",
+      "resolves": [
+        "C6"
+      ],
+      "plausible_answers": [
+        "a) opt-in helper `datamodel.libs.uvloop.install_uvloop()` that callers invoke explicitly (recommended)",
+        "b) helper plus an env var (e.g. DATAMODEL_USE_UVLOOP=1) checked at import",
+        "c) set the policy unconditionally at `import datamodel` when uvloop is importable"
+      ],
+      "user_answer": "a) explicit install_uvloop() helper that callers invoke; no import-time side effect"
+    },
+    {
+      "id": "U2",
+      "question": "Should uvloop be exposed as a pip extra, and under what name?",
+      "resolves": [
+        "C1"
+      ],
+      "plausible_answers": [
+        "a) `python-datamodel[uvloop]`",
+        "b) `python-datamodel[speedups]` (room for future optional accelerators)",
+        "c) no extra; users install uvloop themselves"
+      ],
+      "user_answer": "a) expose as extra python-datamodel[uvloop]"
+    },
+    {
+      "id": "U3",
+      "question": "On Windows, must the Rust `.pyd` ship in the wheel, or is the pure-Python fallback (HAS_RUST=False) acceptable for the first release?",
+      "resolves": [
+        "C4"
+      ],
+      "plausible_answers": [
+        "a) ship the .pyd; fail the release if the Rust build fails",
+        "b) best-effort: build .pyd but allow fallback if maturin fails",
+        "c) Cython-only Windows wheels for now"
+      ],
+      "user_answer": "a) ship the Rust .pyd in Windows wheels; the release fails if the Rust build fails"
+    },
+    {
+      "id": "U4",
+      "question": "Should the same change add macOS (arm64/x86_64) wheels while the matrix is being restructured?",
+      "resolves": [],
+      "plausible_answers": [
+        "a) no, Windows only as requested",
+        "b) yes, add macos-latest in the same matrix"
+      ],
+      "user_answer": "a) Windows only. Release matrix stays manylinux + Windows; no macOS wheels (none exist today, so nothing to remove)"
+    }
+  ],
+  "overall_confidence": "medium",
+  "overall_confidence_rationale": "Localization and CI facts are high-confidence and directly cited. All four design unknowns were resolved by the user on 2026-09-07. Still bounded to medium because MSVC compilation of the Cython sources and the Rust .pyd build on windows-latest are untested (C4, C7).",
+  "recommended_next_command": {
+    "command": "sdd-spec",
+    "args": "FEAT-001",
+    "rationale": "Localization is high-confidence and the work decomposes cleanly into three independent tasks (uvloop extra + helper, MSVC flags + Windows CI leg, 3.14 verification). No architectural fork warrants a brainstorm; the only open design question (U1) can be fixed in the spec."
+  },
+  "alternatives": [
+    {
+      "command": "sdd-brainstorm",
+      "args": "FEAT-001",
+      "when": "if you want to compare uvloop integration strategies (helper vs env var vs import-time) before committing"
+    },
+    {
+      "command": "sdd-task",
+      "args": "FEAT-001",
+      "when": "not recommended: three separate surfaces (packaging, build flags, CI) are too broad for a single task"
+    }
+  ]
+}

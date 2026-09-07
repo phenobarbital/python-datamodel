@@ -55,15 +55,9 @@ build-rust:
 # the source tree, so the wheel would otherwise ship without the Rust
 # extension.
 stage-rust:
-	$(MATURIN) build --release -i python --manifest-path rust/rs_parsers/Cargo.toml --out $(RUST_WHEEL_OUT)
-	@whl=$$(ls -t $(RUST_WHEEL_OUT)/rs_parsers-*.whl | head -1); \
-	  test -n "$$whl" || { echo "ERROR: maturin produced no wheel in $(RUST_WHEEL_OUT)"; exit 1; }; \
-	  echo "Staging Rust extension from $$whl"; \
-	  tmp=$$(mktemp -d); \
-	  unzip -o -q "$$whl" -d "$$tmp"; \
-	  find "$$tmp" -name '_rs_parsers*.so' -exec cp {} datamodel/rs_parsers/ \; ; \
-	  rm -rf "$$tmp"; \
-	  ls -la datamodel/rs_parsers/_rs_parsers*.so
+	python scripts/stage_rust_ext.py --manifest rust/rs_parsers/Cargo.toml \
+	  --dest datamodel/rs_parsers --out-dir $(RUST_WHEEL_OUT) --interpreter python \
+	  --maturin-bin $(MATURIN)
 
 # ---- Cython ----
 

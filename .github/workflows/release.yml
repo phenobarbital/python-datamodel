@@ -3,12 +3,15 @@ name: Python package build and publish
 on:
   release:
     types: [created]
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
+        os: [ubuntu-latest, windows-latest]
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         include:
           - python-version: "3.10"
@@ -33,7 +36,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Add Rust to PATH
-        run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        shell: bash
+        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
       - name: Install dependencies
         run: |
@@ -42,25 +46,28 @@ jobs:
 
       - name: Build wheels
         env:
-          CIBW_ARCHS: x86_64
-          CIBW_BEFORE_BUILD: >-
+          CIBW_ARCHS_LINUX: x86_64
+          CIBW_ARCHS_WINDOWS: AMD64
+          CIBW_BUILD: ${{ matrix.cibw-build }}
+          CIBW_SKIP: "*-musllinux_*"
+          CIBW_ENVIRONMENT_LINUX: "PATH=/root/.cargo/bin:$PATH"
+          CIBW_BEFORE_BUILD_LINUX: >-
             curl https://sh.rustup.rs -sSf | sh -s -- -y &&
             export PATH=/root/.cargo/bin:$PATH &&
             pip install maturin &&
-            cd {project}/rust && rm -rf target/wheels &&
-            maturin build --release --manylinux off --interpreter python3
-            --manifest-path rs_parsers/Cargo.toml &&
-            python3 -c "import zipfile,glob,os,shutil;whl=glob.glob('target/wheels/*.whl')[0];zf=zipfile.ZipFile(whl);so=[n for n in zf.namelist() if n.endswith('.so') and '_rs_parsers' in n][0];zf.extract(so,'/tmp/_rs');shutil.copy2(os.path.join('/tmp/_rs',so),'{project}/datamodel/rs_parsers/')" &&
-            cd {project}
-          CIBW_ENVIRONMENT: "PATH=/root/.cargo/bin:$PATH"
-          CIBW_BUILD: ${{ matrix.cibw-build }}
+            python scripts/stage_rust_ext.py --manylinux off
+          CIBW_BEFORE_BUILD_WINDOWS: >-
+            pip install maturin &&
+            python scripts/stage_rust_ext.py
+          CIBW_TEST_COMMAND: >-
+            python -c "import datamodel.rs_parsers as r; assert r.HAS_RUST"
         run: |
-          cibuildwheel --platform linux --output-dir dist
+          cibuildwheel --output-dir dist
 
       - name: Upload wheel artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-py${{ matrix.python-version }}
+          name: wheels-${{ matrix.os }}-py${{ matrix.python-version }}
           path: dist/*.whl
 
   deploy:
@@ -79,7 +86,7 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v4.1.7
         with:
-          pattern: wheels-py*
+          pattern: wheels-*
           path: dist-artifacts
           merge-multiple: true
 
@@ -100,6 +107,37 @@ jobs:
           if ls dist/*-manylinux*.whl 1> /dev/null 2>&1; then
             echo "Found manylinux wheels."
             echo "HAS_MANYLINUX_WHEELS=true" >> $GITHUB_ENV
+          fi
+
+      - name: Verify wheel inventory
+        run: |
+          set -e
+          echo "Checking dist/ for the expected wheel inventory..."
+          manylinux_count=$(ls dist/*-manylinux*_x86_64.whl 2>/dev/null | wc -l)
+          windows_count=$(ls dist/*-win_amd64.whl 2>/dev/null | wc -l)
+          sdist_count=$(ls dist/*.tar.gz 2>/dev/null | wc -l)
+          total_wheel_count=$(ls dist/*.whl 2>/dev/null | wc -l)
+          echo "manylinux x86_64 wheels: $manylinux_count"
+          echo "win_amd64 wheels: $windows_count"
+          echo "sdist: $sdist_count"
+          echo "total wheels: $total_wheel_count"
+          if [ "$manylinux_count" -ne 5 ]; then
+            echo "ERROR: expected 5 manylinux x86_64 wheels (cp310-cp314), found $manylinux_count" >&2
+            exit 1
+          fi
+          if [ "$windows_count" -ne 5 ]; then
+            echo "ERROR: expected 5 win_amd64 wheels (cp310-cp314), found $windows_count" >&2
+            exit 1
+          fi
+          if [ "$sdist_count" -ne 1 ]; then
+            echo "ERROR: expected exactly one sdist, found $sdist_count" >&2
+            exit 1
+          fi
+          # Guard against unexpected extra wheels (e.g. musllinux) slipping
+          # into dist/ and being uploaded unfiltered by the publish step.
+          if [ "$total_wheel_count" -ne 10 ]; then
+            echo "ERROR: expected exactly 10 wheels total (5 manylinux + 5 win_amd64), found $total_wheel_count" >&2
+            exit 1
           fi
 
       - name: List files in dist
