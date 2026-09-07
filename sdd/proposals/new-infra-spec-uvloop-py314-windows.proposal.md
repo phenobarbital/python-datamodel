@@ -12,7 +12,7 @@ source:
   fetched_at: 2026-09-07
   summary_oneline: Make uvloop optional (lazy-import, auto-use), add Python 3.14 build, add Windows wheels in release.yml
 overall_confidence: medium
-base_branch: main
+base_branch: dev
 research_state: sdd/state/FEAT-001/
 created: 2026-09-07
 updated: 2026-09-07
