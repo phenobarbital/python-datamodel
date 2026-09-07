@@ -1,0 +1,84 @@
+{
+  "backend_note": "Both environments are recorded WITH the rs_parsers extension built. That is not cosmetic: converters.pyx:199,236 dereference rc.to_date / rc.to_datetime unconditionally, and datamodel/rs_parsers/__init__.py defines only HAS_RUST = False when the extension is missing, so every string->date/datetime conversion fails without it. The engineering reference has the identical call sites, so the gap is shared rather than a regression -- but with rs_parsers absent the repository suite has 17 pre-existing failures/errors, and with it present the suite is fully green. Reference and candidate must always be built with MATCHING backend availability, or corpus cases employee_raw and unconstrained_raw diverge for setup reasons alone.",
+  "environments": {
+    "candidate": {
+      "binaries": {
+        "_rs_parsers.cpython-313-x86_64-linux-gnu.so": "599eeff644c130c983e078401553013688506f7f2cebc78758ac616776ab9d30",
+        "converters.cpython-313-x86_64-linux-gnu.so": "1de76778435d729577fd8a18e2594a5965be5a93bf9e9e203f07f5b3388cffa6",
+        "exceptions.cpython-313-x86_64-linux-gnu.so": "758d79b86ba01ff1e2f145d12743698af270894849d482cfade00f4bff68d72a",
+        "fields.cpython-313-x86_64-linux-gnu.so": "b0dc97927dd948dcd899fa562209d20033c13d6200debae7bc0228d7d7015624",
+        "functions.cpython-313-x86_64-linux-gnu.so": "2a7faa732423f96e938d3b080011d2e803868eecff77719559f391520b2e8672",
+        "json.cpython-313-x86_64-linux-gnu.so": "868edf6fe6f7d62baeb24be21c4f1e716d568951c9bfd728ed40de978c570003",
+        "types.cpython-313-x86_64-linux-gnu.so": "6a8fd1ea779f60052cd766a7d350d63267384cd4c5aa6bf734544c5b5ff3e23e",
+        "validation.cpython-313-x86_64-linux-gnu.so": "6d9b73bc358f50880b5b8880bb79d39d112ba2e34c49506e1320fdaed469828e"
+      },
+      "datamodel_file": "/home/jesuslara/proyectos/python-datamodel/.claude/worktrees/feat-FEAT-2-compatible-model-performance/datamodel/__init__.py",
+      "dependencies": {
+        "Cython": "3.3.0",
+        "ciso8601": "2.3.3",
+        "msgspec": "0.21.1",
+        "numpy": "2.5.3",
+        "orjson": "3.12.0",
+        "python-dateutil": "2.9.0.post0"
+      },
+      "git": {
+        "commit": "66a4d509b90206412c328eb3aff181dcd6ffde55",
+        "describe": "66a4d50",
+        "dirty": true
+      },
+      "has_rust_parsers": true,
+      "package_dir": "/home/jesuslara/proyectos/python-datamodel/.claude/worktrees/feat-FEAT-2-compatible-model-performance/datamodel",
+      "platform": "linux",
+      "python": "3.13.11 (main, Dec  9 2025, 19:04:10) [Clang 21.1.4 ]",
+      "python_executable": "/home/jesuslara/proyectos/python-datamodel/.claude/worktrees/feat-FEAT-2-compatible-model-performance/.venv/bin/python",
+      "root": "/home/jesuslara/proyectos/python-datamodel/.claude/worktrees/feat-FEAT-2-compatible-model-performance",
+      "version": "0.12.0"
+    },
+    "reference": {
+      "binaries": {
+        "_rs_parsers.cpython-313-x86_64-linux-gnu.so": "599eeff644c130c983e078401553013688506f7f2cebc78758ac616776ab9d30",
+        "converters.cpython-313-x86_64-linux-gnu.so": "8f91ddf85b272b495abed4fe084d779d95ed8f4eaa14b21753f6c75e405caf33",
+        "exceptions.cpython-313-x86_64-linux-gnu.so": "480b3d47ac61e0587af2a111b1584f70c71c4c647433cc1a01ef0fcf7c9ac4d2",
+        "fields.cpython-313-x86_64-linux-gnu.so": "376f0f1099b6dca1051926d39f0c13b140960a20fb4cd7bfdc8dca1522f3644b",
+        "functions.cpython-313-x86_64-linux-gnu.so": "16d137637529482227773f58bbfe4bd2d336364a67479154e70c29520b36b536",
+        "json.cpython-313-x86_64-linux-gnu.so": "1a4853cb1c5a5568ce9ffba7973981ea5764956a6f5b846f58e1f98169aa7f5d",
+        "types.cpython-313-x86_64-linux-gnu.so": "86d8588761486ed0f9ea0b1303a900cdac625d529007c05b5eb43a4188e0ccb3",
+        "validation.cpython-313-x86_64-linux-gnu.so": "96abde90d6d963094abcca21cb90798d647bbd10c6305af666bc0087b2c0faf2"
+      },
+      "datamodel_file": "/home/jesuslara/proyectos/python-datamodel/.claude/worktrees/ref-FEAT-2-d932c720/datamodel/__init__.py",
+      "dependencies": {
+        "Cython": "3.3.0",
+        "ciso8601": "2.3.3",
+        "msgspec": "0.21.1",
+        "numpy": "2.5.3",
+        "orjson": "3.12.0",
+        "python-dateutil": "2.9.0.post0"
+      },
+      "git": {
+        "commit": "d932c720e9e36bbacdaca2b1a2af0688f2636c40",
+        "describe": "d932c72",
+        "dirty": false
+      },
+      "has_rust_parsers": true,
+      "package_dir": "/home/jesuslara/proyectos/python-datamodel/.claude/worktrees/ref-FEAT-2-d932c720/datamodel",
+      "platform": "linux",
+      "python": "3.13.11 (main, Dec  9 2025, 19:04:10) [Clang 21.1.4 ]",
+      "python_executable": "/home/jesuslara/proyectos/python-datamodel/.claude/worktrees/ref-FEAT-2-d932c720/.venv/bin/python",
+      "root": "/home/jesuslara/proyectos/python-datamodel/.claude/worktrees/ref-FEAT-2-d932c720",
+      "version": "0.10.21"
+    }
+  },
+  "feature": "FEAT-2",
+  "note": "Provenance of the two isolated environments used by tests/compatibility/runner.py. `binaries` are sha256 digests of the compiled extensions actually loaded by the child process, so a stale artifact is detectable; isolation itself is checked by path, because identical sources legitimately produce byte-identical artifacts in both trees. Regenerate with `python tests/compatibility/runner.py --write-manifest` after any rebuild; verify_manifest() reports every drift. Absolute paths and digests are machine-specific by design: they record what was actually measured, and a mismatch on another machine correctly means 'rebuild and regenerate', not 'ignore'.",
+  "reference_commit": "d932c720e9e36bbacdaca2b1a2af0688f2636c40",
+  "reference_version": "0.10.21",
+  "reproduce": [
+    "git worktree add --detach <ref-root> d932c720e9e36bbacdaca2b1a2af0688f2636c40",
+    "cd <ref-root> && uv venv --python 3.13 .venv && uv pip install --python .venv/bin/python -e '.[dev]'",
+    "cd <ref-root>/rust/rs_parsers && cargo build --release",
+    "cp <ref-root>/rust/target/release/lib_rs_parsers.so <ref-root>/datamodel/rs_parsers/_rs_parsers.<abi>.so",
+    "repeat for the candidate worktree, then python tests/compatibility/runner.py --write-manifest"
+  ],
+  "spec": "sdd/specs/compatible-model-performance.spec.md",
+  "task": "TASK-8"
+}
