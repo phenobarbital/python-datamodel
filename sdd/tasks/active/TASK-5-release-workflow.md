@@ -141,7 +141,7 @@ on deploy so manual dispatch cannot publish.
 ## Test Specification
 
 ```bash
-rg -n 'workflow_dispatch|windows-latest|CIBW_TEST_COMMAND|wheels-' \\
+rg -n 'workflow_dispatch|windows-latest|CIBW_TEST_COMMAND|wheels-' \
   .github/workflows/release.yml
 ```
 

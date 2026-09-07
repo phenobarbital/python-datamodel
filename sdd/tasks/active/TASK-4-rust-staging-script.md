@@ -48,9 +48,9 @@ Rust source changes.
 # Makefile:57-66
 stage-rust:
 \t$(MATURIN) build --release -i python --manifest-path rust/rs_parsers/Cargo.toml --out $(RUST_WHEEL_OUT)
-\t@whl=$$(ls -t $(RUST_WHEEL_OUT)/rs_parsers-*.whl | head -1); \\
-\t  ... unzip ...; \\
-\t  find "$$tmp" -name '_rs_parsers*.so' -exec cp {} datamodel/rs_parsers/ \\; ; \\
+\t@whl=$$(ls -t $(RUST_WHEEL_OUT)/rs_parsers-*.whl | head -1); \
+\t  ... unzip ...; \
+\t  find "$$tmp" -name '_rs_parsers*.so' -exec cp {} datamodel/rs_parsers/ \; ; \
 \t  ...
 ```
 

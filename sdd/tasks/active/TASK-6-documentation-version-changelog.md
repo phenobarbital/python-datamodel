@@ -123,9 +123,9 @@ themselves. Do not claim automatic activation, macOS wheels, or ARM wheels.
 ## Test Specification
 
 ```bash
-! rg -n 'setuptools-rust|datamodel\\.install_uvloop|macOS wheels|ARM wheels' \\
+! rg -n 'setuptools-rust|datamodel\.install_uvloop|macOS wheels|ARM wheels' \
   README.md INSTALL.md CHANGELOG.md
-rg -n 'python-datamodel\\[uvloop\\]|install_uvloop|win_amd64|3\\.14|0\\.11\\.0' \\
+rg -n 'python-datamodel\[uvloop\]|install_uvloop|win_amd64|3\.14|0\.11\.0' \
   README.md INSTALL.md CHANGELOG.md datamodel/version.py
 python -c 'from datamodel.version import __version__; assert __version__ == "0.11.0"'
 ```
