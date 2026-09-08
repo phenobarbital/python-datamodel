@@ -278,5 +278,317 @@ fn parse_datamodel(py: Python<'_>, dataclass_instance: Py<PyAny>) -> PyResult<Ve
 fn rs_core(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(validate_datamodel, m)?)?;
     m.add_function(wrap_pyfunction!(parse_datamodel, m)?)?;
+    // FEAT-2/TASK-17: sequential bounded executor (development-only).
+    m.add_class::<NativePlan>()?;
+    m.add("SUPPORTED_KINDS", ("str", "int", "float", "bool"))?;
     Ok(())
+}
+
+// ===========================================================================
+// FEAT-2 / TASK-17 -- sequential, bounded, model-level native executor
+// ===========================================================================
+//
+// EXPERIMENTAL AND DEVELOPMENT-ONLY. Nothing in `datamodel` imports this; the
+// package's default loading and constructors are untouched. The benchmark
+// harness (`benchmarks/native_validation.py`) loads the built cdylib
+// explicitly by path.
+//
+// PRIVATE INTERFACE (consumed by TASK-18; verify against this file, do not
+// infer it from names):
+//
+//   rs_core.SUPPORTED_KINDS -> tuple[str, ...]
+//   rs_core.NativePlan(descriptors) -> plan
+//       descriptors: sequence of (name, kind, min, max, min_len, max_len)
+//           name     : str
+//           kind     : one of SUPPORTED_KINDS
+//           min, max : int | None   -- numeric bounds (int/float kinds)
+//           min_len,
+//           max_len  : int | None   -- string length bounds (str kind)
+//   plan.eligible     -> bool   False if ANY descriptor kind is unsupported
+//   plan.field_count  -> int
+//   plan.kinds        -> list[str]
+//   plan.execute(values: dict) -> list[(name, bool)] | None
+//       None  => the row is INELIGIBLE; the caller MUST run the legacy Python
+//                path. This is not a validation result.
+//       list  => per-field validity in plan order.
+//
+// Design rules, all of them load-bearing:
+//
+// * Eligibility is decided in a FIRST PASS over every field, before any
+//   validation result is produced, so a row can never be half-executed and
+//   then handed back to Python -- the caller re-runs from a clean state and no
+//   parser runs twice.
+// * A field is never SKIPPED. Anything not provably handled makes the whole
+//   row ineligible.
+// * `int` values that do not fit i64 make the row ineligible rather than being
+//   truncated or reported invalid: Python integers are arbitrary precision and
+//   this executor must not narrow the accepted set. (The pre-existing
+//   `validate_datamodel`/`parse_datamodel` prototypes in this file get this
+//   wrong -- they report such a value as simply invalid. They are left alone
+//   and are NOT on the exercised path.)
+// * Subclass instances (including `bool` where `int` is expected, since
+//   `bool` is a subclass of `int`) make the row ineligible: Python's
+//   `valid_*` validators are isinstance-based and the exact semantics are
+//   subtle, so the executor defers rather than guesses.
+// * Temporal kinds are deliberately EXCLUDED from the supported set. The
+//   prototype's `NaiveDate::parse_from_str(s, "%Y-%m-%d")` handling does not
+//   reproduce Python's temporal variants, so those fields are ineligible
+//   instead of being handled wrongly.
+// * No `unwrap`, `expect` or panic on user-supplied data anywhere below.
+
+use pyo3::types::{PyBool, PyFloat, PyInt, PyString, PyList, PyTuple};
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+enum Kind {
+    Str,
+    Int,
+    Float,
+    Bool,
+}
+
+impl Kind {
+    fn from_name(name: &str) -> Option<Kind> {
+        match name {
+            "str" => Some(Kind::Str),
+            "int" => Some(Kind::Int),
+            "float" => Some(Kind::Float),
+            "bool" => Some(Kind::Bool),
+            _ => None,
+        }
+    }
+
+    fn name(&self) -> &'static str {
+        match self {
+            Kind::Str => "str",
+            Kind::Int => "int",
+            Kind::Float => "float",
+            Kind::Bool => "bool",
+        }
+    }
+}
+
+#[derive(Clone)]
+struct PlanField {
+    name: String,
+    kind: Kind,
+    min: Option<i64>,
+    max: Option<i64>,
+    min_len: Option<usize>,
+    max_len: Option<usize>,
+}
+
+/// Outcome of the eligibility pass for one field.
+enum Eligibility {
+    /// Exactly the expected type; carries the decided validity.
+    Decided(bool),
+    /// Anything we will not reason about: the whole row falls back.
+    Ineligible,
+}
+
+/// A cached, immutable plan for one model's eligible scalar fields.
+#[pyclass]
+pub struct NativePlan {
+    fields: Vec<PlanField>,
+    eligible: bool,
+}
+
+#[pymethods]
+impl NativePlan {
+    #[new]
+    fn new(descriptors: &Bound<'_, PyAny>) -> PyResult<Self> {
+        let mut fields: Vec<PlanField> = Vec::new();
+        let mut eligible = true;
+
+        let items = descriptors.try_iter()?;
+        for item in items {
+            let item = item?;
+            let tuple = item.cast_into::<PyTuple>().map_err(|_| {
+                PyTypeError::new_err("each descriptor must be a tuple")
+            })?;
+            if tuple.len() != 6 {
+                return Err(PyTypeError::new_err(
+                    "each descriptor must be (name, kind, min, max, min_len, max_len)",
+                ));
+            }
+            let name: String = tuple.get_item(0)?.extract()?;
+            let kind_name: String = tuple.get_item(1)?.extract()?;
+            let min: Option<i64> = tuple.get_item(2)?.extract()?;
+            let max: Option<i64> = tuple.get_item(3)?.extract()?;
+            let min_len: Option<usize> = tuple.get_item(4)?.extract()?;
+            let max_len: Option<usize> = tuple.get_item(5)?.extract()?;
+
+            match Kind::from_name(&kind_name) {
+                Some(kind) => fields.push(PlanField {
+                    name,
+                    kind,
+                    min,
+                    max,
+                    min_len,
+                    max_len,
+                }),
+                None => {
+                    // An unsupported kind does not merely skip that field: the
+                    // whole plan becomes ineligible, so no caller can end up
+                    // validating a subset and believing it validated the model.
+                    eligible = false;
+                }
+            }
+        }
+
+        Ok(NativePlan { fields, eligible })
+    }
+
+    #[getter]
+    fn eligible(&self) -> bool {
+        self.eligible
+    }
+
+    #[getter]
+    fn field_count(&self) -> usize {
+        self.fields.len()
+    }
+
+    #[getter]
+    fn kinds(&self) -> Vec<String> {
+        self.fields.iter().map(|f| f.kind.name().to_string()).collect()
+    }
+
+    /// Validate one row. Returns None when the caller must use the legacy path.
+    fn execute<'py>(
+        &self,
+        py: Python<'py>,
+        values: &Bound<'py, PyDict>,
+    ) -> PyResult<Option<Py<PyList>>> {
+        if !self.eligible {
+            return Ok(None);
+        }
+
+        // ---- PASS 1: eligibility only. No results are produced or kept. ----
+        let mut decided: Vec<bool> = Vec::with_capacity(self.fields.len());
+        for field in &self.fields {
+            let item = values.get_item(field.name.as_str())?;
+            let value = match item {
+                Some(value) => value,
+                // A missing key means presence/default handling, which this
+                // executor does not implement. Fall back.
+                None => return Ok(None),
+            };
+            match self.check(&value, field)? {
+                Eligibility::Ineligible => return Ok(None),
+                Eligibility::Decided(ok) => decided.push(ok),
+            }
+        }
+
+        // ---- PASS 2: publish. Cannot fail; every field is already decided. --
+        let out = PyList::empty(py);
+        for (field, ok) in self.fields.iter().zip(decided.into_iter()) {
+            let pair = PyTuple::new(py, &[
+                field.name.clone().into_pyobject(py)?.into_any(),
+                ok.into_pyobject(py)?.to_owned().into_any(),
+            ])?;
+            out.append(pair)?;
+        }
+        Ok(Some(out.unbind()))
+    }
+}
+
+impl NativePlan {
+    fn check(&self, value: &Bound<'_, PyAny>, field: &PlanField) -> PyResult<Eligibility> {
+        match field.kind {
+            Kind::Bool => {
+                if value.is_exact_instance_of::<PyBool>() {
+                    Ok(Eligibility::Decided(true))
+                } else if value.is_instance_of::<PyBool>() {
+                    Ok(Eligibility::Ineligible)
+                } else {
+                    Ok(Eligibility::Decided(false))
+                }
+            }
+            Kind::Int => {
+                // `bool` is a subclass of `int`; Python's valid_int accepts it
+                // via isinstance. Defer rather than encode that subtlety here.
+                if value.is_instance_of::<PyBool>() {
+                    return Ok(Eligibility::Ineligible);
+                }
+                if !value.is_exact_instance_of::<PyInt>() {
+                    return Ok(if value.is_instance_of::<PyInt>() {
+                        Eligibility::Ineligible // int subclass
+                    } else {
+                        Eligibility::Decided(false)
+                    });
+                }
+                // Arbitrary-precision guard: never truncate, never call it
+                // invalid -- hand the row back to Python.
+                let native: i64 = match value.extract::<i64>() {
+                    Ok(native) => native,
+                    Err(_) => return Ok(Eligibility::Ineligible),
+                };
+                if let Some(min) = field.min {
+                    if native < min {
+                        return Ok(Eligibility::Decided(false));
+                    }
+                }
+                if let Some(max) = field.max {
+                    if native > max {
+                        return Ok(Eligibility::Decided(false));
+                    }
+                }
+                Ok(Eligibility::Decided(true))
+            }
+            Kind::Float => {
+                if value.is_instance_of::<PyBool>() {
+                    return Ok(Eligibility::Ineligible);
+                }
+                if value.is_exact_instance_of::<PyFloat>() {
+                    let native: f64 = match value.extract::<f64>() {
+                        Ok(native) => native,
+                        Err(_) => return Ok(Eligibility::Ineligible),
+                    };
+                    if let Some(min) = field.min {
+                        if native < min as f64 {
+                            return Ok(Eligibility::Decided(false));
+                        }
+                    }
+                    if let Some(max) = field.max {
+                        if native > max as f64 {
+                            return Ok(Eligibility::Decided(false));
+                        }
+                    }
+                    return Ok(Eligibility::Decided(true));
+                }
+                // Python's valid_float accepts an int too, but the exact
+                // int-vs-float constraint semantics are not worth guessing.
+                if value.is_instance_of::<PyInt>() {
+                    return Ok(Eligibility::Ineligible);
+                }
+                Ok(Eligibility::Decided(false))
+            }
+            Kind::Str => {
+                if !value.is_exact_instance_of::<PyString>() {
+                    return Ok(if value.is_instance_of::<PyString>() {
+                        Eligibility::Ineligible // str subclass
+                    } else {
+                        Eligibility::Decided(false)
+                    });
+                }
+                let text = match value.extract::<String>() {
+                    Ok(text) => text,
+                    Err(_) => return Ok(Eligibility::Ineligible),
+                };
+                // Count CHARACTERS, matching Python's len() on str, not bytes.
+                let length = text.chars().count();
+                if let Some(min_len) = field.min_len {
+                    if length < min_len {
+                        return Ok(Eligibility::Decided(false));
+                    }
+                }
+                if let Some(max_len) = field.max_len {
+                    if length > max_len {
+                        return Ok(Eligibility::Decided(false));
+                    }
+                }
+                Ok(Eligibility::Decided(true))
+            }
+        }
+    }
 }
