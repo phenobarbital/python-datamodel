@@ -128,11 +128,89 @@ Tests are behavioral specifications, not permission to change the oracle. Verify
 
 ## Completion Note
 
-*(Fill in only after implementation and verification.)*
+**STATUS: INCOMPLETE — BLOCKED ON A FAILED ACCEPTANCE GATE.**
 
-**Completed by**: pending
-**Date**: pending
-**Notes**: pending
-**Verification commands/results**: pending
-**Evidence paths and acceptance coverage**: pending
-**Deviations from spec**: pending
+This task is deliberately **not** closed. Its own acceptance criteria state:
+*"If thresholds fail, this task remains incomplete pending compatible
+remediation or reviewed spec change; a negative optimization result is not a
+waiver."* The measurement work is finished and the evidence is committed; the
+thresholds are not met, so the task stays open for a human decision.
+
+**Run by**: sdd-worker (Claude Opus 5)
+**Date**: 2026-09-08
+**Evidence**: `benchmarks/results/compatible-model-performance/cython.md`
+(analysis) and `cython.json` (machine-readable, with raw per-process samples
+and diagnostics embedded).
+
+### Gate results
+
+| gate | required | measured | status |
+|---|---|---|---|
+| AC5 construction improvement | >= 20% | **10.63% raw / 10.95% native** | **FAIL** |
+| AC6 regression, median | <= 5% | `class_creation` +4.91%, **CI upper +5.72%** | **FAIL** |
+| AC6 regression, p95 | <= 5% | `assignment` p95 **+11.77%** | **FAIL** |
+| AC3 generic dispatch budget | <=3/<=3/0 per build | **2.0 / 2.0 / 0.0** | PASS |
+| AC1/AC2/AC4/AC7 compatibility | zero divergence | **0 divergences everywhere** | PASS |
+
+### The measurement is trustworthy, so the shortfall is real
+
+Quiet machine: 8.2% calibration spread, **0 of 16 suspect processes**, no
+protocol shortfalls (8 paired processes, 30 batches, 1000 warm-up operations).
+The same-source control -- two independently built worktrees of the *same*
+reference commit -- reported a **0.95%** cross-build floor and **zero** spurious
+verdicts. Worst resolvable effect 1.50%, so a 20% effect is comfortably
+resolvable: ~11% is a result, not a measurement limitation.
+
+### What actually happened
+
+**11 of 15 workloads improved**, several by more than 10%
+(`unconstrained_native` -15.8%, `unconstrained_raw` -13.7%, `constrained_valid`
+-11.6%, `wide_native` -11.5%, `wide_raw` -11.4%, `employee_native` -11.0%,
+`employee_raw` -10.6%). The optimization is real, broad and behaviourally
+free -- it is simply about half the size AC5 demands.
+
+The dispatch elimination is **finished**, which is why there is no more of it to
+win: `unconstrained_native` reaches the generic dispatch zero times per build,
+and Employee reaches it exactly twice (its two non-scalar fields). ~11% is what
+that dispatch actually cost.
+
+### Diagnosis of the AC6 regression (grounded, not speculative)
+
+`build_field_policy` (TASK-11) runs at class creation, costs **2,300 ns per
+field**, and is invoked from **two** call sites: `abstract.py:356`
+(`_initialize_fields`) and `abstract.py:443` (`__new__`, over the final column
+set). For an 8-field class that is ~36.8 us of the ~65 us regression measured in
+isolation, and **roughly half is redundant** -- the `__new__` loop rebuilds from
+the final field set, which TASK-11 made authoritative precisely so cache hits
+and inheritance are handled. It also allocates a `frozenset` per field even when
+the field has no constraints.
+
+**Remediation was NOT applied here**: modifying production sources is explicitly
+out of scope for this task, and smuggling a fix into an evidence task would
+corrupt the very measurement it exists to produce.
+
+### Verification commands/results
+
+- `python benchmarks/model_performance.py --pin-cpu 9 --control-root <ref2>` ->
+  494.8 s, acceptance mode, **no protocol shortfalls**.
+- `python tests/compatibility/profile_validation.py --builds 20000` ->
+  2.000 / 2.000 / 0.000 dispatches per build, all within budget, exit 0.
+- Differential corpus -> **45 cases, 0 divergences**.
+- asyncdb consumer -> **31 passed, 0 divergences**.
+- `python -m pytest tests/ -q` -> **675 passed, 2 skipped, 0 failed**.
+
+### Required next steps (human decision)
+
+1. Apply the diagnosed `class_creation` remediation in gate-owner scope
+   (TASK-11/TASK-13) and re-run this protocol. Plausibly clears AC6's median
+   gate. **Will not move AC5.**
+2. Decide AC5 deliberately: fund further compatible optimization, or take a
+   **reviewed** spec change to the 20% threshold. The threshold must not be
+   quietly relaxed to match the result -- the acceptance criteria forbid exactly
+   that.
+3. Investigate the `assignment` p95 (+11.77% against a +1.4% median) before AC6
+   can be signed off.
+
+The candidate commit and both environments' extension digests are frozen in
+`cython.json` -> `frozen_candidate`, so TASK-17..TASK-20 measure against this
+optimized-Cython point rather than re-measuring the Cython work.

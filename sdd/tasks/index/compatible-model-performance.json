@@ -324,7 +324,7 @@
       "feature_id": "FEAT-2",
       "feature": "compatible-model-performance",
       "spec": "sdd/specs/compatible-model-performance.spec.md",
-      "status": "in-progress",
+      "status": "blocked",
       "priority": "high",
       "effort": "M",
       "estimated_hours": 2,
@@ -338,10 +338,11 @@
       "assigned_to": "unassigned",
       "assigned_at": null,
       "created_at": "2026-09-07T23:19:35+00:00",
-      "updated_at": "2026-09-07T23:19:35+00:00",
+      "updated_at": "2026-09-08T03:09:49+00:00",
       "started_at": "2026-09-07T23:24:10+00:00",
       "completed_at": null,
-      "file": "sdd/tasks/active/TASK-16-cython-acceptance-evidence.md"
+      "file": "sdd/tasks/active/TASK-16-cython-acceptance-evidence.md",
+      "blocked_reason": "Acceptance thresholds not met. AC5 requires >=20% Employee construction improvement; measured 10.63% (raw) / 10.95% (native) on a quiet machine that resolves a 20% effect. AC6 requires <=5% regression; class_creation is +4.91% with 95% CI upper 5.72%, and assignment p95 is +11.77%. AC3 dispatch budgets and ALL compatibility gates PASS (0 divergences). Per this task acceptance criteria, a shortfall is not a waiver, so the task stays incomplete pending (a) the diagnosed class_creation remediation in gate-owner scope, and/or (b) a REVIEWED spec change to the AC5 threshold. Evidence: benchmarks/results/compatible-model-performance/cython.md and cython.json."
     },
     {
       "id": "TASK-17",
