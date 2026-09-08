@@ -576,7 +576,12 @@ cdef dict _validate_constraints(
         return {}
 
     metadata = field.metadata
-    error = {}
+    # NOTE (FEAT-2/TASK-12): there was an `error = {}` here. It was assigned on
+    # every call and never read -- each failure path returns `_create_error(...)`,
+    # which builds its own dict, and the success path returns a fresh `{}`. It
+    # was therefore one dead dict allocation per primitive field per
+    # construction. Removing it is unobservable: no branch, payload, message or
+    # ordering depends on it.
 
     # String validations
     if annotated_type is str:
@@ -708,7 +713,12 @@ cpdef dict _validation(
 ):
     cdef bint _valid = False
     cdef object field_meta = F.metadata
-    cdef dict error = {}
+    # NOTE (FEAT-2/TASK-12): this used to be `cdef dict error = {}`, allocated
+    # on entry but only ever returned by the final statement. Every early
+    # return -- and there are many -- threw it away. The allocation now happens
+    # at the point of return, so the success contract is unchanged: callers
+    # still receive a FRESH, independently mutable dict, never a shared
+    # singleton and never None.
     cdef list allowed_values = []
 
     if not annotated_type:
@@ -938,7 +948,7 @@ cpdef dict _validation(
                 val_type,
                 annotated_type
             )
-    return error
+    return {}
 
 # Define a validator function for uint64
 def validate_uint64(value: int) -> None:

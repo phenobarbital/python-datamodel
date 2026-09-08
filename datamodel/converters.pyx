@@ -1937,8 +1937,9 @@ cpdef dict processing_fields(object obj, list columns):
     cdef tuple type_args = ()
     # Error handling
     cdef dict errors = {}
-    # Type Information
-    cdef dict _typeinfo = {}
+    # NOTE (FEAT-2/TASK-12): a `cdef dict _typeinfo = {}` lived here. It was
+    # declared and never referenced anywhere in this function -- one dead dict
+    # allocation per model construction. Removing it is unobservable.
     # Column information:
     cdef tuple c_col
     cdef str name
