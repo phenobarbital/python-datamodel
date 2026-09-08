@@ -134,11 +134,168 @@ Tests are behavioral specifications, not permission to change the oracle. Verify
 
 ## Completion Note
 
-*(Fill in only after implementation and verification.)*
+**Completed by**: sdd-worker (Claude Opus 5)
+**Date**: 2026-09-08
+**Notes**: Implemented in the five declared files. This activates the policy
+built by TASK-11. It is the first change in FEAT-2 that produces a **real,
+measurable** speed-up.
 
-**Completed by**: pending
-**Date**: pending
-**Notes**: pending
-**Verification commands/results**: pending
-**Evidence paths and acceptance coverage**: pending
-**Deviations from spec**: pending
+**Where the gate sits.** At the existing post-conversion boundary in
+`processing_fields` -- after parsing, after any encoder/callback has run, after
+the value is stored -- so the gate observes exactly what the legacy path would.
+`test_a_mutation_in_post_init_is_seen_by_validation` proves this by overwriting
+a valid value with an out-of-range one inside `__post_init__` and asserting the
+violation is still reported.
+
+**What it replaces, exactly.** For a field carrying a cached built-in
+validator, `_validation_` does:
+
+```
+error = f.validator(f, name, value, _type)      # None for an exact type
+if not error and _type in (str, int, float):
+    return _validate_constraints(...)
+return None
+```
+
+`fastpath_kind()` reproduces that and nothing more. Because the value's type is
+proven identical to the policy's `type_ref`, the built-in validator is *known*
+to return `None`, so the remaining work is only the constraint read.
+
+**Everything it refuses to take over** (each a cheap pointer comparison;
+`FASTPATH_NONE` is always safe because the legacy path then runs untouched):
+
+| refused | why |
+|---|---|
+| `type(value) is not plan.type_ref` | exact identity, never `isinstance` -- a `str`/`int` subclass must keep the legacy path |
+| `annotated_type is not plan.type_ref` | the annotation must be the one analysed |
+| `f.validator is not plan.validator_ref` | a runtime replacement must be honoured, not bypassed |
+| `f.parser is not plan.parser_ref` | ditto |
+| `is_empty(value)` | `_field_checks_` enforces primary-key, required, `db_default` and nullable rules |
+| `value is annotated_type` | mirrors `_validation_`'s own diversion |
+
+**`0` and `False` are values, not absence.** `is_empty(0)` and `is_empty(False)`
+are both `False` -- verified against the running code, not assumed -- so numeric
+zero and boolean false stay on the fast path, as the task requires. Pinned by
+`test_zero_and_false_are_values_not_absence`.
+
+**Constraints are read LIVE, never trusted from the recorded shape.** This is
+the single most important safety decision in the task. The gate always calls
+`_validate_constraints` for `str`/`int`/`float`, so a constraint added to
+metadata *after* class creation takes effect on the very next build
+(`test_a_constraint_added_at_runtime_cannot_be_skipped`), and one removed stops
+applying (`test_a_constraint_removed_at_runtime_stops_applying`).
+
+I deliberately did **not** call `policy_is_current()` in the hot path: it
+rebuilds the constraint shape as a `frozenset`, which would cost more per field
+than the dispatch it is meant to avoid -- it would have made the "optimisation"
+a pessimisation. Its constraint-shape half is unnecessary here precisely
+*because* the gate reads constraints live. It remains the full audit for
+callers wanting the complete guarantee, and TASK-11's tests still cover it.
+
+**Legacy quirks preserved rather than "fixed".** The legacy route honours
+constraints only for `str`/`int`/`float`, so a `Decimal` `min`/`max` is silently
+ignored. The gate reproduces that exactly
+(`test_decimal_constraints_remain_ignored_on_this_route`). Activating a
+previously-ignored constraint is a non-goal in spec section 1 and would itself
+be a behaviour change.
+
+**Diagnostic counters are absent from release builds, by construction.** The
+counter is guarded by a C macro `DATAMODEL_PROFILE_VALIDATION` that defaults to
+`0`; because it is a compile-time constant the C compiler folds the guarded
+branch away entirely. There is no counter, and no test of a counter, in the
+default application flow. `profiling_compiled_in()` returns `False` in the
+shipped build, asserted by `test_release_build_has_no_counters_compiled_in`.
+I chose a C macro over Cython's `DEF`/`IF` after checking: `IF` still compiles
+under Cython 3.3 but emits a deprecation warning and is slated for removal, and
+Cython's own message recommends "runtime conditions or C macros".
+
+`tests/compatibility/profile_validation.py` therefore makes a **separate
+temporary profiling build**: it copies the package to a temp directory, deletes
+the stale `.c`/`.so` so the macro actually reaches the compiler, rebuilds with
+`CFLAGS=-DDATAMODEL_PROFILE_VALIDATION=1`, runs the workloads in a child bound
+to that build, and deletes it. The worktree's own artifacts are never touched.
+
+**MEASURED DISPATCH COUNTS -- 20,000 builds per workload:**
+
+| workload | fields | dispatches | per build | budget | verdict |
+|---|---|---|---|---|---|
+| `employee_raw` | 11 | 40,000 | 2.000 | 3 | ok |
+| `employee_native` | 11 | 40,000 | 2.000 | 3 | ok |
+| `unconstrained_native` | 8 | **0** | **0.000** | 0 | ok |
+
+40,000 <= the task's 60,000 budget for a 20,000-build Employee run. The
+remaining 2 dispatches per Employee build are its two non-scalar fields,
+`skills: List[str]` and `manager: Optional[Employee]`, which legitimately have
+no policy. `unconstrained_native` reaches the generic dispatch **zero** times.
+
+**MEASURED SPEED-UP (indicative micro-measurement, not the acceptance
+protocol).** Four independent paired runs on a pinned core, 2,000 constructions
+x 30 batches, alternating builds:
+
+| workload | reference | candidate | ratios | mean |
+|---|---|---|---|---|
+| `employee_native` | 30,085 ns | 26,489 ns | .8920 .8907 .8577 .8817 | **0.8805 (11.9% faster)** |
+| `unconstrained_native` | 19,136 ns | 15,928 ns | .8420 .8367 .8182 .8328 | **0.8324 (16.8% faster)** |
+
+Every individual ratio is far below TASK-9's ~2% empirical cross-build floor,
+so unlike TASK-12 this is a genuine, claimable improvement. **It is still not
+an acceptance measurement**: the release-quality figure must come from the full
+paired protocol in `benchmarks/model_performance.py`, which TASK-16 runs against
+the AC5/AC6 gates. I am reporting an indication, not declaring the gate passed.
+
+**Verification commands/results**:
+- `.venv/bin/python -m pytest tests/test_validation_fastpath.py
+  tests/test_validation_policy.py tests/test_converter.py -q` -> **100 passed**.
+- `.venv/bin/python -m pytest tests/ -q` -> **639 passed, 2 skipped, 0 failed**
+  (606 before this task + 33 new).
+- `.venv/bin/python tests/compatibility/profile_validation.py --builds 20000`
+  -> table above, exit code 0.
+- **Differential corpus with the gate ACTIVE: 45/45 cases, 0 divergences.**
+- **asyncdb consumer differential: 31 passed, 0 divergences.**
+- `.venv/bin/python -m ruff check --select F,E9 tests/test_validation_fastpath.py
+  tests/compatibility/profile_validation.py` -> clean.
+
+**Evidence paths and acceptance coverage**:
+- AC2 / AC3 (dispatch budgets): the profiling table above;
+  `tests/compatibility/profile_validation.py` re-derives it on demand and exits
+  non-zero if a budget is exceeded, so it is a gate as well as a report.
+- AC4 (constraints, presence and invalid parser results still exact): the Part 4
+  and Part 5 tests, especially
+  `test_a_constraint_added_at_runtime_cannot_be_skipped`,
+  `test_primary_key_checks_still_run`,
+  `test_nullable_false_behaviour_is_unchanged`,
+  `test_required_field_still_reports_when_missing`.
+- No silently accepted replacement:
+  `test_a_replaced_validator_is_honoured_not_bypassed`,
+  `test_clearing_the_validator_sends_the_field_to_the_generic_path`,
+  `test_a_replaced_parser_sends_the_field_to_the_generic_path`.
+- Subclass preservation: `test_a_str_subclass_is_not_treated_as_a_str`,
+  `test_an_int_subclass_is_not_treated_as_an_int`,
+  `test_bool_supplied_to_an_int_field_keeps_reference_behaviour`.
+- No repeated conversion on fallback:
+  `test_conversion_is_not_repeated_when_the_gate_declines`,
+  `test_post_init_runs_once_with_the_gate_active`.
+- AC7 (results independent): `test_results_are_not_shared_between_instances`,
+  `test_error_dicts_are_not_shared_between_instances`.
+- `.pxd`/cpdef compatibility: the `.pxd` gained declarations only -- the
+  pre-existing `_validate_constraints` line is byte-identical -- and
+  `test_public_validation_surface_is_still_importable` checks the Python-visible
+  surface still imports.
+
+**Deviations from spec**: none in scope of the five declared files. Notes:
+
+1. **The class-cache sharing quirk bit again, this time across test files.**
+   `test_conversion_is_not_repeated_when_the_gate_declines` passed alone and
+   failed in the full suite: it defined `class Encoded(BaseModel)` with the same
+   annotations as an identically-named class in
+   `test_validation_allocations.py`, so the cache handed back that class's Field
+   -- and its encoder -- and mine never ran. Renamed to
+   `EncodedFastpathProbe` with a comment. Worth flagging to the maintainer:
+   this is a live foot-gun for anyone writing datamodel tests, and it is
+   pre-existing behaviour (characterized in TASK-11), not something this feature
+   introduced.
+2. `tests/compatibility/reference_manifest.json` regenerated again for the
+   rebuilt candidate, as in TASK-11/12. `verify_manifest()` -> `problems: []`.
+3. Generated `datamodel/*.html` reverted as build noise, out of scope.
+4. The task's contract still says the candidate targets 0.11.0 while the branch
+   is 0.12.0 -- unchanged, for TASK-22 to reconcile.
