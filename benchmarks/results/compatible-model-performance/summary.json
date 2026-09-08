@@ -1,0 +1,230 @@
+{
+  "blocked_on": [
+    "AC12"
+  ],
+  "candidate_commit": "c04177d788c11ea2863f4ae343055f70b0c96f70",
+  "evidence_index": {
+    "asyncdb-baseline.json": {
+      "bytes": 9270,
+      "sha256": "acdc66cb6285d1fcb5068bfbb7af83c72e51f8b7451c44d5e229339b461f7cf9"
+    },
+    "baseline.json": {
+      "bytes": 2414537,
+      "sha256": "5aa6a61a1a5e4c7fa46e49b336f30106957013ccfb9e88c602d60b253d3a72ef"
+    },
+    "cython.json": {
+      "bytes": 2374505,
+      "sha256": "2895e6b4641845a45f0fab19d1a0a43bf31bf78db55f6026e5cb02c75931f7a9"
+    },
+    "platforms.json": {
+      "bytes": 20292,
+      "sha256": "16cd5ad2be90a37e5256b36e4a46591d4da6d1ea25421492fb5caf9f59667156"
+    },
+    "rust-parallel.json": {
+      "bytes": 7749,
+      "sha256": "fec7ead61f204318c45273b130350767f3d599adce36c1e20e0e3b8222fddcc5"
+    },
+    "rust-sequential.json": {
+      "bytes": 12528,
+      "sha256": "2e3ab68fe267eb6d382825fd5b82b936d94ddd7be28454dae7e0a483aa4d526b"
+    },
+    "serialization.json": {
+      "bytes": 4876,
+      "sha256": "30813b16cc4d5856dd9693fb359c6d649bed38319b007a2d98339cbed1234e48"
+    },
+    "structural.json": {
+      "bytes": 8913,
+      "sha256": "563423a3afe22c7bb2ed34ca02fece5d3e02a027bf45292c79826c5dcf24de80"
+    }
+  },
+  "feature": "FEAT-2",
+  "gates": {
+    "AC1": {
+      "evidence": [
+        "tests/compatibility/reference_manifest.json",
+        "cython.json -> provenance"
+      ],
+      "status": "pass",
+      "what": "Reference provenance and deterministic corpus recorded; both environments freshly built and hash-recorded."
+    },
+    "AC10": {
+      "decision": "retain_current",
+      "evidence": [
+        "serialization.md",
+        "serialization.json"
+      ],
+      "status": "completed-negative",
+      "what": "Serialization experiment.",
+      "why": "Safe candidate measured +1.69%/+0.20% against a required 10%; the candidate worth 77% would skip user __deepcopy__ side effects that demonstrably run."
+    },
+    "AC11": {
+      "evidence": [
+        "docs/performance.md",
+        "benchmarks/results/compatible-model-performance/README.md",
+        "summary.json"
+      ],
+      "status": "pass",
+      "what": "docs/performance.md plus machine-readable reports describing gains, remaining costs, fallback cases, mutation behaviour and every experiment decision."
+    },
+    "AC12": {
+      "blockers": [
+        "BLOCKER-1 (high): CPython 3.14 does not work at all",
+        "BLOCKER-2 (medium): Windows AMD64 evidence is entirely absent (5 of 10 cells)",
+        "BLOCKER-3 (medium): asyncdb consumer verified on one interpreter only",
+        "BLOCKER-4 (low): rs_parsers is not built by an editable install"
+      ],
+      "evidence": [
+        "platforms.md",
+        "platforms.json"
+      ],
+      "measured": {
+        "cells_required": 10,
+        "cells_with_evidence": 1
+      },
+      "status": "BLOCKED",
+      "what": "Platform/interpreter matrix and consumer certification.",
+      "why": "1 of 10 cells has passing evidence. No failure is attributable to FEAT-2 - all reproduce on the reference - but a cell failing for a pre-existing reason still has no passing evidence."
+    },
+    "AC2": {
+      "evidence": [
+        "45/45 corpus cases, 0 divergences",
+        "asyncdb 2.16.0 consumer: 31 tests, 0 divergences",
+        "18 adversarial mutation/hook/generic-fallback tests, 0 divergences",
+        "asyncdb-baseline.json"
+      ],
+      "status": "pass",
+      "what": "No new failures; all differential cases match exactly."
+    },
+    "AC3": {
+      "budget": {
+        "employee_native": 3,
+        "employee_raw": 3,
+        "unconstrained_native": 0
+      },
+      "evidence": [
+        "tests/compatibility/profile_validation.py (separate profiling build), 20000 builds/workload"
+      ],
+      "measured": {
+        "employee_native": 2.0,
+        "employee_raw": 2.0,
+        "unconstrained_native": 0.0
+      },
+      "status": "pass",
+      "what": "Generic dispatch budget."
+    },
+    "AC4": {
+      "evidence": [
+        "tests/compatibility/test_mutation_parity.py",
+        "tests/compatibility/test_hook_parity.py",
+        "tests/compatibility/test_generic_fallback.py"
+      ],
+      "status": "pass",
+      "what": "Missing/null, parse failure, custom behaviour, constraint and mutation cases keep reference outcomes, payloads, order and callback counts."
+    },
+    "AC5": {
+      "conservative_ci_end": {
+        "employee_native": 9.34,
+        "employee_raw": 8.86,
+        "unconstrained_native": 15.42
+      },
+      "evidence": [
+        "cython.md",
+        "cython.json",
+        "spec Amendment 1"
+      ],
+      "measured": {
+        "employee_native": 9.91,
+        "employee_raw": 9.58,
+        "unconstrained_native": 16.03
+      },
+      "note": "Original target was a flat 20%; unreachable compatibly. Passes on the CONSERVATIVE end of every interval.",
+      "required": {
+        "employee_native": 8.0,
+        "employee_raw": 8.0,
+        "unconstrained_native": 12.0
+      },
+      "status": "pass",
+      "what": "Construction improvement, thresholds REVISED by spec Amendment 1 (2026-09-08) after the measured limit was reported."
+    },
+    "AC6": {
+      "evidence": [
+        "cython.json -> gates.AC6_regression_limit"
+      ],
+      "measured": {
+        "worst_median": "class_creation +4.35% (CI upper +4.64%)",
+        "worst_p95": "+4.54%"
+      },
+      "status": "pass",
+      "what": "Representative regressions within 5% (median and p95)."
+    },
+    "AC7": {
+      "evidence": [
+        "tests/test_validation_policy.py",
+        "tests/compatibility/test_validation_allocations.py",
+        "tests/compatibility/test_mutation_parity.py::test_policy_is_invisible_on_both_builds"
+      ],
+      "status": "pass",
+      "what": "Public/cpdef contracts, fresh mutable results, dataclass behaviour, primary keys, aliases, defaults and assignment history unchanged; no policy state leaks into JSON, field lists or dict output."
+    },
+    "AC8": {
+      "decision": "retain_cython",
+      "evidence": [
+        "rust-sequential.md",
+        "rust-sequential.json"
+      ],
+      "status": "completed-negative",
+      "what": "Sequential Rust experiment.",
+      "why": "0 of 15 acceptance workloads eligible; boundary floor 7.8% of a construction against a ~9.9% total available saving, leaving ~2.1% against a required 10%."
+    },
+    "AC9": {
+      "decision": "retain_sequential",
+      "evidence": [
+        "rust-parallel.md",
+        "rust-parallel.json"
+      ],
+      "status": "completed-negative",
+      "what": "Bounded parallel experiment.",
+      "why": "Best 1.11x against a required 1.25x, no crossover at any size; only ~10% of the work is parallelisable because the GIL-held snapshot/rebuild dominates."
+    }
+  },
+  "generated_at": "2026-09-08T07:57:16+00:00",
+  "headline": "NOT RELEASE-READY. AC1-AC7 and AC11 pass; AC8/AC9/AC10 are completed negative experiments with measurements, all retaining the existing implementation. AC12 is BLOCKED: 1 of 10 required platform/interpreter cells has passing evidence. The shipped change is a compatible Cython optimization measured at 9.58%/9.91% on Employee construction and 16.03% on all-scalar models, with ZERO behavioural divergence from 0.10.21 anywhere.",
+  "measurement_discipline": {
+    "evidence": [
+      "baseline.json",
+      "cython.json"
+    ],
+    "protocol": "8 paired fresh processes, alternating order, 30 batches x 2000 constructions, 1000 warm-up operations; clock read twice per batch, never around a constructor.",
+    "same_source_control": "Two independently built worktrees of the SAME reference commit are compared to establish an empirical cross-build noise floor (0.95-2.12% across runs). It has produced up to 3 spurious 'regression' verdicts from provably identical code, which is why a confidence interval excluding 1.0 is not by itself evidence at these magnitudes."
+  },
+  "reference": {
+    "commit": "d932c720e9e36bbacdaca2b1a2af0688f2636c40",
+    "version": "0.10.21"
+  },
+  "release_ready": false,
+  "reproduce": {
+    "acceptance": "python benchmarks/model_performance.py --pin-cpu <cpu> --control-root <second build of d932c720> --output <out>.json",
+    "differential": "python -m pytest tests/compatibility/ -q",
+    "dispatch_budget": "python tests/compatibility/profile_validation.py --builds 20000",
+    "full_suite": "python -m pytest tests/ -q",
+    "native_experiments": "python -m pytest tests/compatibility/test_native_executor.py tests/compatibility/test_parallel_validation.py -q",
+    "platform_matrix": "python -m pytest tests/compatibility/test_matrix_runner.py -q"
+  },
+  "spec": "sdd/specs/compatible-model-performance.spec.md",
+  "title": "Compatible model execution performance",
+  "what_ships": {
+    "change": "A precomputed per-field validation policy plus a gate at the post-conversion boundary that skips the generic _validation_ dispatch for exactly-typed supported scalars, reading constraints live so nothing added at runtime can be missed.",
+    "not_shipped": [
+      "Rust sequential executor (AC8 negative)",
+      "Parallel native execution (AC9 negative)",
+      "Serialization changes (AC10 negative)",
+      "Structural changes to the column snapshot or __fields__ membership (TASK-15 negative, all candidates rejected)"
+    ],
+    "public_api_changes": "none",
+    "version": {
+      "current": "0.12.0",
+      "note": "DISCREPANCY, unresolved and NOT actioned here. The task states 'current version is already 0.11.0, so no new bump is authorized'; the branch is 0.12.0. No bump is authorized either way, so datamodel/version.py is untouched. The maintainer must reconcile which release carries this work.",
+      "spec_and_tasks_assume": "0.11.0"
+    }
+  }
+}
