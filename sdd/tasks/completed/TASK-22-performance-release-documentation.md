@@ -117,11 +117,104 @@ Tests are behavioral specifications, not permission to change the oracle. Verify
 
 ## Completion Note
 
-*(Fill in only after implementation and verification.)*
+**Completed by**: sdd-worker (Claude Opus 5)
+**Date**: 2026-09-08
+**Documentation task complete. The FEATURE is NOT release-ready** —
+`summary.json` records `release_ready: false`, blocked on AC12.
 
-**Completed by**: pending
-**Date**: pending
-**Notes**: pending
-**Verification commands/results**: pending
-**Evidence paths and acceptance coverage**: pending
-**Deviations from spec**: pending
+The distinction matters: this task's job was to aggregate the evidence and say
+truthfully where things stand, and it does. It did **not** and could not clear
+AC12, and it does not pretend to.
+
+**Deliverables**: `docs/performance.md` (user-facing),
+`benchmarks/results/compatible-model-performance/summary.json` (aggregate
+AC1–AC12 roll-up), and `README.md` in that directory (evidence index).
+
+### AC roll-up
+
+| | status |
+|---|---|
+| AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC11 | **pass** |
+| AC8 (sequential Rust) | completed negative — retain Cython |
+| AC9 (parallel) | completed negative — retain sequential |
+| AC10 (serialization) | completed negative — retain current path |
+| **AC12** (platform/consumer) | **BLOCKED — 1 of 10 cells** |
+
+`release_ready` is *computed* from the gates rather than asserted, and a
+consistency check confirms it follows from them.
+
+### What the documentation is careful about
+
+**It documents what did NOT ship at equal length to what did.** Four rejected
+directions — the Rust executor, parallel execution, serialization changes, and
+all six structural candidates — each get the measurement that rejected them and
+a "what would change the answer" note, so the next attempt starts from evidence
+instead of repeating the work.
+
+**It records the remaining cost distribution**: `asdict`'s deep copy is 77.4% of
+`json()`, per-field conversion and `_dc_method_setattr_` dominate construction,
+and the generic validation dispatch is already fully eliminated for supported
+scalars. That is the map for whoever picks this up.
+
+**It explains the measurement discipline prominently**, including that the
+same-source control has produced up to **three spurious "regression" verdicts
+from provably identical code**, so a confidence interval excluding 1.0 is not by
+itself evidence at these magnitudes. Nothing under ~2% is claimed anywhere.
+
+**It states rollout prerequisites without dressing up absent evidence**: CPython
+3.14 non-functional (pre-existing, own ticket), Windows evidence absent, asyncdb
+verified on cp313 only, `rs_parsers` not built by an editable install. No
+consumer baseline approval is supplied, and none is implied.
+
+**It preserves the resolved user requirement verbatim** — `asyncdb.models`
+compatibility is treated as a first-class requirement throughout, with the real
+2.16.0 distribution pinned, installed against both builds, and compared
+field-by-field. The FEAT-001 platform matrix is preserved as a requirement, with
+its true status reported rather than assumed.
+
+### The version discrepancy — recorded, not actioned
+
+The task states *"current version is already 0.11.0, so no new bump is
+authorized"*; `datamodel/version.py` actually reads **0.12.0**. I have flagged
+this in every completion note since TASK-7. No bump is authorized either way, so
+the file is untouched and `version.py` was never in any task's scope. Both
+`summary.json` and `docs/performance.md` record the discrepancy explicitly and
+**decline to choose** — the maintainer must reconcile which release carries this
+work. Silently picking one would have been the easy and wrong thing.
+
+### Verification commands/results
+
+- Aggregate consistency check -> **37 path/hash references validated**, every
+  evidence path resolves, every recorded sha256 matches the file on disk,
+  `release_ready` agrees with the gate statuses, every command in `reproduce`
+  names a file that exists, and the recorded current version matches
+  `datamodel.version.__version__`.
+- `.venv/bin/python -m pytest tests/ -q` -> **772 passed, 2 skipped, 0 failed**.
+- No runtime code was edited; only the three declared documentation/report files
+  changed.
+
+### Evidence and acceptance coverage
+
+- **AC11**: `docs/performance.md`, `summary.json`, `README.md` — gains,
+  remaining costs, fallback categories, mutation-safe behaviour, every
+  experiment decision, and reproducible commands checked against the real
+  harness interfaces.
+- **AC12**: `summary.json` -> `gates.AC12` carries the blocked status, the
+  1-of-10 count and all four named blockers, and drives `release_ready: false`.
+  Incomplete platform/consumer evidence is therefore *structurally* incapable of
+  producing a release-ready summary.
+
+### Deviations from spec
+
+1. **No test file is in this task's declared scope**, yet its test specification
+   asks to "validate aggregate JSON and all local evidence links, sample counts,
+   artifact hashes and decision thresholds". I ran that validation as a
+   scripted check (results above) rather than adding an unowned test file. A
+   permanent regression test for the summary would be a sensible follow-up, and
+   would need its own task to own the file.
+2. **`docs/performance.md` states the feature is not release-ready.** That is
+   deliberate: the task forbids "bypassing failed acceptance criteria", and
+   publishing a performance document that implied readiness while AC12 is
+   blocked would do exactly that.
+3. No `.pyx` changed; no rebuild or manifest regeneration required. No package
+   publication, no PR merge, no backend promotion.
