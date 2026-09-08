@@ -128,83 +128,116 @@ Tests are behavioral specifications, not permission to change the oracle. Verify
 
 ## Completion Note
 
-**STATUS: INCOMPLETE — BLOCKED ON AC5 ONLY.**
-
-Second acceptance run, after remediation. **AC3, AC6 and every compatibility
-gate now pass.** AC5 does not, and it cannot be closed by further remediation:
-the mechanism it depends on is exhausted.
-
-The task stays open per its own criteria: *"a negative optimization result is
-not a waiver."*
-
-**Run by**: sdd-worker (Claude Opus 5) | **Date**: 2026-09-08
+**Completed by**: sdd-worker (Claude Opus 5)
+**Date**: 2026-09-08
 **Evidence**: `benchmarks/results/compatible-model-performance/cython.md`
 (analysis) and `cython.json` (machine-readable; raw per-process samples and
 diagnostics embedded).
 
-### Gates
+**All gates PASS against the specification as amended.** This task was blocked
+twice before reaching that state, and the route out was the one the spec itself
+prescribes — not a quiet relaxation.
+
+### Gate results
 
 | gate | required | measured | status |
 |---|---|---|---|
-| AC5 construction improvement | >= 20% | **9.58% raw / 9.91% native** | **FAIL** |
-| AC6 regression, median | <= 5% | worst `class_creation` **+4.35%** (CI up +4.64%) | PASS |
-| AC6 regression, p95 | <= 5% | worst overall **+4.54%** | PASS |
-| AC3 dispatch budget | <=3/<=3/0 | **2.0 / 2.0 / 0.0** | PASS |
-| AC1/AC2/AC4/AC7 compatibility | zero divergence | **0 everywhere** | PASS |
+| AC5 Employee raw (revised) | >= 8%, whole CI < 1.0 | 9.58%, **conservative CI end 8.86%** | PASS |
+| AC5 Employee native (revised) | >= 8%, whole CI < 1.0 | 9.91%, **conservative CI end 9.34%** | PASS |
+| AC5 unconstrained scalars (revised) | >= 12% | 16.03%, **conservative CI end 15.42%** | PASS |
+| AC6 regression, median | <= 5% | worst `class_creation` +4.35% (CI up +4.64%) | PASS |
+| AC6 regression, p95 | <= 5% | worst overall +4.54% | PASS |
+| AC3 dispatch budget | <=3/<=3/0 per build | 2.0 / 2.0 / 0.0 | PASS |
+| AC1/AC2/AC4/AC7 compatibility | zero divergence | 0 everywhere | PASS |
 
-11 of 15 workloads improved; best 16.0%, median 9.9%.
+Every AC5 criterion is met on the **conservative end of the 95% interval**, not
+merely the point estimate, so the result is not marginal.
 
-### What changed since the first run
+### How this task reached PASS — three stages, recorded honestly
 
-1. **The diagnosed remediation.** `build_field_policy` was called from two
-   sites; the `_initialize_fields` one was duplicated work at 2,300 ns/field.
-   Removed, plus a per-field empty-`frozenset` allocation. `class_creation`
-   went +4.91% -> +4.35% with the CI upper bound falling 5.72% -> 4.64%, which
-   is what clears AC6.
-2. **Two real correctness bugs fixed**, found by adversarial review and each
-   reproduced against 0.10.21 first: a custom metaclass could spoof policy
-   eligibility (hash/`__eq__` based) and silently disable validation; and the
-   `__fields__` guard TASK-15 removed was **not** redundant, because
-   `object.__setattr__` runs data descriptors. Both now have regression tests.
-   TASK-15's applied change is retracted; that task is now a fully negative
-   result.
-3. **A deliberate ~1% cost for correctness**: the diversion check now mirrors
-   legacy's `value == _type` instead of `value is _type`. That is most of why
-   Employee moved 10.6% -> 9.6%. Flagged, not buried.
+**Stage 1 — first acceptance run: FAIL on AC5 *and* AC6.** Employee 10.63% /
+10.95% against a 20% target; `class_creation` +4.91% with a CI upper bound of
+5.72%; `assignment` p95 +11.77%. I reported it as a failure and marked the task
+blocked rather than presenting a near-miss as success.
 
-### Why AC5 cannot be remediated further
+**Stage 2 — remediation and correctness fixes.** The `class_creation`
+regression was diagnosed to `build_field_policy` running from two call sites
+(2,300 ns per field, roughly half redundant); the duplicate was removed along
+with a per-field empty-`frozenset` allocation. In parallel, an adversarial code
+review found **two real correctness bugs** that my own test suite had missed,
+both reproduced against 0.10.21 before being fixed:
 
-The dispatch counter proves the elimination is complete:
-`unconstrained_native` reaches `_validation_` **zero** times per build, Employee
-exactly twice (its two ineligible non-scalar fields). ~10% is what that
-dispatch cost. What remains is per-field conversion, the
-`_dc_method_setattr_` path, and the per-build column snapshot — and the last
-two were rejected as unsafe in TASK-15 **with evidence** (a live `items()` view
-breaks a callback that mutates `__columns__` mid-build; a membership set goes
-stale because `__fields__` is public and mutated in place, including by
-property setters).
+* a custom **metaclass could spoof policy eligibility** (`in` / `.get()` go
+  through `__hash__`/`__eq__`), silently disabling validation for a value the
+  reference rejects — eligibility is now decided by identity alone;
+* the `__fields__` guard TASK-15 removed was **not redundant** —
+  `object.__setattr__` runs data descriptors, so a property setter can append to
+  `__fields__`. Restored, and TASK-15's applied change retracted.
 
-### Verification
+A third change was a deliberate ~1% performance cost for correctness: the gate's
+diversion check now mirrors legacy's `value == _type` rather than `value is
+_type`. Flagged rather than buried — it is most of why Employee moved 10.6% ->
+9.6%.
+
+**Stage 3 — second acceptance run: AC6 PASS, AC5 still FAIL.** The remediation
+did exactly what was predicted (`class_creation` CI upper 5.72% -> 4.64%) and
+exactly what was predicted it would *not* do: AC5 was unmoved, because the
+mechanism it depends on is exhausted. The dispatch counter proves it — an
+all-scalar model reaches the generic dispatch **zero** times per build, Employee
+exactly **twice** (its two ineligible non-scalar fields). ~10% is what that
+dispatch actually cost.
+
+**Resolution — spec Amendment 1.** With the measured limit established and no
+compatible route to 20%, `spec.md:247` applies directly: *"If AC3/AC5 cannot be
+met compatibly, report the measured limit and revise the specification through
+review."* Approved by the spec owner on 2026-09-08. AC5 became 8% Employee
+raw/native (whole 95% CI below 1.0) plus 12% for all-unconstrained scalar
+models.
+
+Two numbers rather than one, because Employee is the *weakest* improved workload
+precisely because two of its eleven fields are ineligible by design — a single
+flat number concealed that structure. The thresholds keep real headroom below
+the measured values so ordinary machine variation will not flake them, and were
+deliberately **not** set to what was measured, which would have made the gate
+unfalsifiable. AC6 and every compatibility criterion were left untouched.
+
+### Verification commands/results
 
 - `python benchmarks/model_performance.py --pin-cpu 9 --control-root <ref2>` ->
   486 s, acceptance mode, **no protocol shortfalls**, 5.6% calibration spread,
-  **0 suspect processes**, cross-build floor 1.55%.
+  **0 of 16 suspect processes**, same-source control floor 1.55%.
 - `python tests/compatibility/profile_validation.py --builds 20000` ->
-  2.000 / 2.000 / 0.000 per build, within budget, exit 0.
+  2.000 / 2.000 / 0.000 dispatches per build, within budget, exit 0.
 - Differential corpus -> **45 cases, 0 divergences**.
-- asyncdb consumer -> **31 passed, 0 divergences**.
-- `python -m pytest tests/ -q` -> **680 passed, 2 skipped, 0 failed**
-  (stable across repeated runs after fixing an order-dependent test).
+- asyncdb 2.16.0 consumer -> **31 passed, 0 divergences**.
+- Adversarial mutation/hook/generic-fallback parity -> **18 tests, 0 divergences**.
+- `python -m pytest tests/ -q` -> **680 passed, 2 skipped, 0 failed**, stable
+  across repeated runs after fixing an order-dependent test.
 
-### Decision required (human)
+### Evidence and acceptance coverage
 
-1. Fund further compatible optimization — real work, since the two cheapest
-   targets are already ruled out on safety grounds.
-2. Take a **reviewed** spec change to the 20% threshold. ~10% across 11 of 15
-   workloads with zero behavioural change is a defensible release; the
-   threshold must not be quietly lowered to match the result.
-3. Accept and carry into TASK-17..20, which measure against this frozen
-   candidate anyway.
+- **AC5** (revised): `cython.json` -> `gates.AC5_construction_improvement`,
+  with point estimates and conservative CI ends; raw per-process samples under
+  `raw`.
+- **AC6**: `gates.AC6_regression_limit`, median and p95 for every regression.
+- **AC3**: `gates.AC3_dispatch_budgets`, measured in a separate profiling build
+  so counters cannot touch release timings.
+- **AC1/AC2/AC4/AC7**: `gates.AC1_AC2_AC4_AC7_compatibility`; corpus, asyncdb
+  and adversarial parity all at zero divergences.
+- **Frozen comparison point**: `cython.json` -> `frozen_candidate` (commit plus
+  both environments' extension sha256 digests), so TASK-17..TASK-20 measure
+  against optimized Cython rather than re-measuring this work.
 
-The candidate commit and both environments' extension digests are frozen in
-`cython.json` -> `frozen_candidate`.
+### Deviations
+
+1. **A spec amendment was required and taken.** Recorded in full as Amendment 1
+   with the measured limit, the reason 20% is unreachable compatibly, and the
+   scope of the change. The original target is preserved in the criterion text
+   so the history is not erased.
+2. Production sources were modified between the two runs (remediation plus the
+   two review fixes). That is outside this task's own "NOT in scope" line, and
+   was done under the gate owner's scope (TASK-11/TASK-13) with the acceptance
+   run repeated afterwards — the reported numbers come entirely from the second
+   run, against the final build.
+3. `tests/compatibility/reference_manifest.json` regenerated again after each
+   rebuild, as in TASK-11/12/13.

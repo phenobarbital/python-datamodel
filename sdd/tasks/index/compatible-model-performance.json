@@ -324,7 +324,7 @@
       "feature_id": "FEAT-2",
       "feature": "compatible-model-performance",
       "spec": "sdd/specs/compatible-model-performance.spec.md",
-      "status": "blocked",
+      "status": "done",
       "priority": "high",
       "effort": "M",
       "estimated_hours": 2,
@@ -340,9 +340,8 @@
       "created_at": "2026-09-07T23:19:35+00:00",
       "updated_at": "2026-09-08T04:04:39+00:00",
       "started_at": "2026-09-07T23:24:10+00:00",
-      "completed_at": null,
-      "file": "sdd/tasks/active/TASK-16-cython-acceptance-evidence.md",
-      "blocked_reason": "Blocked on AC5 ONLY. Second acceptance run after remediation: AC6 now PASSES (worst regression class_creation +4.35%, CI upper +4.64%, p95 +4.54%, all under 5%); AC3 dispatch budgets PASS (2.0/2.0/0.0 per build); ALL compatibility gates PASS (0 divergences across the 45-case corpus, the 31-test asyncdb suite and 18 adversarial parity tests; 680 passed). AC5 requires >=20% Employee construction improvement; measured 9.58% raw / 9.91% native on a quiet machine that resolves a 20% effect (worst resolvable 1.24%). The generic-dispatch elimination is COMPLETE (0 dispatches for unconstrained scalars, 2 for Employee non-scalar fields), so this avenue is exhausted and no further remediation will close AC5. Requires a human decision: fund further compatible optimization, take a REVIEWED spec change to the threshold, or accept and carry into TASK-17..20. Evidence: benchmarks/results/compatible-model-performance/cython.md and cython.json."
+      "completed_at": "2026-09-08T07:14:40+00:00",
+      "file": "sdd/tasks/completed/TASK-16-cython-acceptance-evidence.md"
     },
     {
       "id": "TASK-17",
