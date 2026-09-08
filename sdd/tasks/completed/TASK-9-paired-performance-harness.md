@@ -122,11 +122,168 @@ Tests are behavioral specifications, not permission to change the oracle. Verify
 
 ## Completion Note
 
-*(Fill in only after implementation and verification.)*
+**Completed by**: sdd-worker (Claude Opus 5)
+**Date**: 2026-09-08
+**Notes**: Implemented M1's measurement protocol in exactly the three declared
+files. This harness is the single protocol every later task must use to claim a
+speed-up or a regression.
 
-**Completed by**: pending
-**Date**: pending
-**Notes**: pending
-**Verification commands/results**: pending
-**Evidence paths and acceptance coverage**: pending
-**Deviations from spec**: pending
+**Public interface** (documented in the module docstring so dependent tasks
+verify rather than invent): `Workload`, `BenchmarkPlan`, `BenchmarkError`,
+`batch_size_for()`, `run_benchmark()`, `run_same_source_control()`,
+`summarise_workload()`, `bootstrap_ratio_interval()`, `log_ratio_interval()`,
+`percentile()`, `is_acceptance_run()`, `write_report()`, `format_summary()`,
+`main()`, `REPORT_SCHEMA_VERSION`, `DEFAULT_OUTPUT`, and the
+`ACCEPTANCE_*`/`SMOKE_*` constants. Children run via
+`benchmarks/model_performance.py --worker`, reusing TASK-8's `Environment`,
+`candidate_environment()`, `reference_environment()` and `verify_manifest()` so
+both tasks agree on what "the reference build" means.
+
+**Protocol as built** (spec §4): 8 paired fresh processes -- deliberately 8,
+not the floor of 7, because order alternates *within* each pair; an odd count
+would run the reference first 4 times and the candidate 3, charging any
+within-pair position effect systematically to one side
+(`test_acceptance_requires_an_even_number_of_process_pairs`,
+`test_baseline_counterbalanced_the_execution_order`). 1,000 warm-up operations,
+30 batches x 2,000 constructions (500/200 for the expensive wide and
+class-creation workloads, each recorded per workload in
+`protocol.batch_sizes`). The clock is read exactly **twice per batch**, never
+around an individual constructor, and that count is written into the report so
+the claim is checkable rather than asserted
+(`test_the_clock_was_read_exactly_twice_per_batch`). Every batch's payloads are
+built before the timer starts
+(`test_every_batch_prepared_its_inputs_before_timing`).
+
+**Instrumentation refusal.** An acceptance run aborts if `sys.gettrace()`,
+`sys.getprofile()`, the threading equivalents or `tracemalloc` is active, and
+never enables one itself. Allocation figures come from a *separate* diagnostic
+pass whose every entry says it is not comparable with the timed batches
+(`test_timing_is_refused_while_tracemalloc_is_tracing`,
+`test_timing_is_refused_while_a_profile_hook_is_installed`,
+`test_timing_is_refused_while_another_thread_is_running`,
+`test_timed_batches_ran_without_instrumentation`,
+`test_allocation_diagnostics_are_a_separate_pass`).
+
+**THE CENTRAL RESULT -- this baseline measures no change, and proves it.**
+`datamodel/` is **byte-identical** between the reference commit `d932c720`
+(0.10.21) and this branch except `version.py` and the new `libs/uvloop.py`,
+neither of which is on any measured path
+(`git diff --stat d932c720 HEAD -- datamodel/` -> 2 files, uvloop + version).
+The true ratio is therefore exactly 1.0 on all 15 workloads, and **every**
+verdict this report emits is an artifact of machine noise plus binary layout.
+
+That is not a theoretical caveat -- it is measured. The run was captured with
+`--control-root` pointed at `ref2-FEAT-2-d932c720`, an independently built
+worktree of the *same* reference commit (verified: same SHA, clean tree,
+different `.so` digests -- two separate compilations of identical `.pyx`).
+`same_source_control` reports an **empirical cross-build floor of 2.12%** and,
+decisively, **3 spurious "regression" verdicts from provably identical code**
+(`unconstrained_native` 1.0169, `unconstrained_raw` 1.0212, `client_nested`
+1.0208), each with a 95% interval entirely above 1.0. A confidence interval
+excluding 1.0 is therefore *not* sufficient evidence of a real change at this
+magnitude. The main comparison's four flagged workloads
+(`constrained_valid` 1.0161, `json_warm` 1.0156, `unconstrained_native` 1.0087,
+`employee_native` 1.0062) are all **below** that 2.12% floor and must be read
+as no change.
+
+**Consequence for TASK-11..TASK-15: there is no ~1-2% regression to repay.**
+Any later run must clear the cross-build floor -- not merely produce an
+interval excluding 1.0 -- before a speed-up or regression may be claimed. This
+is also the empirical justification for AC5 asking 20% and AC6 tolerating 5%.
+
+**Two guards added after the first capture was shown to be misleading.** The
+originally captured artifact was taken *without* `--control-root` and carried
+five unqualified "regression" labels; nothing in the suite objected, because
+the existing `test_baseline_is_a_no_change_measurement` only rejects
+*improvement* verdicts. Phantom regressions were exactly as dangerous, and
+would have sent the optimization tasks chasing them. Added:
+- `test_baseline_recorded_the_same_source_control` -- a baseline without the
+  control cannot be interpreted at all and is rejected.
+- `test_baseline_flags_nothing_beyond_the_cross_build_floor` -- no
+  non-inconclusive verdict may exceed the floor the control measured. It does
+  not demand zero labels (independent builds genuinely differ); it demands that
+  no label exceed what calibration can explain.
+
+**Machine quality is a recorded gate, not an afterthought.** An intermediate
+capture came back with a 15.9% calibration spread and 1 suspect process, and
+the new floor guard **failed** on it (three verdicts marginally above a 1.22%
+floor). Per spec §4 the response is re-measurement, not relaxing the threshold,
+so the run was repeated on an idle machine; the threshold was left untouched.
+The accepted artifact records `calibration_spread` 9.1%, **0 suspect
+processes**, quiet-machine true.
+
+**Verification commands/results**:
+- `.venv/bin/python -m pytest tests/compatibility/test_benchmark_protocol.py -q`
+  -> **54 passed**, 0 failed.
+- `.venv/bin/python -m pytest tests/ -q` -> **505 passed, 2 skipped, 0 failed**
+  (451 before this task + 54 new; no new reference-relative regression).
+- `.venv/bin/python -m ruff check --select F,E9 benchmarks/ tests/compatibility/`
+  -> clean.
+- Smoke CLI -> `acceptance: false`, all 19 shortfalls enumerated by name.
+- Acceptance capture: 510.2s, 8 pairs, 30 batches, 15 workloads,
+  `protocol_shortfalls: []`, both environments' extension digests and
+  `has_rust_parsers: true` recorded, plus the same-source control.
+
+**Environments** (provenance embedded in `baseline.json`, cross-checked against
+TASK-8's `reference_manifest.json` before any timing):
+| | reference | candidate | control |
+|---|---|---|---|
+| commit | `d932c720` | this worktree | `d932c720` (independent build) |
+| version | 0.10.21 | 0.12.0 | 0.10.21 |
+| interpreter | own `.venv` CPython 3.13.11 | own `.venv` CPython 3.13.11 | own `.venv` |
+| rs_parsers | built, `HAS_RUST=True` | built, `HAS_RUST=True` | built |
+
+**Evidence paths and acceptance coverage**:
+- AC1 (fresh artifact provenance validated *before* timings):
+  `_validate_provenance()` re-verifies TASK-8's manifest and aborts on mismatch;
+  `baseline.json.provenance` records both roots, interpreters, commits, dirty
+  flags, dependency versions and all binary digests. Pinned by
+  `test_baseline_records_both_artifact_identities`,
+  `test_smoke_report_validated_artifact_provenance`,
+  `test_a_run_refuses_to_measure_when_provenance_is_invalid`.
+- AC5/AC6 (resolvable effect sizes): `baseline.json.noise_floor` --
+  `can_resolve_ac5_20pct_improvement: true`,
+  `can_resolve_ac6_5pct_regression: true`, worst resolvable effect 1.76%.
+  Pinned by `test_baseline_can_resolve_the_thresholds_it_will_be_used_for`.
+- AC11 (reproducible machine-readable evidence): `baseline.json` carries raw
+  per-batch samples, per-process medians/p95s, paired ratios, both interval
+  methods, the protocol description, the order-alternation log, environment and
+  build flags. Pinned by `test_baseline_has_raw_samples_for_every_process`,
+  `test_baseline_is_a_full_acceptance_run`, `test_baseline_covers_every_workload`.
+- No-change honesty: `test_baseline_is_a_no_change_measurement`,
+  `test_baseline_recorded_the_same_source_control`,
+  `test_baseline_flags_nothing_beyond_the_cross_build_floor`.
+- Statistics: `test_bootstrap_interval_is_deterministic`,
+  `test_bootstrap_interval_does_not_claim_a_noisy_improvement`,
+  `test_a_point_estimate_below_one_is_not_enough_for_an_improvement`,
+  `test_paired_ratios_are_not_a_ratio_of_means`,
+  `test_verdict_only_claims_an_improvement_when_the_whole_interval_is_below_one`.
+- Smoke/acceptance separation:
+  `test_smoke_report_is_clearly_not_an_acceptance_measurement`,
+  `test_a_smoke_plan_is_never_an_acceptance_plan`,
+  `test_is_acceptance_run_rejects_a_shortfall_report`,
+  `test_every_undersized_dimension_is_reported`.
+- Pydantic is optional/contextual only, never a gate:
+  `test_pydantic_is_recorded_as_contextual_only`.
+
+**Deviations from spec**: none in scope or file ownership. Notes for the
+reviewer:
+1. **8 process pairs instead of the literal 7** -- exceeds the spec floor;
+   rationale (order-alternation balance) is in a comment at the constant and in
+   `protocol.position_balance`.
+2. **Reduced batch sizes for 4 of 15 workloads** (`wide_raw`, `wide_native`,
+   `container_full` at 500; `class_creation` at 200), each 10-70x more
+   expensive per operation. Each workload's actual size is recorded and
+   compared against its own acceptance size, so a smoke run still cannot pass
+   itself off as acceptance.
+3. **`datamodel/version.py` is 0.12.0 on this branch** while the task contract
+   says 0.11.0. Untouched, carried forward from TASK-7/TASK-8; TASK-22 still
+   needs the maintainer to reconcile the declared release target.
+4. The reference and control worktrees are gitignored and `*.so` is untracked,
+   so reproducing `baseline.json` requires rebuilding all three environments per
+   the manifest's `reproduce` field. The absolute nanosecond figures are
+   machine-specific; **the protocol and the calibrated floor, not the numbers,
+   are the deliverable.**
+5. The cross-build floor is itself run-dependent (1.22% on the noisy capture,
+   2.12% here). Later tasks should re-derive it in the same run as their claim
+   rather than reusing this figure as a constant.
