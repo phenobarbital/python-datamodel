@@ -1,0 +1,260 @@
+{
+  "artifact": {
+    "author": "Jesus Lara <jesuslara@phenobarbital.info>",
+    "company_relevance": "Same author and maintainer as python-datamodel; asyncdb is the Navigator data-access layer and declares python-datamodel>=0.10.21, which is exactly the engineering reference version this feature is measured against. It is therefore the real downstream consumer named in spec section 8, not a proxy.",
+    "declared_datamodel_requirement": "python-datamodel>=0.10.21",
+    "filename": "asyncdb-2.16.0-cp313-cp313-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "index": "https://pypi.org/simple",
+    "name": "asyncdb",
+    "packagetype": "bdist_wheel",
+    "requires_python": ">=3.10",
+    "sha256": "26b77d7b7d9cdd2e51049d632ed02d7c339509e7157f49efa7e3dd403f27c45f",
+    "source_repository": "https://github.com/phenobarbital/asyncdb",
+    "url": "https://files.pythonhosted.org/packages/f2/64/ad7de6501559c3691299ed6610f463dec8567890131e82a9f334f069d90e/asyncdb-2.16.0-cp313-cp313-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "version": "2.16.0"
+  },
+  "coverage": {
+    "cases": {
+      "db_aliased_by_alias": {
+        "expect": "ok",
+        "model": "DbAliasedRow",
+        "notes": "supplied under the wire alias rather than the attribute",
+        "tags": [
+          "alias"
+        ]
+      },
+      "db_aliased_by_attribute": {
+        "expect": "ok",
+        "model": "DbAliasedRow",
+        "notes": "",
+        "tags": [
+          "alias"
+        ]
+      },
+      "db_department": {
+        "expect": "ok",
+        "model": "DbDepartment",
+        "notes": "",
+        "tags": [
+          "scalar"
+        ]
+      },
+      "db_employee_below_min_age": {
+        "expect": "error",
+        "model": "DbEmployee",
+        "notes": "VERIFIED against the reference build: min= IS enforced on an int column and raises ValidationError. Note the contrast with the main corpus, where min/max on a *str* field are silently ignored -- so 'constraints are not enforced' is false in general and must not be generalised from the str case.",
+        "tags": [
+          "error",
+          "constraint",
+          "characterization"
+        ]
+      },
+      "db_employee_native": {
+        "expect": "ok",
+        "model": "DbEmployee",
+        "notes": "",
+        "tags": [
+          "wide",
+          "native",
+          "temporal"
+        ]
+      },
+      "db_employee_partial": {
+        "expect": "ok",
+        "model": "DbEmployee",
+        "notes": "",
+        "tags": [
+          "default",
+          "partial"
+        ]
+      },
+      "db_employee_raw": {
+        "expect": "ok",
+        "model": "DbEmployee",
+        "notes": "string date/datetime conversion via converters.pyx",
+        "tags": [
+          "wide",
+          "raw",
+          "temporal"
+        ]
+      },
+      "db_presence_defaults": {
+        "expect": "ok",
+        "model": "DbPresence",
+        "notes": "",
+        "tags": [
+          "presence",
+          "default"
+        ]
+      },
+      "db_presence_explicit_none": {
+        "expect": "ok",
+        "model": "DbPresence",
+        "notes": "explicit None for a nullable column",
+        "tags": [
+          "presence",
+          "null"
+        ]
+      },
+      "db_presence_full": {
+        "expect": "ok",
+        "model": "DbPresence",
+        "notes": "",
+        "tags": [
+          "presence"
+        ]
+      },
+      "db_presence_missing_required": {
+        "expect": "error",
+        "model": "DbPresence",
+        "notes": "",
+        "tags": [
+          "error",
+          "required"
+        ]
+      },
+      "db_staffing_nested": {
+        "expect": "ok",
+        "model": "DbStaffing",
+        "notes": "dict hydrated into a nested Model under as_objects",
+        "tags": [
+          "nested",
+          "as_objects"
+        ]
+      },
+      "db_staffing_nested_missing": {
+        "expect": "ok",
+        "model": "DbStaffing",
+        "notes": "",
+        "tags": [
+          "nested",
+          "default"
+        ]
+      },
+      "db_user_bad_type": {
+        "expect": "error",
+        "model": "DbUser",
+        "notes": "uncoercible primary key",
+        "tags": [
+          "error",
+          "coercion"
+        ]
+      },
+      "db_user_defaults": {
+        "expect": "ok",
+        "model": "DbUser",
+        "notes": "omitted optional columns fall back to defaults",
+        "tags": [
+          "default"
+        ]
+      },
+      "db_user_missing_required": {
+        "expect": "error",
+        "model": "DbUser",
+        "notes": "both required columns absent",
+        "tags": [
+          "error",
+          "required"
+        ]
+      },
+      "db_user_native": {
+        "expect": "ok",
+        "model": "DbUser",
+        "notes": "typed driver row",
+        "tags": [
+          "scalar",
+          "native"
+        ]
+      },
+      "db_user_raw": {
+        "expect": "ok",
+        "model": "DbUser",
+        "notes": "untyped driver row; every value arrives as str",
+        "tags": [
+          "scalar",
+          "raw"
+        ]
+      }
+    },
+    "models": [
+      "DbUser",
+      "DbEmployee",
+      "DbDepartment",
+      "DbStaffing",
+      "DbAliasedRow",
+      "DbPresence"
+    ]
+  },
+  "environments": {
+    "candidate": {
+      "asyncdb_file": "/home/jesuslara/proyectos/python-datamodel/.claude/worktrees/feat-FEAT-2-compatible-model-performance/.venv/lib/python3.13/site-packages/asyncdb/__init__.py",
+      "asyncdb_version": "2.16.0",
+      "commit": "83a7a197c0cf42c0c8098864700c7889ccbc1c9d",
+      "datamodel_file": "/home/jesuslara/proyectos/python-datamodel/.claude/worktrees/feat-FEAT-2-compatible-model-performance/datamodel/__init__.py",
+      "datamodel_version": "0.12.0",
+      "root": "/home/jesuslara/proyectos/python-datamodel/.claude/worktrees/feat-FEAT-2-compatible-model-performance"
+    },
+    "reference": {
+      "asyncdb_file": "/home/jesuslara/proyectos/python-datamodel/.claude/worktrees/ref-FEAT-2-d932c720/.venv/lib/python3.13/site-packages/asyncdb/__init__.py",
+      "asyncdb_version": "2.16.0",
+      "commit": "d932c720e9e36bbacdaca2b1a2af0688f2636c40",
+      "datamodel_file": "/home/jesuslara/proyectos/python-datamodel/.claude/worktrees/ref-FEAT-2-d932c720/datamodel/__init__.py",
+      "datamodel_version": "0.10.21",
+      "root": "/home/jesuslara/proyectos/python-datamodel/.claude/worktrees/ref-FEAT-2-d932c720"
+    }
+  },
+  "external_prerequisites_pending": {
+    "items": [
+      "No company-internal asyncdb fork or private index was provided. This manifest pins the public PyPI distribution by the same author. If a private Navigator build diverges from 2.16.0, that build must be re-pinned here and the differential re-run before consumer compatibility can be claimed for it.",
+      "Live database driver integration (postgres/mysql/redis backends) is NOT covered: it requires service credentials that this task is not authorized to use. Driver-level compatibility therefore remains evidence-pending."
+    ],
+    "note": "Recorded explicitly rather than silently omitted, per the task's requirement that genuine remaining external prerequisites be stated."
+  },
+  "feature": "FEAT-2",
+  "generated_at": "2026-09-08T02:02:49+00:00",
+  "not_covered": {
+    "classmethod": [
+      "create",
+      "remove",
+      "updating",
+      "deleting",
+      "select",
+      "filter",
+      "get",
+      "all",
+      "makeModel"
+    ],
+    "get_connection": "Not called: it imports asyncdb.drivers.<driver> and constructs a real client.",
+    "instance": [
+      "insert",
+      "update",
+      "delete",
+      "save",
+      "fetch",
+      "close",
+      "__aenter__",
+      "__aexit__"
+    ],
+    "reason": "All are async and require a live database connection. The task forbids production database access, so they are out of scope and are NOT claimed as verified."
+  },
+  "observed_quirks": [
+    "asyncdb's Model.model() renders a default_factory column (DbEmployee.tags) as `varchar DEFAULT <dataclasses._MISSING_TYPE object at 0x...>`: the sentinel repr leaks into the DDL and embeds a heap address. Identical on both builds, so it is not a compatibility break -- it is an asyncdb rendering quirk. The differential normalises addresses to 0xADDR so it compares the DDL rather than the allocator.",
+    "min= IS enforced on an int column (DbEmployee.age below 18 raises ValidationError), in contrast with the main corpus finding that min/max on a *str* field are silently ignored. 'Constraints are not enforced' is therefore false in general.",
+    "Importing asyncdb mutates datamodel module state: it sets DB_TYPES[numpy.int64] = 'bigint' at import time."
+  ],
+  "purpose": "Evidence that the real asyncdb.models consumer behaves identically under the engineering reference and the candidate datamodel build.",
+  "regenerate_command": "python -m pytest tests/compatibility/test_asyncdb_models.py -q  (report written by the documented snippet in the TASK-10 completion note)",
+  "result": {
+    "cases_compared": 18,
+    "detail": [],
+    "divergences": 0,
+    "divergences_by_area": {
+      "assignment": 0,
+      "cases": 0,
+      "schema": 0
+    },
+    "models_compared": 6
+  },
+  "spec": "sdd/specs/compatible-model-performance.spec.md",
+  "task": "TASK-10"
+}

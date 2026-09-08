@@ -1,0 +1,77 @@
+{
+  "feature": "FEAT-2",
+  "task": "TASK-10",
+  "purpose": "Pin the real asyncdb distribution used as the load-bearing consumer for strict datamodel compatibility, so no test can run against a guessed or faked API.",
+  "artifact": {
+    "name": "asyncdb",
+    "version": "2.16.0",
+    "packagetype": "bdist_wheel",
+    "filename": "asyncdb-2.16.0-cp313-cp313-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "sha256": "26b77d7b7d9cdd2e51049d632ed02d7c339509e7157f49efa7e3dd403f27c45f",
+    "url": "https://files.pythonhosted.org/packages/f2/64/ad7de6501559c3691299ed6610f463dec8567890131e82a9f334f069d90e/asyncdb-2.16.0-cp313-cp313-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "index": "https://pypi.org/simple",
+    "requires_python": ">=3.10",
+    "declared_datamodel_requirement": "python-datamodel>=0.10.21",
+    "author": "Jesus Lara <jesuslara@phenobarbital.info>",
+    "source_repository": "https://github.com/phenobarbital/asyncdb",
+    "company_relevance": "Same author and maintainer as python-datamodel; asyncdb is the Navigator data-access layer and declares python-datamodel>=0.10.21, which is exactly the engineering reference version this feature is measured against. It is therefore the real downstream consumer named in spec section 8, not a proxy."
+  },
+  "verified_adapter_api": {
+    "note": "Every entry below was verified by import and call against the installed artifact. Nothing here was inferred from a filename or a docstring.",
+    "asyncdb.models": {
+      "exports": ["Field", "Column", "Model", "is_dataclass", "is_missing", "DB_TYPES"],
+      "Model_mro": [
+        "asyncdb.models.model.Model",
+        "datamodel.base.BaseModel",
+        "datamodel.models.ModelMixin",
+        "builtins.object"
+      ]
+    },
+    "datamodel_surface_consumed_by_asyncdb": {
+      "note": "asyncdb/models/model.py imports these directly. They are a wider public surface than BaseModel alone, and a break in any of them breaks the consumer.",
+      "imports": [
+        "datamodel.BaseModel",
+        "datamodel.Field",
+        "datamodel.abstract.Meta",
+        "datamodel.exceptions.ValidationError",
+        "datamodel.types.MODEL_TYPES",
+        "datamodel.types.DB_TYPES"
+      ],
+      "mutation": "asyncdb sets DB_TYPES[numpy.int64] = 'bigint' at import time, so importing asyncdb mutates a datamodel module-level dict."
+    },
+    "offline_methods_exercised": {
+      "constructor": "Model(**row) - hydration, coercion, defaults, required/null, aliases, nested relations",
+      "Model.model": "classmethod(dialect='sql') -> str; renders DDL via cls.columns(), field.db_type(), field.required(), field.primary_key",
+      "columns": "cls.columns(cls) -> mapping of column name to Field",
+      "to_dict": "instance -> dict",
+      "json": "instance -> str",
+      "set_connection": "stores an object on Meta.connection; exercised with an inert stub, no I/O"
+    },
+    "excluded_methods": {
+      "reason": "All are async and require a live database connection. The task forbids production database access, so they are out of scope and are NOT claimed as verified.",
+      "instance": ["insert", "update", "delete", "save", "fetch", "close", "__aenter__", "__aexit__"],
+      "classmethod": ["create", "remove", "updating", "deleting", "select", "filter", "get", "all", "makeModel"],
+      "get_connection": "Not called: it imports asyncdb.drivers.<driver> and constructs a real client."
+    }
+  },
+  "environments": {
+    "note": "asyncdb is installed with --no-deps into each environment's own venv so that each one binds its own datamodel build. Installing with dependencies would pull python-datamodel from PyPI and silently shadow the build under test.",
+    "install_command": "uv pip install --no-deps <wheel>",
+    "reference": {
+      "root": ".claude/worktrees/ref-FEAT-2-d932c720",
+      "datamodel_commit": "d932c720e9e36bbacdaca2b1a2af0688f2636c40",
+      "datamodel_version": "0.10.21"
+    },
+    "candidate": {
+      "root": ".claude/worktrees/feat-FEAT-2-compatible-model-performance",
+      "datamodel_version": "0.12.0"
+    }
+  },
+  "external_prerequisites_pending": {
+    "note": "Recorded explicitly rather than silently omitted, per the task's requirement that genuine remaining external prerequisites be stated.",
+    "items": [
+      "No company-internal asyncdb fork or private index was provided. This manifest pins the public PyPI distribution by the same author. If a private Navigator build diverges from 2.16.0, that build must be re-pinned here and the differential re-run before consumer compatibility can be claimed for it.",
+      "Live database driver integration (postgres/mysql/redis backends) is NOT covered: it requires service credentials that this task is not authorized to use. Driver-level compatibility therefore remains evidence-pending."
+    ]
+  }
+}
