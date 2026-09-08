@@ -419,3 +419,255 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+# ===========================================================================
+# FEAT-2 / TASK-18 -- full-cost, process-paired comparison against Cython
+# ===========================================================================
+#
+# TASK-17's harness printed "native validate 870 ns vs python construct
+# 14,600 ns". That comparison is not a basis for any decision and was labelled
+# as such: it puts a bare validity check next to a full construction including
+# conversion, assignment, defaults and hooks.
+#
+# What follows measures the thing that actually matters: **what would a
+# native-backed construction cost, end to end, against the frozen optimized
+# Cython artifact?** That means paying, on the native side, for every cost a
+# real integration could not avoid:
+#
+#   * building the values mapping the executor consumes (extraction),
+#   * crossing the Python -> Rust boundary and back,
+#   * interpreting the result and constructing errors,
+#   * materialising the model instance,
+#   * plan creation (cold) and plan reuse (warm),
+#   * and the cost of FALLING BACK when a row turns out to be ineligible,
+#     which a real workload pays on top of, not instead of, the Python path.
+#
+# The native side is measured OPTIMISTICALLY: instance materialisation skips
+# datamodel entirely (`object.__new__` plus a `__dict__` update), i.e. it
+# assumes conversion, defaults, aliases and hooks are free. That is not
+# achievable, but it makes the comparison an upper bound on the native design
+# -- if it loses here, it cannot win in practice.
+#
+# Ratios are computed per PROCESS PAIR, not from a single in-process
+# microbenchmark, so the decision rests on the same kind of evidence the
+# acceptance protocol uses.
+
+NATIVE_PROCESS_PAIRS = 6
+NATIVE_BATCHES = 25
+NATIVE_BATCH_SIZE = 2000
+
+_CHILD_SOURCE = r'''
+import json, sys, time
+from pathlib import Path
+
+request = json.loads(sys.stdin.read())
+root = Path(request["root"])
+sys.path.insert(0, str(root))
+
+from benchmarks.native_validation import load_native, plan_for, eligible_demo_model
+from datamodel import BaseModel
+
+native = load_native(build=False)
+model = eligible_demo_model()
+model_plan = plan_for(native, model)
+plan = model_plan.plan
+
+FIELDS = tuple(model.__columns__.keys())
+row = request["row"]
+batches = request["batches"]
+size = request["size"]
+order = request["order"]
+
+
+def cython_path():
+    return model(**row)
+
+
+def native_path():
+    """Optimistic native-backed construction.
+
+    Everything datamodel does besides validation is assumed FREE here: no
+    conversion, no defaults, no aliases, no hooks. Only the costs a native
+    integration could never avoid are paid.
+    """
+    values = dict(row)                       # extraction / marshalling
+    result = plan.execute(values)            # boundary + native validation
+    if result is None:                       # ineligible -> real work anyway
+        return model(**row)
+    errors = None
+    for name, ok in result:                  # result interpretation
+        if not ok:
+            if errors is None:
+                errors = {}
+            errors[name] = "invalid"
+    instance = object.__new__(model)          # optimistic materialisation
+    instance.__dict__.update(values)
+    return instance
+
+
+def measure(fn):
+    for _ in range(2000):
+        fn()
+    samples = []
+    for _ in range(batches):
+        start = time.perf_counter_ns()
+        for _ in range(size):
+            fn()
+        samples.append((time.perf_counter_ns() - start) / size)
+    samples.sort()
+    return samples
+
+
+def boundary_only():
+    """The cost a native integration can NEVER avoid.
+
+    Building the values mapping, crossing into Rust, validating, and coming
+    back. No materialisation, no conversion, nothing else. This is the number
+    that decides the question: native can at best remove the validation the
+    Cython path performs, so if this floor is already comparable to that
+    saving, promotion cannot pay for itself.
+    """
+    values = dict(row)
+    result = plan.execute(values)
+    if result is None:
+        return None
+    for name, ok in result:
+        if not ok:
+            return name
+    return True
+
+
+if order == "cython_first":
+    cython_samples = measure(cython_path)
+    native_samples = measure(native_path)
+    boundary_samples = measure(boundary_only)
+else:
+    boundary_samples = measure(boundary_only)
+    native_samples = measure(native_path)
+    cython_samples = measure(cython_path)
+
+# Cold plan creation, measured separately from the warm loop.
+descriptors = list(model_plan.descriptors)
+cold = []
+for _ in range(200):
+    start = time.perf_counter_ns()
+    native.NativePlan(descriptors)
+    cold.append(time.perf_counter_ns() - start)
+cold.sort()
+
+print(json.dumps({
+    "cython_ns": cython_samples,
+    "native_ns": native_samples,
+    "boundary_ns": boundary_samples,
+    "plan_creation_ns": cold[len(cold) // 2],
+    "eligible": model_plan.eligible,
+    "fields": plan.field_count,
+}))
+'''
+
+
+def _run_child(root: Path, row: Dict[str, Any], order: str) -> Dict[str, Any]:
+    completed = subprocess.run(
+        [sys.executable, "-c", _CHILD_SOURCE],
+        input=json.dumps({
+            "root": str(root), "row": row, "order": order,
+            "batches": NATIVE_BATCHES, "size": NATIVE_BATCH_SIZE,
+        }),
+        capture_output=True, text=True, cwd=str(root),
+    )
+    if completed.returncode != 0:
+        raise NativeUnavailable(
+            f"native measurement child failed ({completed.returncode})\n"
+            f"{completed.stdout[-2000:]}\n{completed.stderr[-2000:]}"
+        )
+    return json.loads(completed.stdout)
+
+
+def full_cost_comparison(rows: Optional[Sequence[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    """Paired-process, full-cost comparison. Returns a decision-ready report."""
+    sys.path.insert(0, str(HARNESS_ROOT))
+    from benchmarks.model_performance import (  # noqa: PLC0415
+        bootstrap_ratio_interval, percentile,
+    )
+
+    eligible_row = (rows or eligible_demo_rows())[0]
+    runs = []
+    for pair in range(NATIVE_PROCESS_PAIRS):
+        order = "cython_first" if pair % 2 == 0 else "native_first"
+        runs.append(_run_child(HARNESS_ROOT, eligible_row, order))
+
+    ratios = []
+    for run in runs:
+        cython_median = percentile(run["cython_ns"], 50)
+        native_median = percentile(run["native_ns"], 50)
+        ratios.append(native_median / cython_median)
+
+    interval = bootstrap_ratio_interval(ratios)
+    point = sum(ratios) / len(ratios)
+    improvement = (1.0 - point) * 100.0
+
+    boundary = [percentile(r["boundary_ns"], 50) for r in runs]
+    cython_medians = [percentile(r["cython_ns"], 50) for r in runs]
+    boundary_share = [b / c for b, c in zip(boundary, cython_medians)]
+
+    return {
+        "process_pairs": NATIVE_PROCESS_PAIRS,
+        "batches_per_process": NATIVE_BATCHES,
+        "batch_size": NATIVE_BATCH_SIZE,
+        "order_alternated": True,
+        "paired_ratios_native_over_cython": ratios,
+        "ratio_point_estimate": point,
+        "ci95": [interval["low"], interval["high"]],
+        "improvement_pct": improvement,
+        "cython_median_ns": [percentile(r["cython_ns"], 50) for r in runs],
+        "native_median_ns": [percentile(r["native_ns"], 50) for r in runs],
+        "plan_creation_ns": [r["plan_creation_ns"] for r in runs],
+        "boundary_only_ns": boundary,
+        "boundary_share_of_cython_construction": boundary_share,
+        "boundary_is_the_decisive_number": (
+            "Native can at best remove the validation the Cython path "
+            "performs. `boundary_only_ns` is what it must SPEND to do so and "
+            "cannot avoid. Compare it against the saving the Cython gate "
+            "itself delivered (about 10% of a construction, per TASK-16): if "
+            "the floor is the same order as the entire saving, promotion "
+            "cannot pay for itself."
+        ),
+        "why_the_ratio_is_not_a_speed_up": (
+            "`ratio_point_estimate` compares an optimistic native path against "
+            "a real Cython construction. The native side omits conversion, "
+            "defaults, aliases, assignment and hooks, so the difference is "
+            "dominated by work that was SKIPPED, not by validation made "
+            "faster. It is reported as an upper bound and must not be quoted "
+            "as an improvement."
+        ),
+        "raw": [{"cython_ns": r["cython_ns"], "native_ns": r["native_ns"]} for r in runs],
+        "native_side_is_optimistic": (
+            "The native path skips conversion, defaults, aliases and hooks "
+            "entirely (object.__new__ plus a dict update). It is an UPPER "
+            "BOUND on the native design, not an achievable implementation."
+        ),
+    }
+
+
+def fallback_cost(native, rows: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+    """What a mixed workload pays for rows the executor declines."""
+    model = eligible_demo_model()
+    plan = plan_for(native, model).plan
+    executed = fell_back = 0
+    for row in rows:
+        if plan.execute(dict(row)) is None:
+            fell_back += 1
+        else:
+            executed += 1
+    return {
+        "rows": len(rows),
+        "executed_natively": executed,
+        "fell_back": fell_back,
+        "fallback_rate": fell_back / len(rows) if rows else 0.0,
+        "note": (
+            "A fallback costs the native attempt PLUS the full Python path. "
+            "It is additive, never a substitute, so a workload with a high "
+            "fallback rate is strictly worse off than pure Cython."
+        ),
+    }

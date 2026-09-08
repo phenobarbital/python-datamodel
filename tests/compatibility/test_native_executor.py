@@ -451,3 +451,101 @@ def test_benchmark_corpus_models_are_honestly_reported_ineligible(native):
         model_plan = plan_for(native, model)
         assert model_plan.eligible is False
         assert model_plan.ineligible_fields
+
+
+# ===========================================================================
+# Part 7 -- TASK-18: full-cost comparison and promotion eligibility
+# ===========================================================================
+
+
+def test_a_fallback_does_not_duplicate_a_callback(native):
+    """A declined row must cost the Python path exactly once.
+
+    The executor validates only -- it never runs a user callback -- so a
+    fallback must not leave a hook having fired twice. This is the property
+    that makes "attempt natively, then fall back" safe rather than a
+    double-execution hazard.
+    """
+    events = []
+
+    Hooked = _model("NativeFallbackHook", {"an_int": int, "a_str": str},
+                    an_int=Column(required=False, default=0),
+                    a_str=Column(required=False, default="x"))
+
+    def post_init(self):
+        events.append("hook")
+        BaseModel.__post_init__(self)
+
+    Hooked.__post_init__ = post_init
+    plan = plan_for(native, Hooked).plan
+
+    events.clear()
+    assert plan.execute({"an_int": 2 ** 96, "a_str": "s"}) is None
+    assert events == [], "the native attempt ran a user callback"
+
+    Hooked(an_int=2 ** 96, a_str="s")
+    assert events == ["hook"], f"callback ran {len(events)} times, expected 1"
+
+
+def test_fallback_cost_is_reported_in_the_distribution(native):
+    """A fallback is additive: the native attempt PLUS the full Python path."""
+    from benchmarks.native_validation import eligible_demo_rows, fallback_cost
+
+    report = fallback_cost(native, eligible_demo_rows())
+    assert report["rows"] == 5
+    assert report["fell_back"] >= 1, "no row exercised the fallback path"
+    assert 0.0 < report["fallback_rate"] <= 1.0
+    assert "additive" in report["note"]
+
+
+@pytest.fixture(scope="module")
+def full_cost(native):
+    """Run the paired-process comparison ONCE; it spawns real subprocesses."""
+    from benchmarks.native_validation import full_cost_comparison
+
+    return full_cost_comparison()
+
+
+def test_full_cost_comparison_uses_paired_processes(full_cost):
+    """The decision must rest on process ratios, not a scalar microbenchmark."""
+    report = full_cost
+    assert report["process_pairs"] >= 4
+    assert report["order_alternated"] is True
+    assert len(report["paired_ratios_native_over_cython"]) == report["process_pairs"]
+    assert len(report["raw"]) == report["process_pairs"]
+    for run in report["raw"]:
+        assert len(run["cython_ns"]) == report["batches_per_process"]
+        assert len(run["native_ns"]) == report["batches_per_process"]
+
+
+def test_the_boundary_floor_is_measured_and_labelled(full_cost):
+    """The decisive number, and the honest label on the misleading one."""
+    report = full_cost
+    assert report["boundary_only_ns"], "the boundary floor was not measured"
+    assert all(share > 0 for share in report["boundary_share_of_cython_construction"])
+    # The optimistic ratio must never be presented as an improvement.
+    assert "not be quoted as an improvement" in report["why_the_ratio_is_not_a_speed_up"]
+    assert "UPPER BOUND" in report["native_side_is_optimistic"]
+
+
+def test_the_decision_report_exists_and_retains_cython():
+    """The persisted decision must be explicit and must match the evidence."""
+    import json
+
+    report_path = (
+        Path(__file__).resolve().parents[2] / "benchmarks" / "results"
+        / "compatible-model-performance" / "rust-sequential.json"
+    )
+    assert report_path.is_file(), f"{report_path} is missing"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+
+    assert report["decision"] in {"retain_cython", "promote_eligible"}
+    assert report["decision"] == "retain_cython", (
+        "the report claims the native executor is promotion-eligible; the "
+        "measured evidence must then show >=10% additional improvement"
+    )
+    gate = report["promotion_gate"]
+    assert gate["required_additional_improvement_pct"] == 10.0
+    assert gate["met"] is False
+    assert report["eligibility"]["corpus_workloads_eligible"] == 0
+    assert report["measurements"]["boundary_floor_ns"] > 0
