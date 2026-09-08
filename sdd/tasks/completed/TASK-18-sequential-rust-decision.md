@@ -127,11 +127,115 @@ Tests are behavioral specifications, not permission to change the oracle. Verify
 
 ## Completion Note
 
-*(Fill in only after implementation and verification.)*
+**Completed by**: sdd-worker (Claude Opus 5)
+**Date**: 2026-09-08
+**Decision**: **RETAIN CYTHON.** The sequential native executor is **not
+promotion-eligible** under AC8.
+**Evidence**: `benchmarks/results/compatible-model-performance/rust-sequential.md`
+(analysis) and `rust-sequential.json` (machine-readable, raw per-process samples
+embedded).
 
-**Completed by**: pending
-**Date**: pending
-**Notes**: pending
-**Verification commands/results**: pending
-**Evidence paths and acceptance coverage**: pending
-**Deviations from spec**: pending
+This is a **completed negative experiment with measurements** — the prototype
+builds, runs, and achieves parity. It is the numbers that say no, not a failure
+to finish.
+
+### Two independent grounds, either sufficient alone
+
+**1. Coverage — it can run none of the workloads.** 0 of the 15 acceptance
+workloads are eligible. `Employee` is declined via `employee_id` (UUID),
+`salary` (Decimal), `hired_at` (date), `updated_at` (datetime), `skills`
+(List) and `manager` (Optional); `UnconstrainedScalars` via `a_decimal`,
+`a_uuid`, `a_date`, `a_datetime`. AC8 requires ">= 10% additional improvement on
+its declared eligible workload" — there is no such workload in the corpus, so
+the gate cannot even be attempted honestly.
+
+**2. Economics — the boundary costs most of the prize.**
+
+| quantity | value |
+|---|---|
+| Cython construction | 15,058 ns |
+| Native boundary floor (build mapping, cross, validate, return) | **1,163 ns** |
+| Boundary as a share of one construction | **7.8%** |
+| Total saving the Cython gate delivered (TASK-16) | ~9.9% |
+| Theoretical headroom left | **~2.1%** |
+| AC8 requirement | **>= 10% additional** |
+
+Native can at best remove the validation Cython performs, and must spend 7.8% of
+a construction to ask the question. Even with instantaneous native validation
+*and* full type coverage, the arithmetic does not reach 10%. Cold plan creation
+adds a further 816 ns, measured separately and deliberately **not** amortised
+into the warm figures.
+
+### The number I refused to quote as a result
+
+The harness also produces an optimistic ratio of **0.098** — native appearing
+~10x faster. It is recorded as an upper bound with an explicit warning in both
+reports, because it is **not a speed-up**: the optimistic path skips conversion,
+defaults, aliases, assignment and hooks entirely (`object.__new__` plus a dict
+update), so the gap is dominated by work that was *omitted*. Quoting it would
+have been the easiest way to make this experiment look successful, which is
+exactly why it is flagged rather than buried.
+`test_the_boundary_floor_is_measured_and_labelled` asserts the warning text is
+present, so it cannot be quietly dropped.
+
+### Full cost was actually charged
+
+The native side pays for: building the values mapping (extraction), crossing the
+Python->Rust boundary both ways, interpreting the result, constructing errors,
+materialising the instance, plan creation (cold) and reuse (warm), and falling
+back. **Fallbacks are additive** — the native attempt *plus* the full Python
+path — so a workload with a meaningful fallback rate is strictly worse off than
+pure Cython. Measured demo fallback rate: 20%.
+
+### Method
+
+**Paired processes with alternating order** — 6 pairs, 25 batches of 2,000 per
+process — so the decision rests on process-level ratios rather than a single
+in-process scalar microbenchmark, as the task's test specification requires.
+Raw per-batch samples for every process are embedded in the JSON under
+`measurements.raw`.
+
+### Parity holds, and is not a reason to promote
+
+5 rows, 4 executed natively, 1 fell back (the `2**96` row), **zero mismatches**.
+Parity is a *precondition* for promotion, not an argument for it. Also verified:
+**a fallback does not duplicate a callback** — the executor never runs user
+callbacks, so a declined row leaves hooks having fired exactly once
+(`test_a_fallback_does_not_duplicate_a_callback`), which is what makes
+"attempt natively, then fall back" safe rather than a double-execution hazard.
+
+### Verification commands/results
+
+- `.venv/bin/python -m pytest tests/compatibility/test_native_executor.py -q`
+  -> **38 passed** (33 from TASK-17 + 5 new).
+- `.venv/bin/python -m pytest tests/ -q` -> **718 passed, 2 skipped, 0 failed**.
+- `full_cost_comparison()` -> 6 paired processes, ratios
+  [0.109, 0.103, 0.099, 0.101, 0.103, 0.096], boundary floor 1,163 ns.
+- `.venv/bin/python -m ruff check --select F,E9` on both changed files -> clean.
+
+### Evidence and acceptance coverage
+
+- **AC8** (full-cost measurement, parity, eligibility definition, promotion
+  verdict): `rust-sequential.json` -> `promotion_gate`, `eligibility`,
+  `parity`, `measurements`; `test_the_decision_report_exists_and_retains_cython`
+  ties the persisted decision to the evidence and fails if the report ever
+  claims promotion eligibility without the measurements to support it.
+- **AC11** (machine-readable report describing the experiment decision):
+  both files, including `what_would_change_the_answer` so a future attempt
+  starts from evidence rather than from scratch.
+- No callback duplication: `test_a_fallback_does_not_duplicate_a_callback`.
+- Fallback cost visible in the distribution:
+  `test_fallback_cost_is_reported_in_the_distribution`.
+- Process-ratio basis: `test_full_cost_comparison_uses_paired_processes`.
+
+### Deviations from spec
+
+None. Notes:
+
+1. **No production Cython or Rust source was changed**, no default backend was
+   installed, and no public API was added — all explicitly out of scope, and
+   all still true. The experimental crate remains development-only, loaded by
+   path.
+2. The two expensive tests share one module-scoped fixture so the paired-process
+   comparison runs once per session rather than per test.
+3. No `.pyx` changed, so no rebuild and no manifest regeneration was required.
