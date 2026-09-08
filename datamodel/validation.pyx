@@ -95,6 +95,237 @@ validators = {
     Text: valid_str
 }
 
+# ===========================================================================
+# FEAT-2 / TASK-11 -- conservative per-field validation policy
+# ===========================================================================
+#
+# PRIVATE CONTRACT (consumed by the gated-loop task, TASK-13).  Nothing here
+# changes which validators execute: `_validation` does not consult a policy in
+# this task.  This module only *precomputes* what work a field could possibly
+# require, so a later task can gate the generic loop cheaply.
+#
+# The rules that make this safe:
+#
+# * A policy is only ever built for an **exactly supported scalar** field: its
+#   annotated type must be one of the built-in scalar types AND the field's
+#   cached validator must be *identically* the built-in we shipped for that
+#   type.  Identity is checked against `_BUILTIN_VALIDATORS`, a snapshot taken
+#   at import time -- never against a function's display name, and never
+#   against the public, mutable `validators` mapping, so replacing an entry
+#   there cannot make a foreign function look "known".
+# * Anything unknown, dynamic, custom-Field, descriptor-backed or non-scalar
+#   yields `None`, the LEGACY policy, meaning "do all the work".  `None` is the
+#   safe default, so a field that was never visited behaves exactly as before.
+# * Only the *shape* of constraints is recorded (which keys are present), never
+#   their values, and never anything from Meta or from a live metadata mapping.
+#   Constraint values stay live and must still be read at validation time.
+# * `policy_is_current()` re-derives the identities and the constraint shape and
+#   returns False on any drift, so a parser/validator/type swap or a metadata
+#   mutation performed inside a callback can never leave a stale permanent
+#   "skip" decision behind.
+# * A policy holds only references the Field already holds (its type and its
+#   cached callables) and lives on the Field itself, so it is collected with
+#   the class.  There is no global registry and no per-instance storage: no
+#   instance values, default results or errors are ever kept here.
+
+#: Work-mask bits.  A set bit means "this kind of work may be required".
+POLICY_WORK_TYPE_CHECK = 0x01
+POLICY_WORK_CONSTRAINTS = 0x02
+POLICY_WORK_CUSTOM_VALIDATOR = 0x04
+POLICY_WORK_ALL = 0x07
+
+#: Snapshot of the validators we shipped, taken before any user code can run.
+#: Identity comparisons use this, not the mutable public `validators` mapping.
+_BUILTIN_VALIDATORS = dict(validators)
+
+#: Metadata keys `_validate_constraints` reads for each supported category.
+_CONSTRAINT_KEYS_STR = ('length', 'min_length', 'max_length', 'pattern')
+_CONSTRAINT_KEYS_NUMERIC = ('min', 'max')
+#: Field attributes `_validate_constraints` reads directly.
+_CONSTRAINT_ATTRS_STR = ('_pattern',)
+_CONSTRAINT_ATTRS_NUMERIC = ('gt', 'lt', 'ge', 'le', 'eq', 'ne')
+
+_NUMERIC_TYPES = (int, float, Decimal)
+
+
+cdef class FieldPolicy:
+    """Immutable, precomputed description of a field's possible validation work.
+
+    Private to datamodel.  Never exposed on a dataclass field, never
+    serialised, and never part of the public API.
+    """
+
+    cdef readonly unsigned int work_mask
+    cdef readonly object type_ref
+    cdef readonly object validator_ref
+    cdef readonly object parser_ref
+    cdef readonly frozenset constraint_shape
+    cdef readonly bint exact_scalar
+
+    def __cinit__(
+        self,
+        unsigned int work_mask,
+        object type_ref,
+        object validator_ref,
+        object parser_ref,
+        frozenset constraint_shape,
+        bint exact_scalar,
+    ):
+        self.work_mask = work_mask
+        self.type_ref = type_ref
+        self.validator_ref = validator_ref
+        self.parser_ref = parser_ref
+        self.constraint_shape = constraint_shape
+        self.exact_scalar = exact_scalar
+
+    def __repr__(self):
+        return (
+            "FieldPolicy(work_mask=0x%02x, exact_scalar=%r, constraints=%r)"
+            % (self.work_mask, bool(self.exact_scalar), sorted(self.constraint_shape))
+        )
+
+
+cdef frozenset _constraint_shape(object field, object annotated_type):
+    """The *names* of constraints present, never their values."""
+    cdef list present = []
+    cdef object metadata
+    cdef object value
+
+    try:
+        metadata = field.metadata
+    except AttributeError:
+        return frozenset()
+
+    if annotated_type is str or annotated_type is Text:
+        keys = _CONSTRAINT_KEYS_STR
+        attrs = _CONSTRAINT_ATTRS_STR
+    elif annotated_type in _NUMERIC_TYPES:
+        keys = _CONSTRAINT_KEYS_NUMERIC
+        attrs = _CONSTRAINT_ATTRS_NUMERIC
+    else:
+        keys = ()
+        attrs = ()
+
+    for key in keys:
+        try:
+            value = metadata.get(key, None)
+        except (AttributeError, TypeError):
+            # A metadata mapping that cannot be read is a reason to be
+            # conservative, not a reason to assume there are no constraints.
+            return None
+        if value is not None:
+            present.append(key)
+
+    for key in attrs:
+        value = getattr(field, key, None)
+        if value is not None:
+            present.append('@' + key)
+
+    # A custom validator callback is part of the shape: adding one later must
+    # invalidate the policy.
+    try:
+        if metadata.get('validator', None) is not None:
+            present.append('@@validator')
+    except (AttributeError, TypeError):
+        return None
+
+    return frozenset(present)
+
+
+cpdef object build_field_policy(object field, object annotated_type):
+    """Build a conservative policy, or return None for the legacy behaviour.
+
+    Returning ``None`` is always safe: it means "this field gets the full,
+    unchanged treatment".  A policy is only produced when every identity we
+    depend on is exactly what we shipped.
+    """
+    cdef object builtin
+    cdef frozenset shape
+    cdef unsigned int mask
+
+    if field is None or annotated_type is None:
+        return None
+
+    # Only exact, non-subclassed scalar types are eligible.  `type(x) is not T`
+    # for a subclass, so a str subclass or an IntEnum never qualifies.
+    if not isinstance(annotated_type, type):
+        return None
+    if annotated_type not in _BUILTIN_VALIDATORS:
+        return None
+
+    # The field must be a plain datamodel Field, not a user subclass whose
+    # behaviour we cannot reason about.
+    if type(field) is not Field:
+        return None
+
+    # It must be categorised as a primitive: that is the only category for
+    # which `_validation` reaches `_validate_constraints`.
+    if getattr(field, '_type_category', None) != 'primitive':
+        return None
+
+    # The cached validator must be *identically* the built-in for this type.
+    builtin = _BUILTIN_VALIDATORS.get(annotated_type, None)
+    if builtin is None:
+        return None
+    if getattr(field, 'validator', None) is not builtin:
+        return None
+
+    shape = _constraint_shape(field, annotated_type)
+    if shape is None:
+        return None
+
+    mask = POLICY_WORK_TYPE_CHECK
+    if shape:
+        mask |= POLICY_WORK_CONSTRAINTS
+    if '@@validator' in shape:
+        mask |= POLICY_WORK_CUSTOM_VALIDATOR
+
+    return FieldPolicy(
+        mask,
+        annotated_type,
+        builtin,
+        getattr(field, 'parser', None),
+        shape,
+        True,
+    )
+
+
+cpdef bint policy_is_current(object field, object policy):
+    """True only when every identity the policy relied on still holds.
+
+    Callers MUST consult this before acting on a policy.  It re-derives the
+    constraint shape, so a metadata mutation performed inside a callback
+    invalidates the policy instead of leaving a stale decision in place.
+    """
+    cdef FieldPolicy plan
+
+    if policy is None or field is None:
+        return False
+    if not isinstance(policy, FieldPolicy):
+        return False
+
+    plan = <FieldPolicy> policy
+
+    if type(field) is not Field:
+        return False
+    if getattr(field, 'type', None) is not plan.type_ref:
+        return False
+    if getattr(field, 'validator', None) is not plan.validator_ref:
+        return False
+    if getattr(field, 'parser', None) is not plan.parser_ref:
+        return False
+    if _BUILTIN_VALIDATORS.get(plan.type_ref, None) is not plan.validator_ref:
+        return False
+    if getattr(field, '_type_category', None) != 'primitive':
+        return False
+
+    return _constraint_shape(field, plan.type_ref) == plan.constraint_shape
+
+
+cpdef object field_policy(object field):
+    """The policy attached to ``field``, or None. Never raises."""
+    return getattr(field, '_policy', None)
+
 cdef dict _create_error(str name, object value, object error, object val_type, object annotated_type, object exception = None):
     return {
         "field": name,

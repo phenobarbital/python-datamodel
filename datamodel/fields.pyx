@@ -123,6 +123,11 @@ class Field(ff):
         '_value_type',
         '_key_encoder_fn',
         '_value_encoder_fn',
+        # FEAT-2/TASK-11: private, precomputed validation policy.
+        # None means the legacy behaviour (do all the work). It is a
+        # slot, deliberately NOT part of `metadata`/`_meta`, so it can
+        # never leak into the dataclass field metadata or JSON.
+        '_policy',
     )
 
     def __init__(
@@ -157,6 +162,9 @@ class Field(ff):
         self._inner_is_dc = None
         self._inner_origin = None
         self._default_callable = None
+        # Legacy default: no policy until one is built from the final
+        # field. A field that is never visited behaves exactly as before.
+        self._policy = None
         self.is_typing: bool = False
         self.type_args: Any = None
         self.origin: Any = None

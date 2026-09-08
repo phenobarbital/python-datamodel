@@ -20,7 +20,7 @@ from functools import lru_cache
 from dataclasses import dataclass, InitVar
 from .parsers.json import JSONContent
 from .converters import encoders, parse_basic
-from .validation import validators
+from .validation import validators, build_field_policy
 from .fields import Field
 from .functions import (
     is_dataclass,
@@ -341,6 +341,12 @@ class ModelMeta(type):
                 _type_category = 'complex'
             _types_local[field] = _type_category
             df._type_category = _type_category
+            # FEAT-2/TASK-11: build the conservative validation policy only
+            # now, when the field is fully described (`_type_category`,
+            # `parser` and `validator` are all assigned above). Building it
+            # earlier would see a half-initialised field and, being
+            # conservative, would simply yield the legacy `None`.
+            df._policy = build_field_policy(df, _type)
 
             # Store them in a dict keyed by field name:
             _typing_args[field] = (origin, args)
@@ -415,6 +421,26 @@ class ModelMeta(type):
                 'primary_keys': primary_keys.copy(),
             }
             cls._cache_set(base_key, cache_entry)
+
+        # FEAT-2/TASK-11: derive the validation policy from the FINAL field
+        # set, after inheritance and cache reuse have been resolved.
+        #
+        # This is deliberately NOT keyed off `base_key`. That key covers only
+        # (name, bases, annotations) and omits defaults and configuration, so
+        # two classes can legitimately share a cache entry while having
+        # different constraints -- reusing it as a semantic plan key would
+        # attach one class's policy to another's field. Rebuilding from the
+        # final field object is cheap and cannot make that mistake.
+        for _fname, _field in cols.items():
+            try:
+                _field._policy = build_field_policy(
+                    _field, getattr(_field, 'type', None)
+                )
+            except Exception:  # noqa: BLE001
+                # A policy is an optimisation, never a correctness requirement:
+                # any failure to build one falls back to the legacy behaviour.
+                with contextlib.suppress(Exception):
+                    _field._policy = None
 
         _columns = cols.keys()
         cls.__slots__ = tuple(_columns)
