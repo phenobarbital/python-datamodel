@@ -118,11 +118,112 @@ Tests are behavioral specifications, not permission to change the oracle. Verify
 
 ## Completion Note
 
-*(Fill in only after implementation and verification.)*
+**Completed by**: sdd-worker (Claude Opus 5)
+**Date**: 2026-09-08
+**Notes**: Implemented in the three declared files. Two allocations were
+provably dead and were removed; one was allocated too early and is now
+allocated at the point of return.
 
-**Completed by**: pending
-**Date**: pending
-**Notes**: pending
-**Verification commands/results**: pending
-**Evidence paths and acceptance coverage**: pending
-**Deviations from spec**: pending
+| where | what | frequency |
+|---|---|---|
+| `validation.pyx::_validate_constraints` | `error = {}` assigned every call, **never read** | once per primitive field, per construction |
+| `validation.pyx::_validation` | `cdef dict error = {}` allocated on entry, returned only by the final statement | once per field; wasted by every early return |
+| `converters.pyx::processing_fields` | `cdef dict _typeinfo = {}` declared, never referenced | once per model construction |
+
+Each was verified dead by reading every path, not by assuming: in
+`_validate_constraints` every failure returns `_create_error(...)`, which builds
+its own dict, and the success path returns a fresh `{}`, so nothing ever read
+the variable. `_typeinfo` has exactly one occurrence in the whole function --
+its own declaration.
+
+**The success contract is unchanged, which is the part that could have gone
+wrong.** `_validation` is `cpdef`, so its return type is a public contract. It
+still returns a **fresh, independently mutable `dict`** -- never `None`, never a
+shared empty singleton. Pinned by `test_successful_validation_still_returns_a_dict`,
+`test_each_successful_call_returns_a_distinct_object`,
+`test_successful_results_are_independently_mutable`,
+`test_many_successful_results_are_all_distinct` (50 distinct ids) and
+`test_success_result_is_not_interned_across_types`.
+
+**HONEST MEASUREMENT -- this is below the noise floor and is not claimed as a
+speed-up.** The removed dicts are *transient*: allocated and freed inside one
+call, so they never appear in retained memory and a `tracemalloc` delta over a
+batch shows nothing. Their cost was allocator churn (CPU). A targeted paired
+micro-measurement on a pinned core (6-field model, 2 constrained, 2000
+constructions x 40 batches, three independent pairs) gave ratios of **0.9953,
+0.9957 and 1.0010** -- about 0.3-0.5%, with one pair showing nothing at all.
+TASK-9's calibrated **empirical cross-build floor is ~2%**, so this effect is
+comfortably *inside* the noise. The justification for this change is therefore
+structural (the work was provably dead), not empirical. Recording it as a
+measured improvement would be exactly the error TASK-9's control exists to
+prevent.
+
+**Three of my initial test assumptions were wrong, and the reference build
+settled all three.** Rather than "fix" the code to match my expectations, I ran
+the identical probes against 0.10.21 and found the candidate already agreed
+with it in every case:
+
+1. `_validation(field, 'v', None, int, ...)` returns an **error**, not `{}`. I
+   had asserted `{}` after reading only `_validate_constraints`, which does
+   return early for `None` -- but `_validation` then continues to the instance
+   check, which rejects `None` for an `int` field. Both builds agree; the
+   observed behaviour is now pinned.
+2. A custom `validator=` on a **primitive** runs **zero** times on both builds
+   (`abstract.py` caches `validators[int]` into `f.validator`, so the user
+   callback is never reached). TASK-7 recorded the same dead route. It is now
+   pinned as characterization *specifically so that a later refactor cannot
+   quietly revive it* -- going from 0 to 1 call would itself be a behaviour
+   change. The live `List[str]` route is used for the real "exactly once"
+   assertion.
+3. An `encoder=` on a **str** field is likewise dead (`parse_basic`
+   short-circuits `str` before its encoder branch). The float route is live, so
+   the error-fallthrough test uses that instead.
+
+**Verification commands/results**:
+- `.venv/bin/python -m pytest tests/compatibility/test_validation_allocations.py
+  tests/test_converter.py -q` -> **47 passed**.
+- `.venv/bin/python -m pytest tests/ -q` -> **606 passed, 2 skipped, 0 failed**
+  (581 before this task + 25 new; no new reference-relative regression).
+- Extensions rebuilt with `python setup.py build_ext --inplace` before testing.
+- **Differential corpus: 45/45 cases, 0 divergences** vs 0.10.21.
+- **asyncdb consumer differential: 31 passed, 0 divergences.**
+- `.venv/bin/python -m ruff check --select F,E9
+  tests/compatibility/test_validation_allocations.py` -> clean.
+- Reference/candidate probe of all three contested behaviours -> identical
+  output on both builds (transcript summarised above).
+
+**Evidence paths and acceptance coverage**:
+- AC2 / AC4 (error payloads, messages and order match; no error-fallthrough
+  change): `test_error_payload_shape_is_preserved`,
+  `test_error_key_order_is_stable_across_calls`,
+  `test_min_and_max_violations_still_produce_distinct_messages`,
+  `test_string_constraint_errors_are_preserved`,
+  `test_type_errors_are_still_reported`,
+  `test_none_still_falls_through_the_constraint_path_to_a_type_error`,
+  `test_multiple_field_errors_are_all_reported`,
+  `test_strict_model_still_raises_with_a_payload`,
+  `test_a_failing_field_does_not_suppress_later_fields`; plus 45/45 corpus
+  parity, which covers strict/non-strict multi-error behaviour through the
+  differential runner as the task's test spec requires.
+- AC7 (independently mutable results, no shared state):
+  `test_error_results_are_independently_mutable`,
+  `test_error_dicts_from_two_instances_do_not_share_state`,
+  `test_to_dict_is_still_fresh_per_call`, plus the Part 1 freshness tests.
+- No extra parser/callback execution:
+  `test_a_custom_encoder_runs_exactly_once_per_field`,
+  `test_a_live_custom_validator_runs_exactly_once`,
+  `test_post_init_hook_runs_exactly_once`,
+  `test_a_custom_validator_on_a_primitive_stays_dead`.
+- No replacement allocation introduced:
+  `test_no_new_per_field_allocation_replaced_the_removed_one`,
+  `test_repeated_validation_retains_nothing`.
+
+**Deviations from spec**: none in scope of the three declared files. Two notes:
+
+1. `tests/compatibility/reference_manifest.json` regenerated again, for the
+   same reason as TASK-11: rebuilding the candidate changes its `.so` digests
+   and the provenance guard correctly rejects the stale record (1 failure + 12
+   errors until regenerated). `verify_manifest()` reports `problems: []`.
+   This will recur for every remaining task that rebuilds the candidate.
+2. The generated `datamodel/*.html` Cython annotation files were rewritten by
+   the rebuild and reverted again as build noise, out of scope.
