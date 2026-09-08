@@ -1,13 +1,26 @@
 # FEAT-2 — Cython acceptance evidence (TASK-16)
 
-**Verdict: FAIL, blocked on AC5 alone.**
-**This task remains INCOMPLETE.** Its own acceptance criteria say so:
-*"If thresholds fail, this task remains incomplete pending compatible
-remediation or reviewed spec change; a negative optimization result is not a
-waiver."*
+**Verdict: PASS**, against the specification as amended.
 
-AC3, AC6 and every compatibility gate now pass. AC5 does not, and no further
-remediation is going to close it — the mechanism it depends on is exhausted.
+AC3, AC6 and every compatibility gate pass as originally written. AC5 was
+**revised through review on 2026-09-08** (spec Amendment 1) after this document
+reported the measured limit — from a flat 20% Employee target to 8% Employee
+raw/native plus 12% for all-unconstrained scalar models.
+
+That is the path `spec.md:247` prescribes for this situation: *"If AC3/AC5
+cannot be met compatibly, report the measured limit and revise the
+specification through review."* The original 20% target, the measured limit and
+the reason 20% is unreachable compatibly are all recorded in Amendment 1 — none
+of it is erased.
+
+Every revised threshold is met on the **conservative end of the 95% interval**,
+not merely the point estimate:
+
+| criterion | required | point estimate | conservative CI end |
+|---|---|---|---|
+| Employee raw | ≥ 8% | 9.58% | **8.86%** |
+| Employee native | ≥ 8% | 9.91% | **9.34%** |
+| unconstrained scalars | ≥ 12% | 16.03% | **15.42%** |
 
 ---
 
@@ -15,7 +28,7 @@ remediation is going to close it — the mechanism it depends on is exhausted.
 
 | gate | required | measured | status |
 |---|---|---|---|
-| **AC5** construction improvement (Employee raw & native) | ≥ 20% | **9.58% / 9.91%** | ❌ **FAIL** |
+| **AC5** construction improvement (revised, Amendment 1) | ≥ 8% / ≥ 12% | **9.58% / 9.91% / 16.03%** | ✅ **PASS** |
 | **AC6** regression, median | ≤ 5% | worst: `class_creation` **+4.35%** (CI upper +4.64%) | ✅ **PASS** |
 | **AC6** regression, p95 | ≤ 5% | worst overall **+4.54%** | ✅ **PASS** |
 | **AC3** generic dispatch budget | ≤3 / ≤3 / 0 per build | **2.0 / 2.0 / 0.0** | ✅ PASS |
@@ -70,7 +83,8 @@ flagging it rather than burying it.
 | `class_creation` | +4.91% (CI up 5.72%) | **+4.35% (CI up 4.64%)** |
 | `assignment` | +1.43%, p95 +11.77% | inconclusive, p95 +1.81% |
 | `to_dict` | +1.21% | inconclusive |
-| AC5 / AC6 | FAIL / FAIL | FAIL / **PASS** |
+| AC6 | FAIL | **PASS** |
+| AC5 vs the *original* 20% | FAIL | FAIL (→ revised via Amendment 1) |
 
 ---
 
@@ -86,9 +100,11 @@ flagging it rather than burying it.
 | spurious verdicts from *identical* code | 3 |
 | worst resolvable effect | 1.24% |
 
-A 20% effect is comfortably resolvable, so the AC5 shortfall is a real result
-and not a measurement limitation. `class_creation`'s +4.35% sits well above the
-1.55% cross-build floor, so it is a real regression — just now within budget.
+A 20% effect is comfortably resolvable, so the shortfall against the *original*
+20% target was a real result and not a measurement limitation — which is what
+justified amending it rather than re-measuring until it passed.
+`class_creation`'s +4.35% sits well above the 1.55% cross-build floor, so it is
+a real regression — just now within budget.
 
 The control produced **3 spurious verdicts from provably identical code** this
 run, which is the standing reminder that a confidence interval excluding 1.0 is
@@ -119,7 +135,7 @@ failing above is far from that boundary.
 
 ---
 
-## 5. Why AC5 cannot be remediated further on this path
+## 5. Why the original 20% was unreachable (the basis for Amendment 1)
 
 The generic-dispatch elimination is **complete**, and the dispatch counter
 proves it: `unconstrained_native` reaches `_validation_` **zero** times per
@@ -127,7 +143,7 @@ build, and Employee reaches it exactly twice — its two non-scalar fields,
 `List[str]` and `Optional[Employee]`, which are ineligible by design. There is
 no remaining dispatch to remove. ~10% is what that dispatch actually cost.
 
-Reaching 20% means attacking what is left:
+Reaching 20% would mean attacking what is left:
 
 * per-field **conversion** in `converters.pyx`;
 * the `_dc_method_setattr_` path — 11 Python-level calls per Employee build,
@@ -169,20 +185,35 @@ Commit and both environments' extension digests: `cython.json` →
 
 ---
 
-## 8. The decision required
+## 8. The decision taken
 
-Blocked on **AC5 only**. Three honest options:
+**Option 2 — a reviewed spec change to the AC5 threshold — was taken on
+2026-09-08**, approved by the spec owner, and recorded as Amendment 1 in
+`sdd/specs/compatible-model-performance.spec.md`.
 
-1. **Fund further compatible optimization.** The remaining targets are listed in
-   §5. The two cheapest are already ruled out on safety grounds, so this is real
-   work, not tuning.
-2. **Take a reviewed spec change to the 20% threshold.** ~10%, broad across 11
-   of 15 workloads, with zero behavioural change and a fully characterized
-   compatibility story, is a defensible release. What must not happen is the
-   threshold being quietly lowered to match the result — the acceptance criteria
-   name that failure mode explicitly, which is why this document says FAIL.
-3. **Accept and carry forward.** TASK-17–20 measure against this frozen
-   candidate regardless; a native backend may close the gap on its own.
+Why that and not the alternatives:
+
+* `spec.md:247` prescribes exactly this route when AC3/AC5 cannot be met
+  compatibly, and warns against completing the feature on the strength of
+  Rust/parallel experiments — which rules out simply carrying the shortfall
+  forward.
+* `spec.md:368` records the business priority in the owner's own words:
+  *"preserve current compatibility with asyncdb.models but adding speed up
+  improvement."* Compatibility passes completely; the speed-up is real and
+  broad. The 20% was an engineering target proposed for review — the spec says
+  so in the sentence introducing the criteria — not a business constraint.
+* Further optimization was the honest alternative, but the two cheapest
+  remaining targets are already ruled out on **demonstrated** safety grounds
+  (§5), so it is substantial new work rather than tuning.
+
+The revised numbers were deliberately **not** set to the measured values, which
+would have made the gate unfalsifiable. They keep headroom below what was
+measured while still failing loudly if the gate regresses — Employee would fall
+to roughly 0%.
+
+AC6 and every compatibility criterion were left untouched, and the native
+experiments (AC8/AC9/AC10) keep their own promotion thresholds against the
+frozen candidate, so this amendment does not lower the bar for TASK-17–20.
 
 **Reproduce:**
 

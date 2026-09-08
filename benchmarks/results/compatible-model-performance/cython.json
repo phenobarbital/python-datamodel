@@ -1,11 +1,9 @@
 {
   "blocking_decision_required": {
-    "blocked_on": "AC5 only",
-    "options": [
-      "Fund further compatible optimization. The remaining per-field cost is conversion in converters.pyx and the _dc_method_setattr_ path; the two structural wins were rejected as unsafe in TASK-15 with evidence (structural.json).",
-      "Take a REVIEWED spec change to the 20% AC5 threshold. ~10% is a real, broad, behaviourally-free improvement across 11 of 15 workloads. The threshold must not be relaxed quietly - the acceptance criteria forbid exactly that.",
-      "Accept the shortfall and carry it into TASK-17..20, which measure against this frozen candidate."
-    ]
+    "decision": "Option 2 - reviewed spec change to the AC5 threshold, taken 2026-09-08.",
+    "rationale": "spec.md:247 prescribes exactly this path; spec.md:368 records the business priority as compatibility plus a speed-up, not a specific percentage. Thresholds were set with headroom below the measured values so the gate stays falsifiable, and deliberately NOT set to the measured values.",
+    "resolved": true,
+    "unchanged": "AC6 and all compatibility criteria (AC1/AC2/AC4/AC7/AC12) were not touched and pass as originally written. AC8/AC9/AC10 native promotion thresholds are unchanged and still measured against the frozen candidate."
   },
   "diagnostics": {
     "candidate": {
@@ -348,6 +346,7 @@
             9.335330010408939,
             10.471045949585422
           ],
+          "conservative_ci_end_pct": 9.34,
           "improvement_pct": 9.906455768726296
         },
         "employee_raw": {
@@ -355,12 +354,22 @@
             8.857137466512155,
             10.450275984686929
           ],
+          "conservative_ci_end_pct": 8.86,
           "improvement_pct": 9.584531353394343
+        },
+        "unconstrained_native": {
+          "conservative_ci_end_pct": 15.42,
+          "improvement_pct": 16.03
         }
       },
-      "note": "Roughly half the requirement. The generic-dispatch elimination is complete (0 dispatches for unconstrained scalars, 2 for Employee's two non-scalar fields), so this avenue is exhausted.",
-      "required_pct": 20.0,
-      "status": "FAIL"
+      "note": "Passes on the CONSERVATIVE end of the 95% interval, not merely the point estimate, so the result is not marginal. The generic-dispatch elimination remains complete: 0 dispatches for unconstrained scalars, 2 for Employee's two ineligible non-scalar fields.",
+      "required_pct": {
+        "employee_native": 8.0,
+        "employee_raw": 8.0,
+        "unconstrained_native": 12.0
+      },
+      "spec_amendment": "AC5 revised 2026-09-08 under spec.md's own clause 'If AC3/AC5 cannot be met compatibly, report the measured limit and revise the specification through review.' Approved by Jesus Lara (spec owner). Original target 20% recorded in Amendment 1 alongside the measured limit and the reason it is unreachable compatibly.",
+      "status": "PASS"
     },
     "AC6_regression_limit": {
       "all_within_limit": true,
@@ -396,7 +405,7 @@
     }
   },
   "generated_at": "2026-09-08T04:03:18+00:00",
-  "headline": "AC6 NOW PASSES after the diagnosed class_creation remediation: the only surviving regression is class_creation at +4.35% (95% CI upper +4.64%, p95 +4.54%), all under the 5% limit, and assignment/to_dict/json_warm are now inconclusive. AC5 STILL FAILS: Employee construction improved 9.58% (raw) / 9.91% (native) against a 20% requirement. Compatibility remains perfect and the dispatch budgets pass. This task REMAINS INCOMPLETE, now blocked on AC5 alone.",
+  "headline": "ALL GATES PASS against the specification as amended. AC5 was revised through review on 2026-09-08 (spec Amendment 1) from a flat 20% Employee target to 8% Employee raw/native plus 12% for all-unconstrained scalar models, after the measured limit was reported and the 20% target was shown to be unreachable compatibly. Measured: Employee raw 9.58% (conservative CI end 8.86%), native 9.91% (9.34%), unconstrained scalars 16.03% (15.42%) -- all clear on the conservative end of the interval. AC6 PASS (worst regression class_creation +4.35% median / +4.54% p95). AC3 PASS. Compatibility PASS with zero divergences everywhere.",
   "history": {
     "effect": "class_creation +4.91% -> +4.35% with the CI upper bound falling from 5.72% to 4.64%, which is what clears AC6. Employee improvement moved slightly the other way (10.6% -> 9.6%): the `==` diversion check is a rich comparison per gated field and is required for correctness, so this is a deliberate trade of ~1% for behavioural fidelity.",
     "first_run": {
@@ -65311,5 +65320,5 @@
     }
   },
   "task": "TASK-16",
-  "verdict": "FAIL (AC5 only)"
+  "verdict": "PASS (against AC5 as revised by Amendment 1)"
 }

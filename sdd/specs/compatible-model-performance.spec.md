@@ -235,7 +235,11 @@ The numeric thresholds below are engineering targets proposed for review, not me
 - [ ] AC2. All applicable existing tests pass with no new failures; all differential cases match exact behavior. Any existing failure is reproduced on the reference and explicitly tracked.
 - [ ] AC3. Successful, nonempty, ordinary Employee inputs require at most **3 generic `_validation_` dispatches per build**, down from the current 11; an all-unconstrained supported scalar fixture requires zero generic dispatches. Inline/specialized checks still execute required validation. Counters are collected in a separate diagnostic build.
 - [ ] AC4. Missing/null, parse failure, custom behavior, constraint and mutation cases retain their reference outcomes, error payloads, order and callback counts. No rebuild call or model declaration change is required.
-- [ ] AC5. The optimized Cython candidate reduces both raw and native Employee median construction latency by at least **20%** against the engineering reference using §4's protocol. Actual savings and remaining calls are reported; no absolute 15 µs saving is assumed.
+- [ ] AC5 (**revised 2026-09-08 — see Amendment 1**). The optimized Cython candidate, measured against the engineering reference using §4's protocol, reduces median construction latency by at least:
+  - **8%** for both raw and native Employee, with the whole 95% confidence interval below 1.0; and
+  - **12%** for an all-unconstrained supported-scalar model.
+
+  Actual savings, the confidence interval and remaining generic dispatches are reported; no absolute 15 µs saving is assumed. *(Original target: 20% on Employee raw and native. Not met; measured limit and rationale in Amendment 1.)*
 - [ ] AC6. Representative nested/custom/invalid/assignment/serialization cases regress by no more than **5%** in median or upper-tail batch latency. Cold class creation and retained per-class memory are reported; cache-growth tests show bounded/collectable storage, and steady-state construction does not rebuild the class plan.
 - [ ] AC7. Required public/cpdef return types, fresh mutable results, dataclass behavior, ORM primary keys, aliases, defaults and assignment/history are unchanged. New policy state does not leak into JSON, field lists or public dictionary results.
 - [ ] AC8. Sequential Rust experiment records full-cost parity and performance against optimized Cython. Promotion requires all applicable parity/regression gates and at least **10% additional improvement** on its declared eligible workload. Otherwise a completed report retains Cython.
@@ -245,6 +249,58 @@ The numeric thresholds below are engineering targets proposed for review, not me
 - [ ] AC12. Before default rollout, the maintainer identifies deployed baseline(s), supplies/approves representative company ORM integration results, and confirms the Python/platform coverage. Pending external evidence remains an explicit release blocker; repository-only tests do not certify complete company compatibility.
 
 If AC3/AC5 cannot be met compatibly, report the measured limit and revise the specification through review. Do not mark the feature complete solely because Rust/parallel experiments were performed or because some scalar benchmark improved.
+
+### Amendment 1 — AC5 threshold revised (2026-09-08)
+
+Invoked under the clause immediately above. **Approved by Jesus Lara (spec
+owner) on 2026-09-08** after the measured limit was reported.
+
+**Measured limit.** Two full acceptance runs under §4's protocol, on a quiet
+machine (calibration spread 5.6% and 8.2%, zero suspect processes, no protocol
+shortfalls), with a same-source control establishing a cross-build noise floor
+of 0.95–1.55%:
+
+| workload | run 1 | run 2 |
+|---|---|---|
+| Employee raw | 10.63% | 9.58% |
+| Employee native | 10.95% | 9.91% |
+| unconstrained scalars (native) | 15.8% | 16.0% |
+| wide 50-field models | ~11.5% | ~11.3% |
+
+11 of 15 workloads improved; best 16.0%, median 9.9%. A 20% effect is
+comfortably resolvable at this noise level (worst resolvable effect 1.24%), so
+the shortfall is a measured result, not an instrument limitation.
+
+**Why 20% is not reachable compatibly.** AC3's mechanism is *exhausted*: the
+diagnostic build confirms an all-scalar model now reaches the generic
+`_validation_` dispatch **zero** times per build, and Employee exactly **twice**
+— its two non-scalar fields (`List[str]`, `Optional[Employee]`), which are
+ineligible by design. Roughly 10% is what that dispatch actually cost. Employee
+is the *weakest* improved workload for precisely this reason, which is why the
+revised criterion states the scalar case separately rather than hiding it in a
+single number.
+
+The remaining cost is per-field conversion, the `_dc_method_setattr_` path and
+the per-build column snapshot. The latter two were profiled and **rejected as
+unsafe with demonstrated evidence** (`benchmarks/results/compatible-model-performance/structural.json`):
+passing a live `__columns__.items()` view breaks a callback that mutates
+`__columns__` mid-build (tolerated on both builds today), and a cached
+membership set goes stale because `__fields__` is public and mutated in place —
+including by property setters, as an adversarial review demonstrated.
+
+**Why the revised numbers.** 8% and 12% sit clear of the ~1.5% noise floor and
+retain real headroom below the measured values, so ordinary machine variation
+will not flake them, while still failing loudly if the gate regresses or is
+accidentally disabled (Employee would fall to ~0%). They are deliberately *not*
+set to the measured values, which would make the gate unfalsifiable.
+
+**Scope of this amendment.** AC5 only. AC6 and every compatibility criterion
+(AC1, AC2, AC4, AC7, AC12) are unchanged and all pass as originally written —
+which matches the resolved business priority in §8: *"preserve current
+compatibility with asyncdb.models but adding speed up improvement."* The native
+experiments (AC8/AC9/AC10) keep their own promotion thresholds and are still
+measured against the frozen optimized-Cython candidate, so this amendment does
+not lower the bar for them.
 
 ## 6. Codebase Contract
 
