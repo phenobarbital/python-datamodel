@@ -121,11 +121,130 @@ Tests are behavioral specifications, not permission to change the oracle. Verify
 
 ## Completion Note
 
-*(Fill in only after implementation and verification.)*
+**Completed by**: sdd-worker (Claude Opus 5)
+**Date**: 2026-09-08
+**Decision**: **RETAIN THE CURRENT SERIALIZATION PATH.** AC10 is not met.
+**Production changed**: **none.**
+**Evidence**: `benchmarks/results/compatible-model-performance/serialization.md`
+and `serialization.json`.
 
-**Completed by**: pending
-**Date**: pending
-**Notes**: pending
-**Verification commands/results**: pending
-**Evidence paths and acceptance coverage**: pending
-**Deviations from spec**: pending
+### Where the time actually goes
+
+`Employee(native).json()`, warm — this breakdown is the most useful thing the
+task produced:
+
+| component | ns | share |
+|---|---|---|
+| **`dataclasses.asdict`** recursive deep copy | 10,825 | **77.4%** |
+| `orjson.dumps` via the encoder | 1,138 | 8.2% |
+| **`JSONContent()` construction** | 53 | **0.38%** |
+| total | 14,079 | |
+
+Cold and warm measured separately as the task requires: `json()` **20,998 ns
+cold** / 14,079 ns warm; `to_dict()` likewise recorded.
+
+### Candidate A — reuse one encoder instead of building one per call
+
+**REJECTED on measurement.** `json()` does `self.__encoder__(**kwargs)` every
+call. Reusing a single instance was measured end to end:
+
+| model | current | candidate | improvement |
+|---|---|---|---|
+| `Employee` | 13,704 ns | 13,472 ns | **+1.69%** |
+| `UnconstrainedScalars` | 12,393 ns | 12,368 ns | **+0.20%** |
+
+Outputs identical. Against a required **10%** this is nowhere near — encoder
+construction is 0.38% of the call, so that was always the ceiling.
+
+Worth recording that it would have been **safe**: `JSONContent` is a `cdef`
+class with **no instance state at all** (no `__dict__`), so a shared instance is
+not the "mutable encoder instance globally reused" the acceptance criteria warn
+against. It simply buys nothing. `test_json_content_is_stateless` now fails if
+instance state is ever added, which would invalidate that reasoning.
+
+### Candidate B — skip `asdict`'s deep copy inside `json()`
+
+**REJECTED on compatibility, demonstrated.** This is the only candidate that
+could reach 10% — 77.4% is available — and the copy *looks* like pure waste,
+since the intermediate dict is handed to `orjson` and discarded immediately.
+
+But the copying is **observable**. A value with a custom `__deepcopy__` has it
+invoked exactly once during `json()`, verified on **both** builds:
+
+```
+to_dict()  -> __deepcopy__ calls: 1
+json()     -> __deepcopy__ calls: 1
+```
+
+Removing the copy would silently stop running user code — precisely the "custom
+encoders, `__deepcopy__` and exclusion/null side effects" the task requires be
+preserved. Pinned by `test_json_still_invokes_deepcopy_on_values`.
+
+### Parity — zero divergences
+
+Every scenario run in **two separate processes** bound to their own compiled
+artifacts, with the 0.10.21 reference as the oracle: scalars, Decimal extremes
+(28-digit, 1e-28, large negative, zero), Unicode (accents, CJK, emoji, embedded
+quotes), nulls/defaults/`remove_nulls`, containers, **copy independence**,
+**exclusion-set mutation across calls**, nested dataclasses, custom field
+encoders, enums and `convert_enums`, `__deepcopy__` side effects, per-call
+options — plus **every OK case in the benchmark corpus** and **every OK case in
+the real asyncdb 2.16.0 consumer corpus**. **0 divergences.**
+
+### A pre-existing quirk found and characterized, not fixed
+
+**`json(**kwargs)` silently ignores per-call options.** The kwargs are forwarded
+to the encoder's *constructor* (`self.__encoder__(**kwargs)`), never to
+`encode()`; `JSONContent` accepts and discards them. So
+`json(option=OPT_SORT_KEYS)` and `json(indent=2)` both return compact,
+declaration-ordered output and raise nothing. Verified identical on 0.10.21, so
+it is **not a regression**. Correcting it would be new JSON semantics, which
+spec §1 puts out of scope, so it is pinned by
+`test_per_call_json_options_are_silently_ignored` rather than fixed.
+
+**Flagged for the maintainer**: a caller passing `indent=2` today silently gets
+compact output. That is a defect worth its own ticket, outside this feature.
+
+### Verification commands/results
+
+- `.venv/bin/python -m pytest tests/test_json.py
+  tests/compatibility/test_serialization_parity.py -q` -> **31 passed**.
+- `.venv/bin/python -m pytest tests/ -q` -> **755 passed, 2 skipped, 0 failed**
+  (743 before this task + 12 new).
+- `.venv/bin/python -m ruff check --select F,E9` on both test files -> clean.
+- Reference/candidate probe of `json(**kwargs)` -> identical on both builds.
+
+### Evidence and acceptance coverage
+
+- **AC10** (promotion or retain decision from raw cold/warm measurements and
+  parity): `serialization.json` -> `promotion_gate`, `candidates`,
+  `cold_vs_warm`, `cost_breakdown`;
+  `test_serialization_report_exists_and_retains_the_current_path` requires every
+  candidate to carry a `REJECTED` verdict *and* a measurement, and
+  `test_the_report_records_where_the_time_actually_goes` fails if the report
+  stops recording that `asdict` is the dominant cost — so a future attempt
+  cannot start from the wrong end.
+- **AC2/AC6** (exact output, no regression): the parity scenarios above;
+  TASK-16's acceptance run already had `json_warm` and `to_dict` inconclusive.
+- **AC7** (public copy behaviour, no globally reused mutable encoder):
+  `test_to_dict_returns_independent_copies`,
+  `test_each_json_call_builds_its_own_encoder`,
+  `test_json_content_is_stateless`, plus the `to_dict_copy_independence` and
+  `exclusion_set_is_not_mutated_across_calls` parity scenarios.
+- **AC11**: both report files, including "what would change the answer".
+- Construction/assignment unchanged by this task: trivially, since no production
+  file was modified — and the full suite confirms it.
+
+### Deviations from spec
+
+One, flagged.
+
+1. **`datamodel/models.py` and `datamodel/parsers/json.pyx` are listed as MODIFY
+   but were left UNCHANGED.** That is the outcome the task itself prescribes:
+   *"otherwise remove experimental runtime changes and retain the original path
+   with evidence."* Candidate A was measured by faithfully simulating the change
+   at runtime rather than editing production files, so there was never an
+   experimental edit to remove; candidate B was rejected before implementation
+   once `__deepcopy__` was shown to run. Editing either file to match the file
+   table would have meant shipping a change worth 1.69% against a 10% gate.
+2. No `.pyx` changed, so no rebuild and no manifest regeneration was required.

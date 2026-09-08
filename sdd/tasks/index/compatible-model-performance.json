@@ -422,7 +422,7 @@
       "feature_id": "FEAT-2",
       "feature": "compatible-model-performance",
       "spec": "sdd/specs/compatible-model-performance.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "medium",
       "effort": "M",
       "estimated_hours": 4,
@@ -436,8 +436,8 @@
       "created_at": "2026-09-07T23:19:35+00:00",
       "updated_at": "2026-09-07T23:19:35+00:00",
       "started_at": "2026-09-07T23:24:10+00:00",
-      "completed_at": null,
-      "file": "sdd/tasks/active/TASK-20-serialization-parity-experiment.md"
+      "completed_at": "2026-09-08T07:42:22+00:00",
+      "file": "sdd/tasks/completed/TASK-20-serialization-parity-experiment.md"
     },
     {
       "id": "TASK-21",
