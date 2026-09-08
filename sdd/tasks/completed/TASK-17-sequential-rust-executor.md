@@ -124,11 +124,135 @@ Tests are behavioral specifications, not permission to change the oracle. Verify
 
 ## Completion Note
 
-*(Fill in only after implementation and verification.)*
+**Completed by**: sdd-worker (Claude Opus 5)
+**Date**: 2026-09-08
+**Notes**: Implemented in three of the four declared files (see Deviations for
+the fourth). The prototype works, and the single most useful thing it produced
+is a **negative finding about its own reach** — recorded below rather than left
+for TASK-18 to discover.
 
-**Completed by**: pending
-**Date**: pending
-**Notes**: pending
-**Verification commands/results**: pending
-**Evidence paths and acceptance coverage**: pending
-**Deviations from spec**: pending
+**Private interface** (documented in `rust/rs_core/src/lib.rs` and re-derived at
+runtime by `describe_interface()`, so TASK-18 verifies rather than infers):
+
+| symbol | meaning |
+|---|---|
+| `rs_core.SUPPORTED_KINDS` | `("str", "int", "float", "bool")` |
+| `rs_core.NativePlan(descriptors)` | descriptors are `(name, kind, min, max, min_len, max_len)` |
+| `plan.eligible` / `.field_count` / `.kinds` | plan shape |
+| `plan.execute(values: dict)` | `list[(name, bool)]` **or `None`** |
+
+**`None` means "ineligible — run the legacy Python path". It is not a
+validation result**, and nothing in the harness or tests treats it as one.
+
+**The design rule that carries everything: eligibility is decided in a first
+pass over every field, before any result is produced.** A single-pass
+implementation would decide the leading fields and only then discover an
+unusable one, leaving a half-executed row. Returning `None` for the *whole* row
+is what lets the caller re-run from a clean state with no parser running twice.
+Pinned by `test_an_ineligible_field_declines_the_whole_row`, which deliberately
+places the int field **last** so a single-pass implementation would fail it.
+
+**A field is never skipped.** An unsupported kind makes the entire plan
+ineligible (`test_an_unsupported_kind_makes_the_whole_plan_ineligible`), so no
+caller can validate a subset and believe it validated the model. This is
+exactly the flaw in the pre-existing `get_field_info`, which `continue`s past
+unsupported types.
+
+**Both named prototype flaws are addressed:**
+
+1. **i64.** An `int` outside i64 makes the row **ineligible** — never truncated,
+   and never reported invalid. Python integers are arbitrary precision, so
+   calling `2**96` invalid would narrow the accepted set. The pre-existing
+   `validate_datamodel`/`parse_datamodel` do exactly that; they are left
+   untouched and are **not on the exercised path**. Covered for `2**63`,
+   `-(2**63)-1`, `2**200`, with the in-range boundaries `2**63-1` and `-(2**63)`
+   asserted to still execute.
+2. **Temporal variants.** `date`/`datetime`/`time` are **excluded** from the
+   supported set rather than handled. The prototype's
+   `NaiveDate::parse_from_str(s, "%Y-%m-%d")` does not reproduce Python's
+   temporal variants, and the task permits excluding *or* correcting — excluding
+   is the honest option for a bounded experiment.
+
+**Also refused, each for a stated reason:** `Decimal`, `UUID`, containers,
+unions, nested models; subclass instances — including `bool` where `int` is
+expected, because `bool` subclasses `int` and Python's isinstance-based
+`valid_int` accepts it; missing keys (presence/default handling is not
+implemented); and **any field carrying a user encoder or validator**, since the
+executor validates only and running natively would skip the callback
+(`test_callback_bearing_fields_fall_back`, `test_validator_bearing_fields_fall_back`).
+
+**No panic path on user data.** No `unwrap`/`expect` anywhere in the new code;
+every extraction is checked and failure means fallback.
+`test_hostile_values_do_not_panic` feeds `None`, `[]`, `{}`, a bare `object()`,
+`NaN`, `inf`, `bytes` and an object whose `__eq__` raises.
+
+**Unicode length is counted in characters, not bytes**
+(`text.chars().count()`), matching Python's `len()` on `str` — pinned with a
+3-character/5-byte string.
+
+**HONEST FINDING — the prototype cannot run the acceptance workloads.** Both
+corpus models are ineligible:
+
+| model | unhandled fields |
+|---|---|
+| `Employee` | `employee_id`, `salary`, `hired_at`, `updated_at`, `skills`, `manager` |
+| `UnconstrainedScalars` | `a_decimal`, `a_uuid`, `a_date`, `a_datetime` |
+
+Every benchmark model carries `Decimal`, `UUID`, temporal or container fields.
+So the executor covers **none** of the workloads AC5 is measured on. That is a
+finding for TASK-18's promotion analysis, not a failure of this task — the task
+asked for a *bounded* prototype and a declared eligible subset — but it means
+AC8's "at least 10% additional improvement on its declared eligible workload"
+will have to be argued on a workload that is not currently in the corpus.
+`test_benchmark_corpus_models_are_honestly_reported_ineligible` keeps that
+visible.
+
+**Demonstrated with parity on a declared eligible subset**: 5 rows, **4 executed
+natively, 1 fell back** (the `2**96` row), **zero parity mismatches** against
+the Python path.
+
+**Verification commands/results**:
+- Build: `cargo build --release` in `rust/rs_core` -> artifact
+  `rust/target/release/librs_core.so`, sha256 recorded by the harness on every
+  load (`9dc8688c…` at time of writing).
+- `.venv/bin/python -m pytest tests/compatibility/test_native_executor.py -q`
+  -> **33 passed**.
+- `.venv/bin/python -m pytest tests/ -q` -> **713 passed, 2 skipped, 0 failed**
+  (680 before this task + 33 new).
+- `.venv/bin/python benchmarks/native_validation.py` -> builds, loads, reports
+  eligibility and parity as above.
+- `.venv/bin/python -m ruff check --select F,E9 benchmarks/native_validation.py
+  tests/compatibility/test_native_executor.py` -> clean.
+
+**Evidence paths and acceptance coverage**:
+- AC8 (sequential prototype + harness with parity on a declared eligible
+  subset): `benchmarks/native_validation.py` (`parity_report`, `measure`);
+  `test_native_decisions_match_the_python_path`,
+  `test_constraint_decisions_match_the_python_path`.
+- AC2/AC7 (no narrowing, no silent acceptance): the whole of Part 4 —
+  large-integer fallback, subclass fallback, bool-as-int fallback, wrong-type
+  decisions, missing-field fallback, callback-bearing fallback.
+- No default-backend/loader change, no new public API:
+  `test_datamodel_does_not_import_rs_core`,
+  `test_no_new_public_constructor_api`,
+  `test_the_extension_is_loaded_explicitly_by_path`.
+- Statelessness/repeatability: `test_execute_is_repeatable_and_holds_no_state`
+  (a fallback must not leave the plan altered), `test_results_are_fresh_objects`.
+
+**Deviations from spec**: one, flagged.
+
+1. **`rust/rs_core/Cargo.toml` is listed as MODIFY but was left unchanged.**
+   Nothing in it needed to change: the crate already declares
+   `crate-type = ["cdylib"]`, already depends on the pyo3 version used, and
+   already builds. `rayon` remains a dependency because the pre-existing
+   `parse_datamodel` prototype uses it — removing it would delete existing
+   functionality, and parallelism is explicitly out of scope for this task
+   either way. Editing the manifest purely to match the file table would have
+   been a change with no purpose.
+2. The timing the harness prints (native validation ~870 ns vs Python
+   construction ~14,600 ns) is **not** a speed-up claim and is labelled as such
+   in the output and in the report's `caveat` field: it compares a bare
+   validity check against a full construction including conversion, assignment
+   and hooks. Full-cost parity is TASK-18's job.
+3. No `.pyx` changed, so no rebuild and no
+   `tests/compatibility/reference_manifest.json` regeneration was needed.
