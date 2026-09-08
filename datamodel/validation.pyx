@@ -146,6 +146,39 @@ POLICY_WORK_ALL = 0x07
 #: Identity comparisons use this, not the mutable public `validators` mapping.
 _BUILTIN_VALIDATORS = dict(validators)
 
+#: The same snapshot as an ordered tuple of (type, validator) pairs, restricted
+#: to real classes. Eligibility is decided by scanning this with `is`.
+#:
+#: Dict membership (`annotated_type in _BUILTIN_VALIDATORS`) and `.get()` use
+#: `__hash__`/`__eq__`, which a custom METACLASS can define to impersonate a
+#: built-in: `def __hash__(cls): return hash(float)` plus an `__eq__` that
+#: claims equality with `float` makes an arbitrary class pass a hash-based
+#: eligibility test AND collect the real `valid_float` as its cached validator
+#: (abstract.py looks that up the same way). The policy would then record the
+#: impostor as `type_ref`, every `is` comparison in `fastpath_kind` would be
+#: self-consistent against that wrong value, and the gate would skip validation
+#: for a value the reference rejects. Identity cannot be forged, so eligibility
+#: is decided by identity alone.
+_BUILTIN_VALIDATOR_PAIRS = tuple(
+    (key, value) for key, value in _BUILTIN_VALIDATORS.items()
+    if isinstance(key, type)
+)
+
+
+cdef object _builtin_validator_for(object annotated_type):
+    """The shipped validator for exactly this type object, or None.
+
+    Identity-only lookup: see `_BUILTIN_VALIDATOR_PAIRS`. Runs at class
+    creation, not on the hot path, so the linear scan is irrelevant.
+    """
+    cdef Py_ssize_t index
+    cdef tuple pair
+    for index in range(len(_BUILTIN_VALIDATOR_PAIRS)):
+        pair = <tuple> _BUILTIN_VALIDATOR_PAIRS[index]
+        if pair[0] is annotated_type:
+            return pair[1]
+    return None
+
 #: Metadata keys `_validate_constraints` reads for each supported category.
 _CONSTRAINT_KEYS_STR = ('length', 'min_length', 'max_length', 'pattern')
 _CONSTRAINT_KEYS_NUMERIC = ('min', 'max')
@@ -210,7 +243,10 @@ cdef frozenset _constraint_shape(object field, object annotated_type):
     if annotated_type is str or annotated_type is Text:
         keys = _CONSTRAINT_KEYS_STR
         attrs = _CONSTRAINT_ATTRS_STR
-    elif annotated_type in _NUMERIC_TYPES:
+    elif (annotated_type is int or annotated_type is float
+          or annotated_type is Decimal):
+        # Identity, not `in _NUMERIC_TYPES`: tuple membership uses `==` and is
+        # forgeable by a metaclass exactly like dict membership is.
         keys = _CONSTRAINT_KEYS_NUMERIC
         attrs = _CONSTRAINT_ATTRS_NUMERIC
     else:
@@ -266,8 +302,6 @@ cpdef object build_field_policy(object field, object annotated_type):
     # for a subclass, so a str subclass or an IntEnum never qualifies.
     if not isinstance(annotated_type, type):
         return None
-    if annotated_type not in _BUILTIN_VALIDATORS:
-        return None
 
     # The field must be a plain datamodel Field, not a user subclass whose
     # behaviour we cannot reason about.
@@ -280,7 +314,7 @@ cpdef object build_field_policy(object field, object annotated_type):
         return None
 
     # The cached validator must be *identically* the built-in for this type.
-    builtin = _BUILTIN_VALIDATORS.get(annotated_type, None)
+    builtin = _builtin_validator_for(annotated_type)
     if builtin is None:
         return None
     if getattr(field, 'validator', None) is not builtin:
@@ -330,7 +364,7 @@ cpdef bint policy_is_current(object field, object policy):
         return False
     if getattr(field, 'parser', None) is not plan.parser_ref:
         return False
-    if _BUILTIN_VALIDATORS.get(plan.type_ref, None) is not plan.validator_ref:
+    if _builtin_validator_for(plan.type_ref) is not plan.validator_ref:
         return False
     if getattr(field, '_type_category', None) != 'primitive':
         return False
@@ -447,8 +481,12 @@ cdef int fastpath_kind(object f, object value, object annotated_type) except -1:
     if is_empty(value):
         return FASTPATH_NONE
 
-    # `_validation_` also diverts when the value *is* the annotated type.
-    if value is annotated_type:
+    # `_validation_` diverts when `value == _type` (converters.pyx). Mirror
+    # that with `==`, not `is`. They coincide for the built-ins as shipped, but
+    # a type whose instances compare equal to the type object itself would take
+    # the legacy branch -- which routes to `_field_checks_` and enforces
+    # primary-key/required/nullable rules. Using `is` here would skip those.
+    if value == annotated_type:
         return FASTPATH_NONE
 
     # The legacy route honours constraints only for these three types; for

@@ -10,7 +10,7 @@
         "functions.cpython-313-x86_64-linux-gnu.so": "2a7faa732423f96e938d3b080011d2e803868eecff77719559f391520b2e8672",
         "json.cpython-313-x86_64-linux-gnu.so": "868edf6fe6f7d62baeb24be21c4f1e716d568951c9bfd728ed40de978c570003",
         "types.cpython-313-x86_64-linux-gnu.so": "6a8fd1ea779f60052cd766a7d350d63267384cd4c5aa6bf734544c5b5ff3e23e",
-        "validation.cpython-313-x86_64-linux-gnu.so": "46db66071990160ce7819da11a0054cbd7be8d559ecafb543ce496fcdb25edf5"
+        "validation.cpython-313-x86_64-linux-gnu.so": "9f4d68c4879998575f9540808c8cb72e93580f2e3b1f5a35f6738a5eda0318ec"
       },
       "datamodel_file": "/home/jesuslara/proyectos/python-datamodel/.claude/worktrees/feat-FEAT-2-compatible-model-performance/datamodel/__init__.py",
       "dependencies": {
@@ -22,8 +22,8 @@
         "python-dateutil": "2.9.0.post0"
       },
       "git": {
-        "commit": "c512452679a761aa334af6f17ec346ad881fa6a0",
-        "describe": "c512452-dirty",
+        "commit": "8db0fe1775a13c02835c38542ef7b7a215113cfd",
+        "describe": "8db0fe1-dirty",
         "dirty": true
       },
       "has_rust_parsers": true,

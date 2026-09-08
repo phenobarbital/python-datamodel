@@ -174,6 +174,70 @@ def test_add_field_leaves_the_class_unconstructible():
         Broken(known=1)
 
 
+def test_a_property_setter_may_register_its_own_field():
+    """REGRESSION. `object.__setattr__` is not inert -- it runs descriptors.
+
+    TASK-15 removed a second `if name not in self.__fields__:` guard from
+    `_dc_method_setattr_` as "provably redundant, nothing between the two
+    checks can mutate __fields__". That reasoning was WRONG: the
+    `object.__setattr__` between them consults the type's data descriptors, so
+    a class-level `property` setter runs arbitrary user code -- which may
+    legitimately append its own name to `__fields__`.
+
+    With the guard removed, this raised `TypeError: Field 'dynamic' is not
+    allowed`, while the 0.10.21 reference accepted the assignment. Found by
+    adversarial review, verified against the reference, and the guard restored.
+    """
+    class SelfRegistering(BaseModel):
+        known: int = Column(required=False, default=0)
+
+        class Meta:
+            strict = False
+            extra = "forbid"
+
+        @property
+        def dynamic(self):
+            return self.__dict__.get("dynamic")
+
+        @dynamic.setter
+        def dynamic(self, value):
+            self.__dict__["dynamic"] = value
+            if "dynamic" not in self.__fields__:
+                self.__fields__.append("dynamic")
+
+    instance = SelfRegistering(known=1)
+    instance.dynamic = 42
+    assert instance.dynamic == 42
+    assert "dynamic" in SelfRegistering.__fields__
+
+
+def test_a_property_setter_registering_its_field_agrees_with_the_reference():
+    assert_parity({
+        "self_registering_property": '''
+def run():
+    class M(BaseModel):
+        known: int = Column(required=False, default=0)
+        class Meta:
+            strict = False
+            extra = "forbid"
+        @property
+        def dynamic(self):
+            return self.__dict__.get("dynamic")
+        @dynamic.setter
+        def dynamic(self, value):
+            self.__dict__["dynamic"] = value
+            if "dynamic" not in self.__fields__:
+                self.__fields__.append("dynamic")
+    instance = M(known=1)
+    def assign():
+        instance.dynamic = 42
+        return instance.dynamic
+    return {"result": attempt(assign),
+            "in_fields": describe("dynamic" in M.__fields__)}
+''',
+    })
+
+
 def test_public_fields_mutation_is_honoured_on_both_builds():
     assert_parity({
         "public_fields_append": '''

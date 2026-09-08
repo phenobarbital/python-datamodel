@@ -244,16 +244,31 @@ def test_adding_a_constraint_through_live_metadata_invalidates_the_policy():
 
 
 def test_removing_a_constraint_also_invalidates_the_policy():
-    class Bounded(BaseModel):
-        v: int = Column(required=False, min=1)
+    """Uses a unique class name and restores state, deliberately.
+
+    A plain `class Bounded` here would share its Field with the identically
+    shaped `Bounded` in test_validation_fastpath.py via the (name, bases,
+    annotations) class cache -- and this test pops `min` from it. That made the
+    suite order-dependent: whichever test ran second saw the mutated field.
+    Flagged by adversarial review; fixed by not sharing and by restoring.
+    """
+    Bounded = type(
+        f"BoundedRemoval{next(_UNIQUE)}",
+        (BaseModel,),
+        {"__annotations__": {"v": int}, "v": Column(required=False, min=1)},
+    )
 
     field = Bounded.__columns__["v"]
     policy = field_policy(field)
     assert policy_is_current(field, policy) is True
 
-    field._meta.pop("min")
+    removed = field._meta.pop("min")
     field.metadata = field._meta
-    assert policy_is_current(field, policy) is False
+    try:
+        assert policy_is_current(field, policy) is False
+    finally:
+        field._meta["min"] = removed
+        field.metadata = field._meta
 
 
 def test_adding_a_custom_validator_later_invalidates_the_policy():
@@ -285,6 +300,63 @@ def test_replacing_a_public_validator_cannot_make_a_stranger_look_known():
         assert build_field_policy(field, int) is None
     finally:
         validators[int] = original
+
+
+def test_a_metaclass_cannot_impersonate_a_builtin_scalar():
+    """Eligibility must be decided by identity, never by hash/__eq__.
+
+    Found by adversarial review. `annotated_type in _BUILTIN_VALIDATORS` and
+    `.get()` go through `__hash__`/`__eq__`, which a custom METACLASS can
+    define to claim equality with `float`. That made an arbitrary class pass
+    eligibility -- and, because `abstract.py` looks the validator up the same
+    way, collect the real `valid_float` as its cached validator, so even the
+    validator-identity check passed. The policy then recorded the impostor as
+    `type_ref`, every `is` comparison in the gate was self-consistent against
+    that wrong value, and validation was skipped for a value the reference
+    build rejects.
+
+    Reproduced end to end before the fix: the gate accepted it, the legacy
+    path reported "expected a float, got ... of type PretendFloat".
+    """
+    class AliasMeta(type):
+        def __hash__(cls):
+            return hash(float)
+
+        def __eq__(cls, other):
+            return other is float or other is cls
+
+    class PretendFloat(metaclass=AliasMeta):
+        pass
+
+    # It really does impersonate float through the hash-based protocols...
+    assert PretendFloat == float
+    assert hash(PretendFloat) == hash(float)
+    assert PretendFloat in {float: "yes"}
+    # ...but identity cannot be forged, so it earns no policy.
+    assert build_field_policy(Field(required=False), PretendFloat) is None
+
+
+def test_an_impersonating_type_is_still_validated_end_to_end():
+    class AliasMeta2(type):
+        def __hash__(cls):
+            return hash(float)
+
+        def __eq__(cls, other):
+            return other is float or other is cls
+
+    class AlsoPretendFloat(metaclass=AliasMeta2):
+        pass
+
+    class Probe(BaseModel):
+        v: AlsoPretendFloat = Column(required=False, encoder=lambda value: value)
+
+        class Meta:
+            strict = False
+
+    assert field_policy(Probe.__columns__["v"]) is None
+    assert Probe(v=AlsoPretendFloat()).get_errors(), (
+        "a value the reference rejects was silently accepted"
+    )
 
 
 def test_identity_is_not_inferred_from_a_function_name():
