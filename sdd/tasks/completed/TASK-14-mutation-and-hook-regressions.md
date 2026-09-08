@@ -127,11 +127,109 @@ Tests are behavioral specifications, not permission to change the oracle. Verify
 
 ## Completion Note
 
-*(Fill in only after implementation and verification.)*
+**Completed by**: sdd-worker (Claude Opus 5)
+**Date**: 2026-09-08
+**Notes**: Implemented in exactly the three declared files. **No production
+code changed** -- this task is the adversarial safety net for TASK-13's gate,
+and its job is to find regressions, not to fix them. It found none.
 
-**Completed by**: pending
-**Date**: pending
-**Notes**: pending
-**Verification commands/results**: pending
-**Evidence paths and acceptance coverage**: pending
-**Deviations from spec**: pending
+**Why these tests cannot merely mirror the implementation** (the acceptance
+criterion that shapes the whole design). Every scenario is executed **twice, in
+two separate processes**, each bound to its own compiled artifacts: once
+against the rebuilt 0.10.21 engineering reference, once against the candidate.
+The assertion is that the two agree. The oracle is therefore the reference
+build -- not my expectations and not the gate's behaviour. A test written to
+match whatever the gate happens to do would fail the moment the reference
+disagreed.
+
+`assert_parity()` additionally refuses to pass if a scenario failed to *execute*
+on the reference, so a broken scenario cannot masquerade as parity, and it
+asserts the two runs really loaded different builds
+(`test_both_environments_are_really_different_builds`) -- without that, both
+children could load one build and every comparison would be vacuous.
+
+**The comparison is proven able to fail.**
+`test_the_comparison_detects_an_intentionally_altered_gate` takes a real
+scenario result and corrupts it the way a broken gate would -- the constraint
+violation simply vanishes -- then asserts `compare` reports a divergence. Had
+that reported nothing, every "parity holds" result in these files would be
+worthless.
+
+**What is covered** (18 tests, ~45 scenarios):
+
+*Mutation* (`test_mutation_parity.py`): replacing the whole `_meta` backing map
+after the policy was built; a constraint **set to `None` versus removed**
+(the absent/None distinction the task calls out); a zero-valued bound, which is
+a real bound and not "absent"; constraint added then removed; string
+constraints mutated; validator replaced, cleared; parser replaced; field `type`
+replaced; `Meta.strict` flipped after class creation; dynamic field
+replacement; `str`/`int` subclasses; boundary values (0, False, empty string,
+0.0, 2**96, negative).
+
+*Hooks* (`test_hook_parity.py`): encoder call **count and order**, including
+`encoder_runs_when_an_earlier_field_fails` and a three-field ordering scenario
+run both with and without a failing middle field -- the AC's "identical
+order/count even when an earlier field fails"; encoder raising; the dead `str`
+encoder route staying dead; the dead primitive-validator route staying dead;
+the live `List[str]` validator running; a validator returning `False`;
+`__post_init__` running exactly once, mutating its own field, mutating a *later*
+field, raising, and adding metadata mid-flight; descriptors; assignment history
+via `old_value`; `reset_values`.
+
+*Generic fallback* (`test_generic_fallback.py`): typed containers, wrong inner
+types, empty containers and factory independence, nested containers; `Optional`,
+`Union`, `Literal`, `Enum`; nested models from dict and from instance,
+`as_objects`, inheritance with an overridden field; callables, aliases,
+`default_factory` sharing; failed conversion followed by validation, parse-error
+ordering across three fields, and a strict parse error. Plus
+`test_mixed_fast_and_generic_fields_in_one_model`, a seven-field model mixing
+fast-path and generic fields -- the realistic case where leaked state between
+fields would show.
+
+**Two scenario bugs of mine, caught by the harness rather than by luck.** Both
+`get_errors()` scenarios initially crashed **on the reference as well as the
+candidate**: `get_errors()` returns `None`, not `{}`, on a clean model. Because
+`assert_parity` treats a reference-side execution failure as a hard failure
+rather than something to compare, they could not slip through as "both sides
+agree". Fixed with `get_errors() or {}`.
+
+**Verification commands/results**:
+- `.venv/bin/python -m pytest tests/compatibility/test_mutation_parity.py
+  tests/compatibility/test_hook_parity.py
+  tests/compatibility/test_generic_fallback.py -q` -> **18 passed**, 0 failed,
+  0 skipped (reference worktree present), **zero divergences** in every
+  scenario.
+- Existing descriptor/inheritance/alias/union coverage in the rebuilt candidate:
+  `.venv/bin/python -m pytest tests/test_descriptors.py tests/test_qsmodel.py
+  tests/test_converter.py tests/test_field.py -q` -> **37 passed**.
+- `.venv/bin/python -m pytest tests/ -q` -> **657 passed, 2 skipped, 0 failed**
+  (639 before this task + 18 new).
+- `.venv/bin/python -m ruff check --select F,E9` on all three files -> clean.
+
+**Evidence paths and acceptance coverage**:
+- AC2 / AC4 (mutation, hook and generic parity in both strict modes):
+  all three files; both modes exercised explicitly by
+  `test_strict_and_non_strict_agree`, and every scenario dict carries its own
+  `Meta.strict` choice.
+- Identical callback order and count with an earlier failure:
+  `test_callback_order_is_identical_with_a_failing_field`,
+  `test_encoder_parity`.
+- AC7 (policy absent from observable output):
+  `test_policy_is_invisible_on_both_builds`, which compares the field list,
+  columns, `__dataclass_fields__`, `to_dict()` keys, `json()` and the union of
+  all metadata keys across both builds, then additionally greps the rendered
+  candidate output for `_policy`/`FieldPolicy`.
+- Tests distinguish an altered gate:
+  `test_the_comparison_detects_an_intentionally_altered_gate`.
+
+**Deviations from spec**: none. Notes for the reviewer:
+1. The shared harness (`run_scenarios`, `assert_parity`, and the child script)
+   lives in `test_mutation_parity.py` and is imported by the other two files.
+   All three are owned by this task, so no unowned file was touched; the
+   alternative would have been triplicating a ~120-line subprocess harness.
+2. No rebuild was needed (no production change), so
+   `tests/compatibility/reference_manifest.json` did **not** need regenerating
+   this time -- unlike TASK-11/12/13.
+3. Scenarios are passed to the children as source strings and `exec`'d there.
+   That is deliberate: the scenario must be compiled against the *child's*
+   `datamodel`, so it cannot be a closure captured in this process.
