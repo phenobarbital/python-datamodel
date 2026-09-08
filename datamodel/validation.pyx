@@ -326,6 +326,117 @@ cpdef object field_policy(object field):
     """The policy attached to ``field``, or None. Never raises."""
     return getattr(field, '_policy', None)
 
+
+# ---------------------------------------------------------------------------
+# FEAT-2 / TASK-13 -- the gate, and its diagnostic-only counter
+# ---------------------------------------------------------------------------
+
+cdef extern from *:
+    """
+    /* Diagnostic dispatch counting is OFF unless a profiling build defines
+       this macro (see tests/compatibility/profile_validation.py). Because it
+       is a compile-time constant, the C compiler folds the guarded branch
+       away entirely in a release build: there is no counter, and no test of
+       a counter, in the default application flow. */
+    #ifndef DATAMODEL_PROFILE_VALIDATION
+    #define DATAMODEL_PROFILE_VALIDATION 0
+    #endif
+    """
+    int DATAMODEL_PROFILE_VALIDATION
+
+cdef long _generic_dispatches = 0
+
+
+cdef void count_generic_dispatch() noexcept:
+    """Record one generic `_validation_` dispatch. Compiled out in release."""
+    global _generic_dispatches
+    if DATAMODEL_PROFILE_VALIDATION:
+        _generic_dispatches += 1
+
+
+cpdef bint profiling_compiled_in():
+    """True only in a build made with -DDATAMODEL_PROFILE_VALIDATION=1."""
+    return DATAMODEL_PROFILE_VALIDATION != 0
+
+
+cpdef long generic_dispatch_count():
+    """Generic dispatches counted so far. Always 0 in a release build."""
+    return _generic_dispatches
+
+
+cpdef void reset_generic_dispatch_count():
+    global _generic_dispatches
+    _generic_dispatches = 0
+
+
+#: `fastpath_kind` results.
+FASTPATH_NONE = 0         # fall back to the legacy `_validation_`
+FASTPATH_COMPLETE = 1     # all required work is provably done; skip
+FASTPATH_CONSTRAINTS = 2  # skip, but run `_validate_constraints` first
+
+
+cdef int fastpath_kind(object f, object value, object annotated_type) except -1:
+    """Decide whether narrow inline checks can replace `_validation_`.
+
+    This mirrors **exactly** the branch `_validation_` takes for a field that
+    carries a cached built-in validator:
+
+        error = f.validator(f, name, value, _type)   # None for an exact type
+        if not error and _type in (str, int, float):
+            return _validate_constraints(...)
+        return None
+
+    Every assumption below is a cheap pointer comparison; anything unexpected
+    returns ``FASTPATH_NONE`` and the legacy path runs completely unchanged.
+
+    Deliberately NOT used here: `policy_is_current()`. It rebuilds the
+    constraint shape as a frozenset, which would cost more per field than the
+    dispatch it is meant to avoid. It remains the full audit for callers that
+    want the complete guarantee. Its constraint-shape half is unnecessary in
+    this gate because the gate *always* runs `_validate_constraints` live for
+    the three types whose constraints the legacy route honours -- so a
+    constraint added at runtime is read, never skipped.
+    """
+    cdef FieldPolicy plan
+    cdef object policy = getattr(f, '_policy', None)
+
+    if policy is None:
+        return FASTPATH_NONE
+    plan = <FieldPolicy> policy
+
+    # EXACT type identity, never isinstance: a subclass must keep the legacy
+    # path, which may treat it differently.
+    if type(value) is not plan.type_ref:
+        return FASTPATH_NONE
+    if annotated_type is not plan.type_ref:
+        return FASTPATH_NONE
+
+    # The cached validator and parser must still be the ones the policy saw;
+    # a user may replace either at runtime.
+    if f.validator is not plan.validator_ref:
+        return FASTPATH_NONE
+    if f.parser is not plan.parser_ref:
+        return FASTPATH_NONE
+
+    # `_validation_` routes empty/None values to `_field_checks_`, which
+    # enforces primary-key, required, db_default and nullable rules. Those
+    # must never be skipped. NOTE: is_empty(0) and is_empty(False) are both
+    # False -- 0 and False are values, not absence -- so numeric zero and
+    # boolean false still take the fast path, as they must.
+    if is_empty(value):
+        return FASTPATH_NONE
+
+    # `_validation_` also diverts when the value *is* the annotated type.
+    if value is annotated_type:
+        return FASTPATH_NONE
+
+    # The legacy route honours constraints only for these three types; for
+    # every other scalar it returns immediately after the validator. Preserve
+    # that exactly, including the quirk that a Decimal min/max is ignored here.
+    if annotated_type is str or annotated_type is int or annotated_type is float:
+        return FASTPATH_CONSTRAINTS
+    return FASTPATH_COMPLETE
+
 cdef dict _create_error(str name, object value, object error, object val_type, object annotated_type, object exception = None):
     return {
         "field": name,

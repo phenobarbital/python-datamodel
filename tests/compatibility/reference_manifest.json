@@ -4,13 +4,13 @@
     "candidate": {
       "binaries": {
         "_rs_parsers.cpython-313-x86_64-linux-gnu.so": "599eeff644c130c983e078401553013688506f7f2cebc78758ac616776ab9d30",
-        "converters.cpython-313-x86_64-linux-gnu.so": "331749cb4d3b4ff6b24ffdf2077dfbf1271b9c7870832dd7b432f47b5dc555da",
+        "converters.cpython-313-x86_64-linux-gnu.so": "88050ff08b9959239cb1adc1d71ed32f38c6f3f823904050630948a7530a7f41",
         "exceptions.cpython-313-x86_64-linux-gnu.so": "758d79b86ba01ff1e2f145d12743698af270894849d482cfade00f4bff68d72a",
         "fields.cpython-313-x86_64-linux-gnu.so": "bde8191e76da61d6b5d7bfa3804a9a1c82158817bc6c4d470a189d41a8b1c542",
         "functions.cpython-313-x86_64-linux-gnu.so": "2a7faa732423f96e938d3b080011d2e803868eecff77719559f391520b2e8672",
         "json.cpython-313-x86_64-linux-gnu.so": "868edf6fe6f7d62baeb24be21c4f1e716d568951c9bfd728ed40de978c570003",
         "types.cpython-313-x86_64-linux-gnu.so": "6a8fd1ea779f60052cd766a7d350d63267384cd4c5aa6bf734544c5b5ff3e23e",
-        "validation.cpython-313-x86_64-linux-gnu.so": "dd3c004a0f91a90c9b8d3e110977c93d68c0f7bbe116635701739ecbe4245cf9"
+        "validation.cpython-313-x86_64-linux-gnu.so": "11cdee32f1bccd56a3029f0db126e4a0ef6fa6a9a9db490675387272c9fc88e5"
       },
       "datamodel_file": "/home/jesuslara/proyectos/python-datamodel/.claude/worktrees/feat-FEAT-2-compatible-model-performance/datamodel/__init__.py",
       "dependencies": {
@@ -22,8 +22,8 @@
         "python-dateutil": "2.9.0.post0"
       },
       "git": {
-        "commit": "c2b4dfeab2c99f36f3c31b611df1c24141d5d350",
-        "describe": "c2b4dfe-dirty",
+        "commit": "b5cabe266e90b5fa2e637b420eba3e0eb2b7599c",
+        "describe": "b5cabe2-dirty",
         "dirty": true
       },
       "has_rust_parsers": true,

@@ -30,7 +30,11 @@ from uuid import UUID
 import asyncpg.pgproto.pgproto as pgproto
 from .functions import is_iterable, is_primitive
 from .validation import _validation
-from .validation cimport _validate_constraints
+from .validation cimport (
+    _validate_constraints,
+    count_generic_dispatch,
+    fastpath_kind,
+)
 from .fields import Field
 # New converter:
 import datamodel.rs_parsers as rc
@@ -1946,6 +1950,7 @@ cpdef dict processing_fields(object obj, list columns):
     cdef object f
     cdef object value
     cdef object newval
+    cdef int _fast = 0
 
     for c_col in columns:
         name = c_col[0]
@@ -2294,9 +2299,29 @@ cpdef dict processing_fields(object obj, list columns):
                 except Exception as ex:
                     errors.update(_build_error(name, f"Error parsing Typing: ", ex))
                     continue
-            # then, call the validation process:
-            if (error := _validation_(name, newval, f, _type, meta, field_category, as_objects)):
-                errors[name] = error
+            # then, call the validation process.
+            #
+            # FEAT-2/TASK-13: this is the post-conversion boundary -- after
+            # parsing, after any encoder/callback has run and after the value
+            # is stored -- so the gate sees exactly what the legacy path would.
+            # `fastpath_kind` returns FASTPATH_NONE for anything it cannot
+            # prove, and then `_validation_` runs completely unchanged.
+            _fast = fastpath_kind(f, newval, _type)
+            if _fast == 0:
+                count_generic_dispatch()
+                if (error := _validation_(name, newval, f, _type, meta, field_category, as_objects)):
+                    errors[name] = error
+            elif _fast == 2:
+                # The value's type is already proven, so the built-in
+                # validator is known to return None; only the live constraints
+                # remain. Reading them here (rather than trusting the policy's
+                # recorded shape) is what makes a constraint added at runtime
+                # impossible to skip.
+                error = _validate_constraints(f, name, newval, _type, type(newval))
+                if error:
+                    errors[name] = error
+            # _fast == 1: type proven and this type carries no constraint work
+            # on the legacy route, so there is nothing left to do.
         except (TypeError, ValueError) as ex:
             _case = ex.__class__.__name__
             if meta.strict is True:
