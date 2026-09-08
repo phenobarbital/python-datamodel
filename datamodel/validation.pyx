@@ -23,6 +23,14 @@ from .functions import (
     is_callable,
     is_empty
 )
+# NOTE (FEAT-2/TASK-16 review): `is_empty` is declared `cpdef` in
+# functions.pxd, so cimporting it for a direct C call in `fastpath_kind` looks
+# attractive -- and a code review raised exactly that. It does not compile:
+# functions.pxd declares its return type via `from libcpp cimport bool as
+# bool_t`, and functions.pyx is built with language="c++" (setup.py:51-54)
+# while validation.pyx is built with language="c" (setup.py:45-47). Cimporting
+# across that boundary fails with "unknown type name 'bool'". Acting on it
+# would mean changing setup.py or functions.pxd, both outside this scope.
 
 
 cdef str valid_int(object field, str name, object value, object _type):
@@ -147,6 +155,9 @@ _CONSTRAINT_ATTRS_NUMERIC = ('gt', 'lt', 'ge', 'le', 'eq', 'ne')
 
 _NUMERIC_TYPES = (int, float, Decimal)
 
+#: Shared, immutable 'no constraints' shape.
+_EMPTY_CONSTRAINT_SHAPE = frozenset()
+
 
 cdef class FieldPolicy:
     """Immutable, precomputed description of a field's possible validation work.
@@ -229,6 +240,11 @@ cdef frozenset _constraint_shape(object field, object annotated_type):
     except (AttributeError, TypeError):
         return None
 
+    if not present:
+        # Most fields carry no constraints at all. frozenset is immutable, so a
+        # single shared empty instance is safe and avoids an allocation per
+        # field at class creation.
+        return _EMPTY_CONSTRAINT_SHAPE
     return frozenset(present)
 
 
@@ -402,7 +418,12 @@ cdef int fastpath_kind(object f, object value, object annotated_type) except -1:
 
     if policy is None:
         return FASTPATH_NONE
-    plan = <FieldPolicy> policy
+    # Checked cast. `Field` is a plain Python class with __slots__, so `_policy`
+    # is externally writable; an unchecked <FieldPolicy> would reinterpret an
+    # arbitrary object's pointer. `policy_is_current` guards with isinstance for
+    # the same reason -- this is the hot-path equivalent, and it costs one type
+    # check against the pointer comparisons that follow.
+    plan = <FieldPolicy?> policy
 
     # EXACT type identity, never isinstance: a subclass must keep the legacy
     # path, which may treat it differently.

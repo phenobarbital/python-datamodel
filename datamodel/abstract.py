@@ -348,12 +348,14 @@ class ModelMeta(type):
                 _type_category = 'complex'
             _types_local[field] = _type_category
             df._type_category = _type_category
-            # FEAT-2/TASK-11: build the conservative validation policy only
-            # now, when the field is fully described (`_type_category`,
-            # `parser` and `validator` are all assigned above). Building it
-            # earlier would see a half-initialised field and, being
-            # conservative, would simply yield the legacy `None`.
-            df._policy = build_field_policy(df, _type)
+            # FEAT-2/TASK-16 remediation: the validation policy is NOT built
+            # here. `ModelMeta.__new__` rebuilds it from the FINAL column set
+            # (after inheritance and class-cache reuse are resolved), which
+            # TASK-11 made the authoritative point precisely so cache hits and
+            # inherited fields are handled. Building it here as well meant
+            # every newly declared field paid for its policy twice --
+            # measured at 2300 ns per field, and the dominant part of the
+            # class_creation regression the acceptance run flagged.
 
             # Store them in a dict keyed by field name:
             _typing_args[field] = (origin, args)
