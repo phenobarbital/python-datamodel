@@ -390,12 +390,17 @@ enum Eligibility {
 pub struct NativePlan {
     fields: Vec<PlanField>,
     eligible: bool,
+    /// Bounded, REUSABLE worker pool. Built once per plan, never unbounded,
+    /// and only used while the GIL is released. `None` means this plan runs
+    /// sequentially only.
+    pool: Option<Arc<ThreadPool>>,
 }
 
 #[pymethods]
 impl NativePlan {
     #[new]
-    fn new(descriptors: &Bound<'_, PyAny>) -> PyResult<Self> {
+    #[pyo3(signature = (descriptors, threads=None))]
+    fn new(descriptors: &Bound<'_, PyAny>, threads: Option<usize>) -> PyResult<Self> {
         let mut fields: Vec<PlanField> = Vec::new();
         let mut eligible = true;
 
@@ -435,7 +440,22 @@ impl NativePlan {
             }
         }
 
-        Ok(NativePlan { fields, eligible })
+        // A bounded pool, built once and reused. Never unbounded: a caller
+        // asking for 0 threads gets sequential execution rather than Rayon's
+        // "one per core" default.
+        let pool = match threads {
+            Some(count) if count > 0 => Some(Arc::new(
+                rayon::ThreadPoolBuilder::new()
+                    .num_threads(count)
+                    .build()
+                    .map_err(|err| PyTypeError::new_err(format!(
+                        "could not build a bounded worker pool: {err}"
+                    )))?,
+            )),
+            _ => None,
+        };
+
+        Ok(NativePlan { fields, eligible, pool })
     }
 
     #[getter]
@@ -489,6 +509,91 @@ impl NativePlan {
             out.append(pair)?;
         }
         Ok(Some(out.unbind()))
+    }
+
+    /// Number of worker threads this plan's bounded pool was built with.
+    #[getter]
+    fn threads(&self) -> usize {
+        match &self.pool {
+            Some(pool) => pool.current_num_threads(),
+            None => 0,
+        }
+    }
+
+    /// Validate many rows, optionally in bounded parallel.
+    ///
+    /// Returns one entry per row IN ORDER: either the per-field results, or
+    /// `None` for a row that must be run serially by the caller.
+    #[pyo3(signature = (rows, parallel=false))]
+    fn execute_batch<'py>(
+        &self,
+        py: Python<'py>,
+        rows: &Bound<'py, PyAny>,
+        parallel: bool,
+    ) -> PyResult<Py<PyList>> {
+        if !self.eligible {
+            let out = PyList::empty(py);
+            for _ in rows.try_iter()? {
+                out.append(py.None())?;
+            }
+            return Ok(out.unbind());
+        }
+
+        // ---- PHASE 1: SNAPSHOT (GIL held) -----------------------------------
+        let mut snapshots: Vec<Option<Vec<Owned>>> = Vec::new();
+        for row in rows.try_iter()? {
+            let row = row?;
+            let dict = row.cast_into::<PyDict>().map_err(|_| {
+                PyTypeError::new_err("each row must be a dict")
+            })?;
+            snapshots.push(self.snapshot_row(&dict)?);
+        }
+
+        // ---- PHASE 2: DETACH (no Python reachable from here) ----------------
+        let use_parallel = parallel && self.pool.is_some();
+        let computed: Vec<Option<Vec<bool>>> = if use_parallel {
+            let pool = match &self.pool {
+                Some(pool) => Arc::clone(pool),
+                None => unreachable!("guarded by use_parallel"),
+            };
+            py.detach(|| {
+                pool.install(|| {
+                    snapshots
+                        .par_iter()
+                        .map(|snapshot| {
+                            snapshot.as_ref().map(|row| self.validate_owned(row))
+                        })
+                        .collect()
+                })
+            })
+        } else {
+            py.detach(|| {
+                snapshots
+                    .iter()
+                    .map(|snapshot| snapshot.as_ref().map(|row| self.validate_owned(row)))
+                    .collect()
+            })
+        };
+
+        // ---- PHASE 3: REBUILD (GIL held, original order) --------------------
+        let out = PyList::empty(py);
+        for entry in computed {
+            match entry {
+                None => out.append(py.None())?,
+                Some(flags) => {
+                    let row_out = PyList::empty(py);
+                    for (field, ok) in self.fields.iter().zip(flags.into_iter()) {
+                        let pair = PyTuple::new(py, &[
+                            field.name.clone().into_pyobject(py)?.into_any(),
+                            ok.into_pyobject(py)?.to_owned().into_any(),
+                        ])?;
+                        row_out.append(pair)?;
+                    }
+                    out.append(row_out)?;
+                }
+            }
+        }
+        Ok(out.unbind())
     }
 }
 
@@ -590,5 +695,176 @@ impl NativePlan {
                 Ok(Eligibility::Decided(true))
             }
         }
+    }
+}
+
+// ===========================================================================
+// FEAT-2 / TASK-19 -- bounded parallel snapshot execution (development-only)
+// ===========================================================================
+//
+// The rule that makes this safe: **no worker touches Python.**
+//
+// Execution is in three strictly separated phases:
+//
+//   1. SNAPSHOT (GIL held).  Every row is converted into owned Rust values, or
+//      marked ineligible. Nothing is validated yet.
+//   2. DETACH (GIL released via `Python::detach`).  Workers operate only on
+//      the owned snapshot inside a bounded, reusable Rayon pool. There is no
+//      `Py<...>`, no `Bound<...>` and no callback reachable from here, so a
+//      worker cannot touch the interpreter even by accident, and the caller is
+//      not required to hold the GIL on anyone's behalf.
+//   3. REBUILD (GIL re-acquired).  Results are turned back into Python objects
+//      in the ORIGINAL row order.
+//
+// Ordering is deterministic: `par_iter().collect()` into a `Vec` preserves
+// index order regardless of completion order, and ineligible rows keep their
+// slot as `None` so the caller can run exactly those serially.
+//
+// Ineligible rows are never executed natively and never reordered. Custom
+// callbacks, errors, descriptors and mutations all remain on the serial
+// Python path -- this executor still only validates.
+
+use std::sync::Arc;
+use rayon::ThreadPool;
+
+/// An owned, Python-free snapshot of one field value.
+#[derive(Clone, Debug)]
+enum Owned {
+    Str(String),
+    Int(i64),
+    Float(f64),
+    Bool(bool),
+    /// Present, but definitively the wrong type: decided without Python.
+    WrongType,
+}
+
+impl NativePlan {
+    /// Snapshot one row into owned values. `None` means ineligible.
+    ///
+    /// Runs with the GIL held. Every Python interaction happens here and
+    /// nowhere else.
+    fn snapshot_row(&self, values: &Bound<'_, PyDict>) -> PyResult<Option<Vec<Owned>>> {
+        let mut owned: Vec<Owned> = Vec::with_capacity(self.fields.len());
+        for field in &self.fields {
+            let item = values.get_item(field.name.as_str())?;
+            let value = match item {
+                Some(value) => value,
+                None => return Ok(None),
+            };
+            let snapshot = match field.kind {
+                Kind::Bool => {
+                    if value.is_exact_instance_of::<PyBool>() {
+                        match value.extract::<bool>() {
+                            Ok(native) => Owned::Bool(native),
+                            Err(_) => return Ok(None),
+                        }
+                    } else if value.is_instance_of::<PyBool>() {
+                        return Ok(None);
+                    } else {
+                        Owned::WrongType
+                    }
+                }
+                Kind::Int => {
+                    if value.is_instance_of::<PyBool>() {
+                        return Ok(None);
+                    }
+                    if value.is_exact_instance_of::<PyInt>() {
+                        match value.extract::<i64>() {
+                            Ok(native) => Owned::Int(native),
+                            // Arbitrary precision: never truncate.
+                            Err(_) => return Ok(None),
+                        }
+                    } else if value.is_instance_of::<PyInt>() {
+                        return Ok(None);
+                    } else {
+                        Owned::WrongType
+                    }
+                }
+                Kind::Float => {
+                    if value.is_instance_of::<PyBool>() {
+                        return Ok(None);
+                    }
+                    if value.is_exact_instance_of::<PyFloat>() {
+                        match value.extract::<f64>() {
+                            Ok(native) => Owned::Float(native),
+                            Err(_) => return Ok(None),
+                        }
+                    } else if value.is_instance_of::<PyInt>() {
+                        return Ok(None);
+                    } else {
+                        Owned::WrongType
+                    }
+                }
+                Kind::Str => {
+                    if value.is_exact_instance_of::<PyString>() {
+                        match value.extract::<String>() {
+                            Ok(text) => Owned::Str(text),
+                            Err(_) => return Ok(None),
+                        }
+                    } else if value.is_instance_of::<PyString>() {
+                        return Ok(None);
+                    } else {
+                        Owned::WrongType
+                    }
+                }
+            };
+            owned.push(snapshot);
+        }
+        Ok(Some(owned))
+    }
+
+    /// Validate an owned snapshot. Pure Rust: callable with the GIL released.
+    fn validate_owned(&self, row: &[Owned]) -> Vec<bool> {
+        let mut out = Vec::with_capacity(row.len());
+        for (field, value) in self.fields.iter().zip(row.iter()) {
+            out.push(match value {
+                Owned::WrongType => false,
+                Owned::Bool(_) => true,
+                Owned::Int(native) => {
+                    let mut ok = true;
+                    if let Some(min) = field.min {
+                        if *native < min {
+                            ok = false;
+                        }
+                    }
+                    if let Some(max) = field.max {
+                        if *native > max {
+                            ok = false;
+                        }
+                    }
+                    ok
+                }
+                Owned::Float(native) => {
+                    let mut ok = true;
+                    if let Some(min) = field.min {
+                        if *native < min as f64 {
+                            ok = false;
+                        }
+                    }
+                    if let Some(max) = field.max {
+                        if *native > max as f64 {
+                            ok = false;
+                        }
+                    }
+                    ok
+                }
+                Owned::Str(text) => {
+                    let length = text.chars().count();
+                    let mut ok = true;
+                    if let Some(min_len) = field.min_len {
+                        if length < min_len {
+                            ok = false;
+                        }
+                    }
+                    if let Some(max_len) = field.max_len {
+                        if length > max_len {
+                            ok = false;
+                        }
+                    }
+                    ok
+                }
+            });
+        }
+        out
     }
 }

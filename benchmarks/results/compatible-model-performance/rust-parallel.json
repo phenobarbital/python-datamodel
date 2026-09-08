@@ -1,0 +1,209 @@
+{
+  "decision": "retain_sequential",
+  "environment": {
+    "cpu_count": 12
+  },
+  "feature": "FEAT-2",
+  "generated_at": "2026-09-08T07:33:38+00:00",
+  "grid": {
+    "ac9_factor_required": 1.25,
+    "ac9_met_at_any_size": false,
+    "crossover_size": null,
+    "sizes": {
+      "1": {
+        "best_speedup": 0.27283014597714156,
+        "best_threads": 1,
+        "by_threads": {
+          "1": {
+            "ns_per_row": 4418.5,
+            "speedup_vs_sequential": 0.27283014597714156
+          },
+          "16": {
+            "ns_per_row": 9231.5,
+            "speedup_vs_sequential": 0.13058549531495423
+          },
+          "2": {
+            "ns_per_row": 4662.0,
+            "speedup_vs_sequential": 0.25858000858000857
+          },
+          "4": {
+            "ns_per_row": 4874.5,
+            "speedup_vs_sequential": 0.24730741614524568
+          },
+          "8": {
+            "ns_per_row": 8071.0,
+            "speedup_vs_sequential": 0.14936191302193036
+          }
+        },
+        "meets_ac9": false,
+        "sequential_ns_per_row": 1205.5
+      },
+      "10": {
+        "best_speedup": 0.6045782376920665,
+        "best_threads": 1,
+        "by_threads": {
+          "1": {
+            "ns_per_row": 1594.5,
+            "speedup_vs_sequential": 0.6045782376920665
+          },
+          "16": {
+            "ns_per_row": 4582.35,
+            "speedup_vs_sequential": 0.21037240717099304
+          },
+          "2": {
+            "ns_per_row": 1660.3000000000002,
+            "speedup_vs_sequential": 0.5806179606095283
+          },
+          "4": {
+            "ns_per_row": 3232.8999999999996,
+            "speedup_vs_sequential": 0.2981842927402642
+          },
+          "8": {
+            "ns_per_row": 3262.1499999999996,
+            "speedup_vs_sequential": 0.2955106294928192
+          }
+        },
+        "meets_ac9": false,
+        "sequential_ns_per_row": 964.0
+      },
+      "100": {
+        "best_speedup": 0.9153126871582852,
+        "best_threads": 1,
+        "by_threads": {
+          "1": {
+            "ns_per_row": 1035.22,
+            "speedup_vs_sequential": 0.9153126871582852
+          },
+          "16": {
+            "ns_per_row": 2009.87,
+            "speedup_vs_sequential": 0.4714484021354615
+          },
+          "2": {
+            "ns_per_row": 1160.0549999999998,
+            "speedup_vs_sequential": 0.8168147199917246
+          },
+          "4": {
+            "ns_per_row": 1181.375,
+            "speedup_vs_sequential": 0.8020738546185588
+          },
+          "8": {
+            "ns_per_row": 1267.62,
+            "speedup_vs_sequential": 0.7475031949637905
+          }
+        },
+        "meets_ac9": false,
+        "sequential_ns_per_row": 947.55
+      },
+      "1000": {
+        "best_speedup": 0.9977459455195031,
+        "best_threads": 4,
+        "by_threads": {
+          "1": {
+            "ns_per_row": 1202.3505,
+            "speedup_vs_sequential": 0.9940042441866993
+          },
+          "16": {
+            "ns_per_row": 1330.1570000000002,
+            "speedup_vs_sequential": 0.8984965684501903
+          },
+          "2": {
+            "ns_per_row": 1248.4740000000002,
+            "speedup_vs_sequential": 0.9572818496820917
+          },
+          "4": {
+            "ns_per_row": 1197.8415,
+            "speedup_vs_sequential": 0.9977459455195031
+          },
+          "8": {
+            "ns_per_row": 1275.5810000000001,
+            "speedup_vs_sequential": 0.9369389321415103
+          }
+        },
+        "meets_ac9": false,
+        "sequential_ns_per_row": 1195.1415
+      },
+      "10000": {
+        "best_speedup": 1.110594322858299,
+        "best_threads": 8,
+        "by_threads": {
+          "1": {
+            "ns_per_row": 1409.1348,
+            "speedup_vs_sequential": 1.0566798506431039
+          },
+          "16": {
+            "ns_per_row": 1376.77365,
+            "speedup_vs_sequential": 1.0815171760441522
+          },
+          "2": {
+            "ns_per_row": 1391.7959500000002,
+            "speedup_vs_sequential": 1.069843858936362
+          },
+          "4": {
+            "ns_per_row": 1384.90085,
+            "speedup_vs_sequential": 1.0751703632790752
+          },
+          "8": {
+            "ns_per_row": 1340.7275,
+            "speedup_vs_sequential": 1.110594322858299
+          }
+        },
+        "meets_ac9": false,
+        "sequential_ns_per_row": 1489.0043500000002
+      }
+    },
+    "threads_grid": [
+      1,
+      2,
+      4,
+      8,
+      16
+    ]
+  },
+  "headline": "RETAIN SEQUENTIAL EXECUTION. AC9 requires >=1.25x throughput over sequential native execution; the best result anywhere on the grid is 1.11x (size 10000, 8 threads). There is NO crossover size at which threading pays. The cause is measured, not guessed: per-row cost is dominated by the GIL-held snapshot and rebuild phases, so the parallelisable slice is too small for more workers to help. A completed negative experiment with measurements.",
+  "not_introduced": [
+    "no public batch API on any model",
+    "no constructor threading default",
+    "no package deployment; the crate remains development-only and is loaded by path",
+    "no parallel execution of arbitrary Python callbacks"
+  ],
+  "promotion_gate": {
+    "criterion": "AC9",
+    "crossover_size": null,
+    "measured_best_factor": 1.110594322858299,
+    "measured_best_size": 10000,
+    "measured_best_threads": 8,
+    "met": false,
+    "required_throughput_factor": 1.25
+  },
+  "reproduce": "python -c \"import sys; sys.path.insert(0,'.'); from benchmarks.native_validation import load_native, parallel_grid; print(parallel_grid(load_native(build=False)))\"",
+  "safety": {
+    "bounded_pool": "Workers are bounded and reusable: the pool is built once per plan with an explicit count. Asking for 0 threads yields sequential execution rather than Rayon's one-per-core default, so nothing is ever unbounded.",
+    "deterministic_order": "par_iter().collect() preserves index order regardless of completion order; ineligible rows keep their slot as None. Verified identical to sequential over 30 repeats and under 16-way oversubscription on a 7-row batch.",
+    "ineligible_stays_serial": "Ineligible rows are never executed natively, never reordered, and are returned as None in their own slot for the caller to run serially.",
+    "no_worker_touches_python": "Structural, not statistical: rows are snapshotted into owned Rust values with the GIL held, the pool runs inside Python::detach with nothing Python-shaped in scope, and results are rebuilt only after the GIL is re-acquired. A user callback therefore cannot run in a worker -- verified by test_no_callback_runs_during_batch_execution.",
+    "ordering_check": {
+      "identical": true,
+      "ineligible_slots_preserved": true,
+      "rows": 5
+    }
+  },
+  "spec": "sdd/specs/compatible-model-performance.spec.md",
+  "task": "TASK-19",
+  "why_it_cannot_pay": {
+    "amdahl": {
+      "conclusion": "The measured best of 1.11x corresponds to validation being roughly 10% of the work. Reaching AC9's 1.25x would require it to exceed 20%. It does not, and making it so would mean making the boundary cheaper -- which is the same blocker TASK-18 identified, not a threading problem.",
+      "note": "Only the DETACHED validation slice is parallelisable. With 8 workers:",
+      "validation_share_to_max_speedup": {
+        "10%": 1.1,
+        "20%": 1.21,
+        "30%": 1.36,
+        "5%": 1.05
+      }
+    },
+    "measured": {
+      "execute_batch_total_ns_per_row": 1357.5,
+      "single_row_boundary_floor_ns": 1163.0,
+      "source": "TASK-18 measured the single-row boundary floor independently; the batch per-row cost is barely above it, so almost all of the cost is snapshot and rebuild, not validation."
+    }
+  }
+}

@@ -671,3 +671,101 @@ def fallback_cost(native, rows: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
             "fallback rate is strictly worse off than pure Cython."
         ),
     }
+
+
+# ===========================================================================
+# FEAT-2 / TASK-19 -- bounded parallel measurement
+# ===========================================================================
+
+#: The size grid the task specifies.
+PARALLEL_SIZES = (1, 10, 100, 1000, 10000)
+#: Thread counts to sweep, including deliberate oversubscription.
+PARALLEL_THREADS = (1, 2, 4, 8, 16)
+
+#: AC9: promotion needs this much throughput over SEQUENTIAL RUST.
+AC9_THROUGHPUT_FACTOR = 1.25
+
+
+def _time_batch(fn, rows, repeats: int) -> float:
+    """Median nanoseconds per ROW for a batch callable."""
+    import statistics as _st
+
+    for _ in range(3):
+        fn(rows)
+    samples = []
+    for _ in range(repeats):
+        start = time.perf_counter_ns()
+        fn(rows)
+        samples.append((time.perf_counter_ns() - start) / max(len(rows), 1))
+    return _st.median(samples)
+
+
+def parallel_grid(native, threads_grid=PARALLEL_THREADS,
+                  sizes=PARALLEL_SIZES) -> Dict[str, Any]:
+    """Sweep batch size x thread count against sequential native execution.
+
+    The comparison AC9 asks for is parallel-native versus **sequential
+    native**, not versus Cython: the question is whether threading a native
+    executor pays for itself, independently of whether that executor should
+    ship at all.
+    """
+    model = eligible_demo_model()
+    descriptors, ineligible = descriptors_for(model)
+    assert not ineligible, "the demo model must be fully eligible"
+
+    sequential = native.NativePlan(descriptors)
+    pools = {count: native.NativePlan(descriptors, count) for count in threads_grid}
+
+    base_row = {"an_int": 7, "a_str": "hello", "a_float": 1.5,
+                "a_bool": True, "bounded": 5, "short": "ok"}
+
+    results: Dict[str, Any] = {"sizes": {}, "threads_grid": list(threads_grid)}
+    for size in sizes:
+        rows = [dict(base_row) for _ in range(size)]
+        repeats = max(5, min(200, 200_000 // max(size, 1)))
+
+        seq_ns = _time_batch(lambda r: sequential.execute_batch(r, False), rows, repeats)
+        entry: Dict[str, Any] = {
+            "sequential_ns_per_row": seq_ns,
+            "by_threads": {},
+            "best_speedup": 0.0,
+            "best_threads": None,
+        }
+        for count, plan in pools.items():
+            par_ns = _time_batch(lambda r, p=plan: p.execute_batch(r, True), rows, repeats)
+            speedup = seq_ns / par_ns if par_ns else 0.0
+            entry["by_threads"][str(count)] = {
+                "ns_per_row": par_ns, "speedup_vs_sequential": speedup,
+            }
+            if speedup > entry["best_speedup"]:
+                entry["best_speedup"] = speedup
+                entry["best_threads"] = count
+        entry["meets_ac9"] = entry["best_speedup"] >= AC9_THROUGHPUT_FACTOR
+        results["sizes"][str(size)] = entry
+
+    crossover = None
+    for size in sizes:
+        if results["sizes"][str(size)]["meets_ac9"]:
+            crossover = size
+            break
+    results["crossover_size"] = crossover
+    results["ac9_factor_required"] = AC9_THROUGHPUT_FACTOR
+    results["ac9_met_at_any_size"] = crossover is not None
+    return results
+
+
+def parallel_ordering_check(native, rows: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+    """Parallel results must equal sequential results, element for element."""
+    model = eligible_demo_model()
+    descriptors, _ = descriptors_for(model)
+    sequential = native.NativePlan(descriptors)
+    parallel = native.NativePlan(descriptors, 8)
+    seq = sequential.execute_batch(list(rows), False)
+    par = parallel.execute_batch(list(rows), True)
+    return {
+        "rows": len(rows),
+        "identical": seq == par,
+        "ineligible_slots_preserved": [
+            index for index, entry in enumerate(seq) if entry is None
+        ] == [index for index, entry in enumerate(par) if entry is None],
+    }
