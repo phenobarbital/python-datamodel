@@ -577,6 +577,56 @@ def test_baseline_is_a_no_change_measurement(baseline):
         f"changed; this indicates measurement bias, not a speed-up: {claimed}"
     )
 
+
+def test_baseline_recorded_the_same_source_control(baseline):
+    """A baseline without the control cannot be interpreted.
+
+    The control is what converts "1.2% slower" from a finding into a
+    measurement artifact. Without it the report states a difference it has no
+    way to calibrate, so later tasks would have to take its verdicts on faith.
+    """
+    control = baseline.get("same_source_control")
+    assert control is not None, (
+        "the baseline was captured without --control-root; re-run with an "
+        "independently built worktree of the reference commit so the report "
+        "can state how much of its own output is noise"
+    )
+    assert control["same_commit"] is True, control
+    assert control["reference_root"] != control["control_root"], control
+    assert control["empirical_cross_build_floor"] is not None
+
+
+def test_baseline_flags_nothing_beyond_the_cross_build_floor(baseline):
+    """No verdict on byte-identical source may exceed measured build noise.
+
+    ``datamodel/`` is byte-identical between the reference commit and this
+    branch apart from ``version.py`` and ``libs/uvloop.py``, neither of which
+    is on any measured path. So the true ratio is 1.0 everywhere and *every*
+    non-inconclusive verdict here is an artifact. This test does not demand
+    that the harness produce zero labels -- two independent builds genuinely
+    differ by code layout -- it demands that no label exceed the floor the
+    control measured. A verdict above that floor would mean the harness is
+    reporting a difference its own calibration cannot explain, and TASK-11
+    onwards would be optimising a phantom.
+    """
+    floor = baseline["same_source_control"]["empirical_cross_build_floor"]
+    beyond = {
+        name: {
+            "ratio": summary["median_ratio_point_estimate"],
+            "verdict": summary["verdict"]["label"],
+        }
+        for name, summary in baseline["summaries"].items()
+        if summary["verdict"]["label"] != "inconclusive"
+        and abs(summary["median_ratio_point_estimate"] - 1.0) > floor
+    }
+    assert not beyond, (
+        f"these verdicts exceed the {floor:.2%} empirical cross-build floor "
+        f"although no production code changed: {beyond}. Either the machine "
+        "was too noisy to trust or the control is not comparable; re-measure "
+        "before treating any of them as a real regression"
+    )
+
+
 def test_report_records_the_smallest_effect_it_could_resolve(smoke_report):
     """A run must state its own resolution, so a claim can be sanity-checked."""
     floor = smoke_report["noise_floor"]
