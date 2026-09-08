@@ -204,7 +204,7 @@
       "feature_id": "FEAT-2",
       "feature": "compatible-model-performance",
       "spec": "sdd/specs/compatible-model-performance.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "M",
       "estimated_hours": 3,
@@ -218,8 +218,8 @@
       "created_at": "2026-09-07T23:19:35+00:00",
       "updated_at": "2026-09-07T23:19:35+00:00",
       "started_at": "2026-09-07T23:24:10+00:00",
-      "completed_at": null,
-      "file": "sdd/tasks/active/TASK-11-conservative-validation-policy.md"
+      "completed_at": "2026-09-08T02:14:04+00:00",
+      "file": "sdd/tasks/completed/TASK-11-conservative-validation-policy.md"
     },
     {
       "id": "TASK-12",
