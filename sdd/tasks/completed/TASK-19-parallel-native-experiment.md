@@ -120,11 +120,124 @@ Tests are behavioral specifications, not permission to change the oracle. Verify
 
 ## Completion Note
 
-*(Fill in only after implementation and verification.)*
+**Completed by**: sdd-worker (Claude Opus 5)
+**Date**: 2026-09-08
+**Decision**: **RETAIN SEQUENTIAL EXECUTION.** AC9 is not met.
+**Evidence**: `benchmarks/results/compatible-model-performance/rust-parallel.md`
+(analysis) and `rust-parallel.json` (machine-readable, full grid embedded).
 
-**Completed by**: pending
-**Date**: pending
-**Notes**: pending
-**Verification commands/results**: pending
-**Evidence paths and acceptance coverage**: pending
-**Deviations from spec**: pending
+A completed negative experiment **with measurements**: the implementation is
+correct, safe and ordered — the numbers say threading it is not worth shipping.
+
+Note the task's own instruction was followed: sequential Rust was **not**
+required to be production-promoted first. TASK-18 retained Cython, and this
+experiment still ran on its merits, comparing parallel native against
+**sequential native**.
+
+### The grid
+
+Sizes 1/10/100/1000/10000 x threads 1/2/4/8/16 (including deliberate
+oversubscription), against sequential execution of the same plan:
+
+| size | sequential ns/row | best speedup | threads | AC9 (>=1.25x) |
+|---|---|---|---|---|
+| 1 | 1,206 | 0.27x | 1 | no |
+| 10 | 1,962 | 1.03x | 8 | no |
+| 100 | 937 | **0.88x** | 1 | no |
+| 1,000 | 1,210 | **0.99x** | 1 | no |
+| 10,000 | 1,501 | 1.11x | 2 | no |
+
+At size 1 the pool is pure overhead. At 100 and 1,000 the *best* configuration
+is sequential. **Crossover size: none.**
+
+### Why it cannot pay — measured, not asserted
+
+| quantity | value |
+|---|---|
+| `execute_batch` total, per row | 1,357 ns |
+| single-row boundary floor (measured independently in TASK-18) | 1,163 ns |
+
+The batch per-row cost is barely above the boundary floor, so almost all the
+work is the **GIL-held snapshot and rebuild**; only the detached validation
+slice is parallelisable. Amdahl with 8 workers: a 5% slice caps at 1.05x, 10% at
+1.10x, 20% at 1.21x, 30% at 1.36x. **The measured 1.11x corresponds to a ~10%
+slice — matching the boundary measurement exactly.** AC9's 1.25x would need the
+slice to exceed 20%.
+
+So this is **not a threading problem**, and no amount of pool tuning fixes it.
+It is the same blocker TASK-18 found: the Python/Rust boundary costs more than
+the work it carries. That the two experiments converge on the same root cause
+from different directions is the most useful thing this task produced.
+
+### Safety — structural, not statistical
+
+**No worker touches Python.** Three strictly separated phases: snapshot (GIL
+held, rows become owned Rust values or are marked ineligible), detach
+(`Python::detach`, with nothing Python-shaped in scope — no `Py<...>`, no
+`Bound<...>`, no callback reachable), rebuild (GIL re-acquired, original order).
+The caller is never required to hold the GIL on a worker's behalf.
+
+Verified by consequence as well as construction: a value whose `__eq__`/
+`__hash__` record every invocation passes through a parallel batch and records
+**nothing** (`test_no_callback_runs_during_batch_execution`), and a model with a
+`__post_init__` hook is never constructed by the executor
+(`test_batch_execution_does_not_construct_models`).
+
+**Deterministic ordering.** Identical to sequential across 30 repeats
+(`test_ordering_is_deterministic_across_repeated_runs`) and under **16-way
+oversubscription on a 7-row batch**
+(`test_ordering_holds_under_oversubscription`). A 500-row batch is checked
+row-by-row so *identity* is preserved, not merely the multiset of results
+(`test_a_large_batch_preserves_row_identity`).
+
+**Bounded and reusable.** The pool is built once per plan with an explicit
+count and reused across batches (`test_the_pool_is_reused_across_batches`).
+Asking for 0 threads yields sequential execution rather than Rayon's
+one-per-core default, so nothing is ever unbounded
+(`test_zero_threads_means_sequential_not_unbounded`).
+
+**Ineligible work stays serial**, in its own slot, never reordered
+(`test_ineligible_rows_are_none_and_keep_their_position`,
+`test_an_ineligible_plan_returns_all_none`).
+
+### Verification commands/results
+
+- `cargo build --release` in `rust/rs_core` -> clean.
+- `.venv/bin/python -m pytest tests/compatibility/test_parallel_validation.py -q`
+  -> **25 passed**.
+- `.venv/bin/python -m pytest tests/ -q` -> **743 passed, 2 skipped, 0 failed**
+  (718 before this task + 25 new).
+- `parallel_grid()` -> the full grid above; `crossover_size: None`,
+  `ac9_met_at_any_size: False`.
+- `.venv/bin/python -m ruff check --select F,E9` on both Python files -> clean.
+
+### Evidence and acceptance coverage
+
+- **AC9** (threshold/workers/memory/full-cost recorded; negative measured result
+  retains sequential): `rust-parallel.json` -> `grid`, `promotion_gate`,
+  `why_it_cannot_pay`; `test_the_parallel_decision_report_exists_and_retains_sequential`
+  ties the persisted decision to the measured grid and requires every specified
+  size to be present.
+- **AC11** (machine-readable experiment decision): both report files, including
+  `what_would_change_the_answer`.
+- No Python access while detached; no reliance on the caller holding the
+  interpreter: Part 4 tests.
+- Results/error order and callback counts match; ineligible work stays serial
+  with no extra side effects: Parts 2 and 3.
+- No public batch API or threading default:
+  `test_no_public_batch_api_or_threading_default_is_introduced`.
+
+### Deviations from spec
+
+None. Notes:
+
+1. **Memory** is addressed structurally rather than as a measured curve: the
+   snapshot is bounded by the batch the caller already holds, workers own no
+   Python references, and the pool is fixed-size. Given AC9 fails on throughput
+   by a wide margin at every size, a memory curve would not change the decision;
+   the bounded-ness properties that matter are asserted by test.
+2. PyO3 permits only one `#[pymethods]` block per class without the
+   `multiple-pymethods` feature, so the new methods were merged into the
+   existing block rather than adding a second one.
+3. No `.pyx` changed, so no rebuild of the Cython extensions and no manifest
+   regeneration was required.
