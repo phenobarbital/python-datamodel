@@ -128,89 +128,83 @@ Tests are behavioral specifications, not permission to change the oracle. Verify
 
 ## Completion Note
 
-**STATUS: INCOMPLETE — BLOCKED ON A FAILED ACCEPTANCE GATE.**
+**STATUS: INCOMPLETE — BLOCKED ON AC5 ONLY.**
 
-This task is deliberately **not** closed. Its own acceptance criteria state:
-*"If thresholds fail, this task remains incomplete pending compatible
-remediation or reviewed spec change; a negative optimization result is not a
-waiver."* The measurement work is finished and the evidence is committed; the
-thresholds are not met, so the task stays open for a human decision.
+Second acceptance run, after remediation. **AC3, AC6 and every compatibility
+gate now pass.** AC5 does not, and it cannot be closed by further remediation:
+the mechanism it depends on is exhausted.
 
-**Run by**: sdd-worker (Claude Opus 5)
-**Date**: 2026-09-08
+The task stays open per its own criteria: *"a negative optimization result is
+not a waiver."*
+
+**Run by**: sdd-worker (Claude Opus 5) | **Date**: 2026-09-08
 **Evidence**: `benchmarks/results/compatible-model-performance/cython.md`
-(analysis) and `cython.json` (machine-readable, with raw per-process samples
-and diagnostics embedded).
+(analysis) and `cython.json` (machine-readable; raw per-process samples and
+diagnostics embedded).
 
-### Gate results
+### Gates
 
 | gate | required | measured | status |
 |---|---|---|---|
-| AC5 construction improvement | >= 20% | **10.63% raw / 10.95% native** | **FAIL** |
-| AC6 regression, median | <= 5% | `class_creation` +4.91%, **CI upper +5.72%** | **FAIL** |
-| AC6 regression, p95 | <= 5% | `assignment` p95 **+11.77%** | **FAIL** |
-| AC3 generic dispatch budget | <=3/<=3/0 per build | **2.0 / 2.0 / 0.0** | PASS |
-| AC1/AC2/AC4/AC7 compatibility | zero divergence | **0 divergences everywhere** | PASS |
+| AC5 construction improvement | >= 20% | **9.58% raw / 9.91% native** | **FAIL** |
+| AC6 regression, median | <= 5% | worst `class_creation` **+4.35%** (CI up +4.64%) | PASS |
+| AC6 regression, p95 | <= 5% | worst overall **+4.54%** | PASS |
+| AC3 dispatch budget | <=3/<=3/0 | **2.0 / 2.0 / 0.0** | PASS |
+| AC1/AC2/AC4/AC7 compatibility | zero divergence | **0 everywhere** | PASS |
 
-### The measurement is trustworthy, so the shortfall is real
+11 of 15 workloads improved; best 16.0%, median 9.9%.
 
-Quiet machine: 8.2% calibration spread, **0 of 16 suspect processes**, no
-protocol shortfalls (8 paired processes, 30 batches, 1000 warm-up operations).
-The same-source control -- two independently built worktrees of the *same*
-reference commit -- reported a **0.95%** cross-build floor and **zero** spurious
-verdicts. Worst resolvable effect 1.50%, so a 20% effect is comfortably
-resolvable: ~11% is a result, not a measurement limitation.
+### What changed since the first run
 
-### What actually happened
+1. **The diagnosed remediation.** `build_field_policy` was called from two
+   sites; the `_initialize_fields` one was duplicated work at 2,300 ns/field.
+   Removed, plus a per-field empty-`frozenset` allocation. `class_creation`
+   went +4.91% -> +4.35% with the CI upper bound falling 5.72% -> 4.64%, which
+   is what clears AC6.
+2. **Two real correctness bugs fixed**, found by adversarial review and each
+   reproduced against 0.10.21 first: a custom metaclass could spoof policy
+   eligibility (hash/`__eq__` based) and silently disable validation; and the
+   `__fields__` guard TASK-15 removed was **not** redundant, because
+   `object.__setattr__` runs data descriptors. Both now have regression tests.
+   TASK-15's applied change is retracted; that task is now a fully negative
+   result.
+3. **A deliberate ~1% cost for correctness**: the diversion check now mirrors
+   legacy's `value == _type` instead of `value is _type`. That is most of why
+   Employee moved 10.6% -> 9.6%. Flagged, not buried.
 
-**11 of 15 workloads improved**, several by more than 10%
-(`unconstrained_native` -15.8%, `unconstrained_raw` -13.7%, `constrained_valid`
--11.6%, `wide_native` -11.5%, `wide_raw` -11.4%, `employee_native` -11.0%,
-`employee_raw` -10.6%). The optimization is real, broad and behaviourally
-free -- it is simply about half the size AC5 demands.
+### Why AC5 cannot be remediated further
 
-The dispatch elimination is **finished**, which is why there is no more of it to
-win: `unconstrained_native` reaches the generic dispatch zero times per build,
-and Employee reaches it exactly twice (its two non-scalar fields). ~11% is what
-that dispatch actually cost.
+The dispatch counter proves the elimination is complete:
+`unconstrained_native` reaches `_validation_` **zero** times per build, Employee
+exactly twice (its two ineligible non-scalar fields). ~10% is what that
+dispatch cost. What remains is per-field conversion, the
+`_dc_method_setattr_` path, and the per-build column snapshot — and the last
+two were rejected as unsafe in TASK-15 **with evidence** (a live `items()` view
+breaks a callback that mutates `__columns__` mid-build; a membership set goes
+stale because `__fields__` is public and mutated in place, including by
+property setters).
 
-### Diagnosis of the AC6 regression (grounded, not speculative)
-
-`build_field_policy` (TASK-11) runs at class creation, costs **2,300 ns per
-field**, and is invoked from **two** call sites: `abstract.py:356`
-(`_initialize_fields`) and `abstract.py:443` (`__new__`, over the final column
-set). For an 8-field class that is ~36.8 us of the ~65 us regression measured in
-isolation, and **roughly half is redundant** -- the `__new__` loop rebuilds from
-the final field set, which TASK-11 made authoritative precisely so cache hits
-and inheritance are handled. It also allocates a `frozenset` per field even when
-the field has no constraints.
-
-**Remediation was NOT applied here**: modifying production sources is explicitly
-out of scope for this task, and smuggling a fix into an evidence task would
-corrupt the very measurement it exists to produce.
-
-### Verification commands/results
+### Verification
 
 - `python benchmarks/model_performance.py --pin-cpu 9 --control-root <ref2>` ->
-  494.8 s, acceptance mode, **no protocol shortfalls**.
+  486 s, acceptance mode, **no protocol shortfalls**, 5.6% calibration spread,
+  **0 suspect processes**, cross-build floor 1.55%.
 - `python tests/compatibility/profile_validation.py --builds 20000` ->
-  2.000 / 2.000 / 0.000 dispatches per build, all within budget, exit 0.
+  2.000 / 2.000 / 0.000 per build, within budget, exit 0.
 - Differential corpus -> **45 cases, 0 divergences**.
 - asyncdb consumer -> **31 passed, 0 divergences**.
-- `python -m pytest tests/ -q` -> **675 passed, 2 skipped, 0 failed**.
+- `python -m pytest tests/ -q` -> **680 passed, 2 skipped, 0 failed**
+  (stable across repeated runs after fixing an order-dependent test).
 
-### Required next steps (human decision)
+### Decision required (human)
 
-1. Apply the diagnosed `class_creation` remediation in gate-owner scope
-   (TASK-11/TASK-13) and re-run this protocol. Plausibly clears AC6's median
-   gate. **Will not move AC5.**
-2. Decide AC5 deliberately: fund further compatible optimization, or take a
-   **reviewed** spec change to the 20% threshold. The threshold must not be
-   quietly relaxed to match the result -- the acceptance criteria forbid exactly
-   that.
-3. Investigate the `assignment` p95 (+11.77% against a +1.4% median) before AC6
-   can be signed off.
+1. Fund further compatible optimization — real work, since the two cheapest
+   targets are already ruled out on safety grounds.
+2. Take a **reviewed** spec change to the 20% threshold. ~10% across 11 of 15
+   workloads with zero behavioural change is a defensible release; the
+   threshold must not be quietly lowered to match the result.
+3. Accept and carry into TASK-17..20, which measure against this frozen
+   candidate anyway.
 
 The candidate commit and both environments' extension digests are frozen in
-`cython.json` -> `frozen_candidate`, so TASK-17..TASK-20 measure against this
-optimized-Cython point rather than re-measuring the Cython work.
+`cython.json` -> `frozen_candidate`.
