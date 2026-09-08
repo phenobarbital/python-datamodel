@@ -136,6 +136,39 @@ Tests are behavioral specifications, not permission to change the oracle. Verify
 
 ## Completion Note
 
+> **ADDENDUM (2026-09-08, after adversarial code review) — candidate C is
+> RETRACTED.**
+>
+> The one change this task applied has been reverted, because the reasoning
+> given for it below is **wrong**. I claimed the removed
+> `if name not in self.__fields__:` guard was "provable from control flow …
+> nothing between the two checks can mutate `__fields__` (a `Meta.frozen` read
+> and an `object.__setattr__` of an unrelated attribute)".
+>
+> `object.__setattr__` is **not** inert: it consults the type's data
+> descriptors, so a class-level `property` setter for `name` runs arbitrary
+> user code — which may legitimately append `name` to `self.__fields__`. The
+> guard existed to catch precisely that. Verified against 0.10.21: with the
+> guard removed, a self-registering property raised
+> `TypeError: Field 'dynamic' is not allowed` while the reference **accepted**
+> the assignment.
+>
+> This was found by adversarial code review, not by my tests — nothing in the
+> suite exercised a property setter that mutates `__fields__`. The guard is
+> restored, and the behaviour is now pinned by
+> `test_a_property_setter_may_register_its_own_field` plus a reference-parity
+> twin.
+>
+> The removal had no measurable benefit anyway (the paired measurement below
+> shows the candidate marginally *slower*, inside noise), so nothing was lost.
+> The part worth remembering is the reasoning error: "provable from control
+> flow" was asserted without accounting for descriptor reentrancy.
+>
+> **This task's outcome is therefore a fully negative result: all six
+> candidates rejected, production code unchanged.** `structural.json` has been
+> updated to match.
+
+
 **Completed by**: sdd-worker (Claude Opus 5)
 **Date**: 2026-09-08
 **Notes**: **This is a negative result, and it is the honest one.** No candidate

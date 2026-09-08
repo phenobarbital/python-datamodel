@@ -36,7 +36,7 @@
       "verdict": "REJECTED"
     },
     {
-      "honest_note": "The benchmark does not exercise the removed code after the first call: a new attribute is appended to __fields__ on first assignment, so every later assignment takes the early known-field branch. The removal is real work eliminated on first assignment of each new name, but it is NOT measurable on any benchmark workload and is not claimed as a speed-up.",
+      "honest_note": "The removal never had a measurable benefit either (paired measurement showed the candidate marginally slower, inside noise), so nothing of value was lost by reverting it. The lesson worth keeping is the one about the reasoning: 'provable from control flow' was asserted without accounting for descriptor reentrancy through object.__setattr__.",
       "id": "C",
       "measured": {
         "paired extra-attribute assignment, 30 extra attrs present": {
@@ -54,8 +54,8 @@
         }
       },
       "name": "Remove the redundant second `if name not in self.__fields__` guard",
-      "reason": "Provable from control flow rather than measurement: the earlier `if name in self.__fields__` branch returns unconditionally, and nothing between the two checks can mutate __fields__ (a Meta.frozen read and an object.__setattr__ of an unrelated attribute). The guard was therefore always True and cost a second O(n) list scan on the extra-attribute path.",
-      "verdict": "APPLIED (correct, but not a measured win)"
+      "reason": "RETRACTED. This was applied on the claim that the guard was 'provable from control flow: nothing between the two checks can mutate __fields__ (a Meta.frozen read and an object.__setattr__ of an unrelated attribute)'. That claim is FALSE. object.__setattr__ consults the type's data descriptors, so a class-level property setter for `name` runs arbitrary user code -- which may legitimately append `name` to self.__fields__ (a self-registering property). The removed guard caught exactly that. Verified against 0.10.21: with the guard removed a self-registering property raised TypeError: Field 'dynamic' is not allowed, while the reference accepted the assignment. Found by adversarial code review, not by the test suite -- no existing test exercised a property setter that mutates __fields__. The guard has been restored and the behaviour is now pinned by test_structural_parity.py::test_a_property_setter_may_register_its_own_field and its reference-parity twin.",
+      "verdict": "RETRACTED (applied, then reverted -- the reasoning was wrong)"
     },
     {
       "id": "D",
@@ -91,7 +91,7 @@
   },
   "feature": "FEAT-2",
   "generated_at": "2026-09-08T02:44:06+00:00",
-  "headline": "NEGATIVE RESULT. No candidate delivered a measurable, safe improvement. The two largest wins are unsafe for reasons demonstrated empirically below, and the two safe ones measured as no change. One provably-redundant O(n) scan was removed; it is correct but has no measurable effect on any benchmark workload. The stable path is left intact.",
+  "headline": "NEGATIVE RESULT, and now a fully negative one: every candidate was rejected. The two largest wins are unsafe for reasons demonstrated empirically; two safe-looking ones measured as no change; and the one change that WAS applied (candidate C) has since been RETRACTED because adversarial review proved its 'provable from control flow' justification wrong -- it broke a self-registering property setter relative to 0.10.21. The stable path is left intact.",
   "parity": {
     "differential_corpus_cases": 45,
     "divergences": 0,

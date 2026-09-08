@@ -429,18 +429,44 @@ def test_structural_report_exists_and_records_every_verdict():
     verdicts = {c["id"]: c["verdict"] for c in report["candidates"]}
     assert set(verdicts) == {"A1", "A2", "B", "C", "D", "E"}
     for identifier, verdict in verdicts.items():
-        assert verdict.startswith(("REJECTED", "APPLIED")), (identifier, verdict)
+        assert verdict.startswith(("REJECTED", "APPLIED", "RETRACTED")), (
+            identifier, verdict
+        )
         candidate = next(c for c in report["candidates"] if c["id"] == identifier)
         assert candidate.get("reason") or candidate.get("honest_note"), identifier
 
 
+def test_structural_report_records_the_retraction():
+    """Candidate C was applied, then proven wrong, then reverted.
+
+    The report must keep saying so. Quietly dropping a retracted candidate --
+    or downgrading it to a plain REJECTED as though it had never shipped --
+    would erase the most instructive part of this task: that "provable from
+    control flow" was asserted without accounting for descriptor reentrancy
+    through `object.__setattr__`, and a code review caught it rather than the
+    test suite.
+    """
+    import json
+
+    report = json.loads(STRUCTURAL_REPORT.read_text(encoding="utf-8"))
+    candidate = next(c for c in report["candidates"] if c["id"] == "C")
+    assert candidate["verdict"].startswith("RETRACTED"), candidate["verdict"]
+    assert "descriptor" in candidate["reason"].lower()
+    assert "0.10.21" in candidate["reason"]
+
+
 def test_structural_report_does_not_claim_an_unmeasured_win():
-    """The applied change must not be dressed up as a speed-up."""
+    """No candidate may be dressed up as a speed-up.
+
+    Every candidate is now rejected or retracted, so the report must not
+    contain an APPLIED verdict at all.
+    """
     import json
 
     report = json.loads(STRUCTURAL_REPORT.read_text(encoding="utf-8"))
     applied = [c for c in report["candidates"] if c["verdict"].startswith("APPLIED")]
-    assert applied, "at least one candidate should record what was done"
-    for candidate in applied:
-        assert "not" in candidate["honest_note"].lower()
+    assert not applied, (
+        f"the report claims changes were applied, but this task ended with no "
+        f"production change: {[c['id'] for c in applied]}"
+    )
     assert "NEGATIVE RESULT" in report["headline"]
