@@ -1,0 +1,74 @@
+{
+  "candidates": [
+    {
+      "id": "A",
+      "measured": {
+        "employee_candidate_ns": 13471.9,
+        "employee_current_ns": 13704.0,
+        "employee_improvement_pct": 1.69,
+        "outputs_identical": true,
+        "unconstrained_candidate_ns": 12507.1818,
+        "unconstrained_current_ns": 12713.8654,
+        "unconstrained_improvement_pct": 1.6256550899146682
+      },
+      "name": "Reuse one stateless encoder instead of constructing one per json() call",
+      "reason": "Encoder construction is only 0.37% of json(), so the ceiling on this idea is 0.37% plus whatever attribute-lookup noise it removes -- measured at 1.69% and 0.20%, against a required 10%. Note it would have been SAFE: JSONContent is a cdef class with no instance state (no __dict__), so a shared instance is not the 'mutable encoder instance' the acceptance criteria warn about. It simply is not worth anything.",
+      "verdict": "REJECTED (measured, far below the gate)"
+    },
+    {
+      "id": "B",
+      "measured": {
+        "available_share_of_json_pct": 77.41434955207012,
+        "would_be_the_only_way_to_reach_10pct": true
+      },
+      "name": "Skip dataclasses.asdict's recursive deep copy inside json()",
+      "reason": "The intermediate dict json() builds is discarded immediately, so copying looks like pure waste -- but the copy is OBSERVABLE. A value with a custom __deepcopy__ has it invoked exactly once during json(), verified on BOTH builds. Skipping the copy would silently stop running user code. That is precisely the 'custom encoders, __deepcopy__ and exclusion/null side effects' the task requires be preserved.",
+      "verdict": "REJECTED (compatibility, demonstrated)"
+    }
+  ],
+  "characterized_quirks": [
+    "json(**kwargs) silently IGNORES per-call options: kwargs are forwarded to the encoder's CONSTRUCTOR (self.__encoder__(**kwargs)), never to encode(). option=OPT_SORT_KEYS and indent=2 both have no effect and raise nothing. Verified identical on 0.10.21, so it is pre-existing, not a regression. Fixing it would be new JSON semantics, which spec section 1 puts out of scope, so it is pinned by test rather than corrected.",
+    "JSONContent has no instance state at all, which is why a shared encoder was even considered; a test now fails if instance state is ever added."
+  ],
+  "cold_vs_warm": {
+    "json_cold_ns": 20998.5,
+    "json_warm_ns": 14079.436,
+    "note": "Measured separately, as the task requires. Cold = first call on a freshly built instance; warm = steady state.",
+    "to_dict_cold_ns": 16582.5,
+    "to_dict_warm_ns": 11030.9078
+  },
+  "cost_breakdown": {
+    "as_dict_ns": 10899.5038,
+    "as_dict_share_pct": 77.41434955207012,
+    "encoder_construction_ns": 54.078,
+    "encoder_construction_share_pct": 0.3840920900524709,
+    "json_total_ns": 14079.436,
+    "note": "as_dict dominates. Any future serialization work should start there, not at the encoder -- but see the rejection reason for candidate B before trying.",
+    "orjson_dumps_ns": 1148.4306,
+    "orjson_dumps_share_pct": 8.156794064762254,
+    "workload": "Employee(native payload).json(), warm"
+  },
+  "decision": "retain_current",
+  "feature": "FEAT-2",
+  "generated_at": "2026-09-08T07:40:17+00:00",
+  "headline": "RETAIN THE CURRENT SERIALIZATION PATH. AC10 requires >=10% warm JSON improvement. The only SAFE candidate -- reusing one stateless encoder instead of constructing one per call -- measured +1.69% (Employee) and +0.20% (UnconstrainedScalars), because encoder construction is 0.37% of json(). The candidate that WOULD pay, skipping dataclasses.asdict's recursive deep copy at 76.8% of json(), is rejected on compatibility: a user's __deepcopy__ genuinely runs during json(), so removing the copy is an observable behaviour change. No production file was modified.",
+  "parity": {
+    "asyncdb_models": "every OK case in the real asyncdb 2.16.0 consumer corpus",
+    "corpus_models": "every OK case in the benchmark corpus",
+    "divergences": 0,
+    "method": "each scenario executed in two separate processes bound to their own compiled artifacts; the 0.10.21 reference is the oracle",
+    "scenarios": "scalars (incl. Decimal extremes, Unicode, nulls/defaults), containers and copy independence, exclusion-set mutation, nested dataclasses, custom encoders, enums, deepcopy side effects, per-call options"
+  },
+  "production_changed": false,
+  "promotion_gate": {
+    "best_measured_improvement_pct": 1.69,
+    "criterion": "AC10",
+    "met": false,
+    "required_other_regression_limit_pct": 5.0,
+    "required_warm_json_improvement_pct": 10.0
+  },
+  "reproduce": "python -m pytest tests/test_json.py tests/compatibility/test_serialization_parity.py -q",
+  "retained": "datamodel/models.py and datamodel/parsers/json.pyx are UNCHANGED by this task.",
+  "spec": "sdd/specs/compatible-model-performance.spec.md",
+  "task": "TASK-20"
+}

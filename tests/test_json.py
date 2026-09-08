@@ -245,3 +245,142 @@ def test_encode_decode_roundtrip():
 
     # Field -> dict via to_dict()
     assert decoded["field"] == DummyField().to_dict()
+
+
+# ===========================================================================
+# FEAT-2 / TASK-20 -- serialization experiment invariants
+# ===========================================================================
+#
+# The experiment considered reusing a single encoder instance instead of
+# building one per `json()` call. It was measured at +1.69%/+0.20% against
+# AC10's required >=10% and REJECTED, so `json()` still constructs its encoder
+# per call. These tests pin the properties that made the question worth asking
+# and that any future attempt must not break.
+
+
+def test_json_content_is_stateless():
+    """The encoder holds no instance state.
+
+    This is why a shared instance was even considered. It is also why the
+    acceptance criterion's warning -- "no mutable encoder instance is globally
+    reused" -- is satisfied trivially today: there is no mutable state to
+    share. If an attribute is ever added here, the caching idea becomes unsafe
+    and this test should start failing.
+    """
+    encoder = JSONContent()
+    assert not hasattr(encoder, "__dict__"), (
+        "JSONContent grew instance state; a shared encoder would no longer be safe"
+    )
+
+
+def test_each_json_call_builds_its_own_encoder():
+    """Pinning the CURRENT behaviour, which the experiment left in place."""
+    from datamodel import BaseModel, Column
+
+    created = []
+    original_init = JSONContent.__call__
+
+    class Probe(BaseModel):
+        v: int = Column(required=False, default=1)
+
+    instance = Probe()
+    seen = set()
+
+    class Counting(JSONContent):
+        def __call__(self, obj, **kwargs):
+            seen.add(id(self))
+            created.append(1)
+            return original_init(self, obj, **kwargs)
+
+    Probe.__encoder__ = Counting
+    try:
+        instance.json()
+        instance.json()
+        assert len(created) == 2
+        assert len(seen) == 2, "the encoder instance was reused across calls"
+    finally:
+        Probe.__encoder__ = JSONContent
+
+
+def test_per_call_json_options_are_silently_ignored():
+    """CHARACTERIZATION of a pre-existing quirk, identical on 0.10.21.
+
+    `json(**kwargs)` forwards its kwargs to the ENCODER'S CONSTRUCTOR
+    (`self.__encoder__(**kwargs)`), never to `encode()`. `JSONContent` is a
+    cdef class that accepts and discards them, so per-call options like
+    `option=OPT_SORT_KEYS` or `indent=2` have no effect and raise nothing.
+
+    Verified identical on the reference build, so this is not a regression.
+    Fixing it would be new JSON semantics, which spec section 1 puts out of
+    scope -- so the behaviour is pinned rather than corrected, and a future
+    encoder-caching attempt must reproduce it exactly.
+    """
+    from datamodel import BaseModel, Column
+
+    class Sortable(BaseModel):
+        b: int = Column(required=False, default=2)
+        a: int = Column(required=False, default=1)
+
+    instance = Sortable()
+    default = instance.json()
+    assert default == '{"b":2,"a":1}'
+    # Declaration order is preserved; the sort option is dropped on the floor.
+    assert instance.json(option=orjson.OPT_SORT_KEYS) == default
+    assert instance.json(indent=2) == default
+
+
+def test_json_still_invokes_deepcopy_on_values():
+    """The reason the big optimisation was rejected, pinned as behaviour.
+
+    `json()` goes through `dataclasses.asdict`, which deep-copies every value.
+    That copy is invisible in the output -- the dict is discarded immediately --
+    but a user's `__deepcopy__` runs, and skipping it would be an observable
+    behaviour change. Removing the copy is worth ~77% of `json()`, and this is
+    exactly why it was not taken.
+    """
+    from typing import Any
+
+    from datamodel import BaseModel, Column
+
+    events = []
+
+    class Tracked:
+        def __init__(self, value):
+            self.value = value
+
+        def __deepcopy__(self, memo):
+            events.append("deepcopy")
+            return Tracked(self.value)
+
+    class Holder(BaseModel):
+        payload: Any = Column(required=False)
+
+        class Meta:
+            strict = False
+
+    holder = Holder(payload=Tracked(1))
+
+    events.clear()
+    holder.to_dict()
+    assert events == ["deepcopy"], "to_dict stopped deep-copying its values"
+
+    events.clear()
+    with pytest.raises(Exception):
+        holder.json()          # not serialisable, but the copy happens first
+    assert events == ["deepcopy"], "json() stopped deep-copying its values"
+
+
+def test_to_dict_returns_independent_copies():
+    """Public copy behaviour must be unchanged by any serialization work."""
+    from datamodel import BaseModel, Column
+
+    class WithList(BaseModel):
+        items: list = Column(required=False, default_factory=list)
+
+        class Meta:
+            strict = False
+
+    model = WithList(items=[1, 2, 3])
+    dumped = model.to_dict()
+    dumped["items"].append(99)
+    assert model.items == [1, 2, 3], "to_dict handed out a shared mutable"
