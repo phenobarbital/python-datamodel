@@ -1,0 +1,293 @@
+{
+  "analysis": {
+    "cells_passing_outright": [
+      "linux-x86_64/3.13"
+    ],
+    "new_regressions_found": 0,
+    "note": "Every failure observed is reproduced on the 0.10.21 reference and is recorded as baseline-only. No failure is attributable to FEAT-2. That is a real result, but it is NOT certification: a cell that fails for a pre-existing reason still has no passing evidence, so it still blocks AC12.",
+    "release_blockers": [
+      {
+        "detail": "CPython 3.14 incompatibility: dataclasses.Field.__init__ gained a required 'doc' parameter in 3.14, and datamodel/fields.pyx does not pass it, so EVERY model definition raises TypeError: Field.__init__() missing 1 required positional argument: 'doc'. VERIFIED IDENTICAL on the 0.10.21 reference built for 3.14, so it is PRE-EXISTING and not a FEAT-2 regression -- but it means the FEAT-001 release matrix claims a CPython 3.14 that does not work at all. RELEASE BLOCKER, outside FEAT-2's scope to fix.",
+        "evidence": "linux-x86_64/3.14 cell (29 collection errors) plus a direct probe of the 0.10.21 reference built for 3.14, which fails identically.",
+        "id": "BLOCKER-1",
+        "owner": "outside FEAT-2 scope; needs its own ticket against fields.pyx",
+        "severity": "high",
+        "summary": "CPython 3.14 does not work at all"
+      },
+      {
+        "detail": "No Windows runner is available in this environment. Requires the FEAT-001 release workflow or an authorized CI runner.",
+        "id": "BLOCKER-2",
+        "owner": "maintainer / CI",
+        "severity": "medium",
+        "summary": "Windows AMD64 evidence is entirely absent (5 of 10 cells)"
+      },
+      {
+        "detail": "The pinned asyncdb 2.16.0 artifact used is the cp313 wheel, so real consumer compatibility is verified for CPython 3.13 only. AC12 requires it per cell.",
+        "id": "BLOCKER-3",
+        "owner": "maintainer / CI",
+        "severity": "medium",
+        "summary": "asyncdb consumer verified on one interpreter only"
+      },
+      {
+        "detail": "rs_parsers-absent gap: `uv pip install -e .` does not build the Rust extension, so converters.pyx:199,236 dereference rc.to_date/rc.to_datetime on a module that defines only HAS_RUST=False and every string->date conversion fails. Characterized in TASK-7 and confirmed shared with the 0.10.21 reference (identical call sites). TASK-8 showed building rs_parsers makes the suite fully green. NOT a FEAT-2 regression.",
+        "id": "BLOCKER-4",
+        "owner": "packaging; affects test-environment setup rather than shipped wheels",
+        "severity": "low",
+        "summary": "rs_parsers is not built by an editable install"
+      }
+    ]
+  },
+  "cells": {
+    "linux-x86_64/3.10": {
+      "artifact_hashes": {},
+      "asyncdb_verified": false,
+      "baseline_only_failures": [
+        "rs_parsers-absent gap: `uv pip install -e .` does not build the Rust extension, so converters.pyx:199,236 dereference rc.to_date/rc.to_datetime on a module that defines only HAS_RUST=False and every string->date conversion fails. Characterized in TASK-7 and confirmed shared with the 0.10.21 reference (identical call sites). TASK-8 showed building rs_parsers makes the suite fully green. NOT a FEAT-2 regression."
+      ],
+      "commands": [
+        "uv venv --python 3.10",
+        "uv pip install -e '.[dev]'",
+        "python -c '<probe: version/backend/native-absence>'",
+        "python -m pytest tests/ -q"
+      ],
+      "experimental_native_absent": true,
+      "has_rust_parsers": false,
+      "interpreter": "/tmp/matrix-3.10-ncus6jxr/.venv/bin/python",
+      "interpreter_version": "3.10.19",
+      "is_import_only": false,
+      "log_excerpt": "\n==================================== ERRORS ====================================\n_____________________ ERROR collecting tests/test_types.py _____________________\ntests/test_types.py:56: in <module>\n    user = User(**external_data)\ndatamodel/abstract.py:572: in __call__\n    return super().__call__(*args, **kwargs)\n<string>:12: in __init__\n    ???\ndatamodel/base.py:45: in __post_init__\n    raise ValidationError(\nE   datamodel.exceptions.ValidationError: User: There are errors in Model.\nE   Hint: please check the 'payload' attribute in the exception. (Fields with errors: born)\n=========================== short test summary info ============================\nERROR tests/test_types.py - datamodel.exceptions.ValidationError: User: There...\n!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\n1 error in 1.43s\n",
+      "platform": "linux-x86_64",
+      "python": "3.10",
+      "reason": "1 collection error from the pre-existing rs_parsers-absent gap; asyncdb consumer also unverified (the pinned wheel is cp313)",
+      "source_fingerprint": "fde1d97b71c03be889390a4bfe69c4cdf0564ce8a84e5cd29986cd2ed3368518",
+      "status": "fail",
+      "tests_failed": 1,
+      "tests_passed": 0,
+      "tests_skipped": 0
+    },
+    "linux-x86_64/3.11": {
+      "artifact_hashes": {},
+      "asyncdb_verified": false,
+      "baseline_only_failures": [
+        "rs_parsers-absent gap: `uv pip install -e .` does not build the Rust extension, so converters.pyx:199,236 dereference rc.to_date/rc.to_datetime on a module that defines only HAS_RUST=False and every string->date conversion fails. Characterized in TASK-7 and confirmed shared with the 0.10.21 reference (identical call sites). TASK-8 showed building rs_parsers makes the suite fully green. NOT a FEAT-2 regression."
+      ],
+      "commands": [
+        "uv venv --python 3.11",
+        "uv pip install -e '.[dev]'",
+        "python -c '<probe: version/backend/native-absence>'",
+        "python -m pytest tests/ -q"
+      ],
+      "experimental_native_absent": true,
+      "has_rust_parsers": false,
+      "interpreter": "/tmp/matrix-3.11-vwwmp7ry/.venv/bin/python",
+      "interpreter_version": "3.11.14",
+      "is_import_only": false,
+      "log_excerpt": "\n==================================== ERRORS ====================================\n_____________________ ERROR collecting tests/test_types.py _____________________\ntests/test_types.py:56: in <module>\n    user = User(**external_data)\n           ^^^^^^^^^^^^^^^^^^^^^\ndatamodel/abstract.py:572: in __call__\n    return super().__call__(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n<string>:12: in __init__\n    ???\ndatamodel/base.py:45: in __post_init__\n    raise ValidationError(\nE   datamodel.exceptions.ValidationError: User: There are errors in Model.\nE   Hint: please check the 'payload' attribute in the exception. (Fields with errors: born)\n=========================== short test summary info ============================\nERROR tests/test_types.py - datamodel.exceptions.ValidationError: User: There...\n!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\n1 error in 1.31s\n",
+      "platform": "linux-x86_64",
+      "python": "3.11",
+      "reason": "1 collection error from the pre-existing rs_parsers-absent gap; asyncdb consumer also unverified (the pinned wheel is cp313)",
+      "source_fingerprint": "fde1d97b71c03be889390a4bfe69c4cdf0564ce8a84e5cd29986cd2ed3368518",
+      "status": "fail",
+      "tests_failed": 1,
+      "tests_passed": 0,
+      "tests_skipped": 0
+    },
+    "linux-x86_64/3.12": {
+      "artifact_hashes": {},
+      "asyncdb_verified": false,
+      "baseline_only_failures": [
+        "rs_parsers-absent gap: `uv pip install -e .` does not build the Rust extension, so converters.pyx:199,236 dereference rc.to_date/rc.to_datetime on a module that defines only HAS_RUST=False and every string->date conversion fails. Characterized in TASK-7 and confirmed shared with the 0.10.21 reference (identical call sites). TASK-8 showed building rs_parsers makes the suite fully green. NOT a FEAT-2 regression."
+      ],
+      "commands": [
+        "uv venv --python 3.12",
+        "uv pip install -e '.[dev]'",
+        "python -c '<probe: version/backend/native-absence>'",
+        "python -m pytest tests/ -q"
+      ],
+      "experimental_native_absent": true,
+      "has_rust_parsers": false,
+      "interpreter": "/tmp/matrix-3.12-iaz6pkoa/.venv/bin/python",
+      "interpreter_version": "3.12.3",
+      "is_import_only": false,
+      "log_excerpt": "\n==================================== ERRORS ====================================\n_____________________ ERROR collecting tests/test_types.py _____________________\ntests/test_types.py:56: in <module>\n    user = User(**external_data)\n           ^^^^^^^^^^^^^^^^^^^^^\ndatamodel/abstract.py:572: in __call__\n    return super().__call__(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n<string>:12: in __init__\n    ???\ndatamodel/base.py:45: in __post_init__\n    raise ValidationError(\nE   datamodel.exceptions.ValidationError: User: There are errors in Model.\nE   Hint: please check the 'payload' attribute in the exception. (Fields with errors: born)\n=========================== short test summary info ============================\nERROR tests/test_types.py - datamodel.exceptions.ValidationError: User: There...\n!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\n1 error in 1.52s\n",
+      "platform": "linux-x86_64",
+      "python": "3.12",
+      "reason": "1 collection error from the pre-existing rs_parsers-absent gap; asyncdb consumer also unverified (the pinned wheel is cp313)",
+      "source_fingerprint": "fde1d97b71c03be889390a4bfe69c4cdf0564ce8a84e5cd29986cd2ed3368518",
+      "status": "fail",
+      "tests_failed": 1,
+      "tests_passed": 0,
+      "tests_skipped": 0
+    },
+    "linux-x86_64/3.13": {
+      "artifact_hashes": {},
+      "asyncdb_verified": true,
+      "baseline_only_failures": [],
+      "commands": [
+        "uv venv --python 3.13",
+        "uv pip install -e '.[dev]'",
+        "uv pip install --no-deps <asyncdb wheel>",
+        "python -c '<probe: version/backend/native-absence>'",
+        "python -m pytest tests/ -q"
+      ],
+      "experimental_native_absent": true,
+      "has_rust_parsers": true,
+      "interpreter": "/tmp/matrix-3.13-xq866624/.venv/bin/python",
+      "interpreter_version": "3.13.11",
+      "is_import_only": false,
+      "log_excerpt": "........................................................................ [  9%]\n........................................................................ [ 18%]\n........................................................................ [ 27%]\n........................................................................ [ 37%]\n........................................................................ [ 46%]\n........................................................................ [ 55%]\n........................................................................ [ 65%]\n........................................................................ [ 74%]\n........................................................................ [ 83%]\n............................ss.......................................... [ 93%]\n......................................................                   [100%]\n=============================== warnings summary ===============================\ntests/test_validation_fastpath.py::test_decimal_constraints_remain_ignored_on_this_route\n  <string>:0: RuntimeWarning: coroutine 'my_async_func' was never awaited\n  Enable tracemalloc to get traceback where the object was allocated.\n  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n772 passed, 2 skipped, 1 warning in 20.09s\n",
+      "platform": "linux-x86_64",
+      "python": "3.13",
+      "reason": "",
+      "source_fingerprint": "fde1d97b71c03be889390a4bfe69c4cdf0564ce8a84e5cd29986cd2ed3368518",
+      "status": "pass",
+      "tests_failed": 0,
+      "tests_passed": 772,
+      "tests_skipped": 2
+    },
+    "linux-x86_64/3.14": {
+      "artifact_hashes": {},
+      "asyncdb_verified": false,
+      "baseline_only_failures": [
+        "CPython 3.14 incompatibility: dataclasses.Field.__init__ gained a required 'doc' parameter in 3.14, and datamodel/fields.pyx does not pass it, so EVERY model definition raises TypeError: Field.__init__() missing 1 required positional argument: 'doc'. VERIFIED IDENTICAL on the 0.10.21 reference built for 3.14, so it is PRE-EXISTING and not a FEAT-2 regression -- but it means the FEAT-001 release matrix claims a CPython 3.14 that does not work at all. RELEASE BLOCKER, outside FEAT-2's scope to fix."
+      ],
+      "commands": [
+        "uv venv --python 3.14",
+        "uv pip install -e '.[dev]'",
+        "python -c '<probe: version/backend/native-absence>'",
+        "python -m pytest tests/ -q"
+      ],
+      "experimental_native_absent": true,
+      "has_rust_parsers": false,
+      "interpreter": "/tmp/matrix-3.14-kh77ukvs/.venv/bin/python",
+      "interpreter_version": "3.14.2",
+      "is_import_only": false,
+      "log_excerpt": "ssing 1 required po...\nERROR tests/test_generic.py - TypeError: Field.__init__() missing 1 required ...\nERROR tests/test_inherit.py - TypeError: Field.__init__() missing 1 required ...\nERROR tests/test_model.py - TypeError: Field.__init__() missing 1 required po...\nERROR tests/test_notify.py - TypeError: Field.__init__() missing 1 required p...\nERROR tests/test_qsdriver.py - TypeError: Field.__init__() missing 1 required...\nERROR tests/test_qsmodel.py - TypeError: Field.__init__() missing 1 required ...\nERROR tests/test_qsobject.py - TypeError: Field.__init__() missing 1 required...\nERROR tests/test_ticket.py - TypeError: Field.__init__() missing 1 required p...\nERROR tests/test_tickets.py - TypeError: Field.__init__() missing 1 required ...\nERROR tests/test_tuples.py - TypeError: Field.__init__() missing 1 required p...\nERROR tests/test_type_user.py - TypeError: Field.__init__() missing 1 require...\nERROR tests/test_types.py - TypeError: Field.__init__() missing 1 required po...\nERROR tests/test_unions.py - TypeError: Field.__init__() missing 1 required p...\nERROR tests/test_valid_callables.py - TypeError: Field.__init__() missing 1 r...\nERROR tests/test_validation_fastpath.py - TypeError: Field.__init__() missing...\nERROR tests/test_validation_policy.py - TypeError: Field.__init__() missing 1...\nERROR tests/test_validations.py - TypeError: Field.__init__() missing 1 requi...\n!!!!!!!!!!!!!!!!!!! Interrupted: 29 errors during collection !!!!!!!!!!!!!!!!!!!\n29 errors in 1.49s\n",
+      "platform": "linux-x86_64",
+      "python": "3.14",
+      "reason": "29 collection errors, all from the pre-existing 3.14 'doc' incompatibility",
+      "source_fingerprint": "fde1d97b71c03be889390a4bfe69c4cdf0564ce8a84e5cd29986cd2ed3368518",
+      "status": "fail",
+      "tests_failed": 29,
+      "tests_passed": 0,
+      "tests_skipped": 0
+    },
+    "windows-amd64/3.10": {
+      "artifact_hashes": {},
+      "asyncdb_verified": false,
+      "baseline_only_failures": [],
+      "commands": [],
+      "experimental_native_absent": null,
+      "has_rust_parsers": null,
+      "interpreter": "",
+      "interpreter_version": "",
+      "is_import_only": false,
+      "log_excerpt": "",
+      "platform": "windows-amd64",
+      "python": "3.10",
+      "reason": "no Windows AMD64 runner is available in this environment; requires the FEAT-001 release workflow or an authorized CI runner",
+      "source_fingerprint": "fde1d97b71c03be889390a4bfe69c4cdf0564ce8a84e5cd29986cd2ed3368518",
+      "status": "unavailable",
+      "tests_failed": 0,
+      "tests_passed": 0,
+      "tests_skipped": 0
+    },
+    "windows-amd64/3.11": {
+      "artifact_hashes": {},
+      "asyncdb_verified": false,
+      "baseline_only_failures": [],
+      "commands": [],
+      "experimental_native_absent": null,
+      "has_rust_parsers": null,
+      "interpreter": "",
+      "interpreter_version": "",
+      "is_import_only": false,
+      "log_excerpt": "",
+      "platform": "windows-amd64",
+      "python": "3.11",
+      "reason": "no Windows AMD64 runner is available in this environment; requires the FEAT-001 release workflow or an authorized CI runner",
+      "source_fingerprint": "fde1d97b71c03be889390a4bfe69c4cdf0564ce8a84e5cd29986cd2ed3368518",
+      "status": "unavailable",
+      "tests_failed": 0,
+      "tests_passed": 0,
+      "tests_skipped": 0
+    },
+    "windows-amd64/3.12": {
+      "artifact_hashes": {},
+      "asyncdb_verified": false,
+      "baseline_only_failures": [],
+      "commands": [],
+      "experimental_native_absent": null,
+      "has_rust_parsers": null,
+      "interpreter": "",
+      "interpreter_version": "",
+      "is_import_only": false,
+      "log_excerpt": "",
+      "platform": "windows-amd64",
+      "python": "3.12",
+      "reason": "no Windows AMD64 runner is available in this environment; requires the FEAT-001 release workflow or an authorized CI runner",
+      "source_fingerprint": "fde1d97b71c03be889390a4bfe69c4cdf0564ce8a84e5cd29986cd2ed3368518",
+      "status": "unavailable",
+      "tests_failed": 0,
+      "tests_passed": 0,
+      "tests_skipped": 0
+    },
+    "windows-amd64/3.13": {
+      "artifact_hashes": {},
+      "asyncdb_verified": false,
+      "baseline_only_failures": [],
+      "commands": [],
+      "experimental_native_absent": null,
+      "has_rust_parsers": null,
+      "interpreter": "",
+      "interpreter_version": "",
+      "is_import_only": false,
+      "log_excerpt": "",
+      "platform": "windows-amd64",
+      "python": "3.13",
+      "reason": "no Windows AMD64 runner is available in this environment; requires the FEAT-001 release workflow or an authorized CI runner",
+      "source_fingerprint": "fde1d97b71c03be889390a4bfe69c4cdf0564ce8a84e5cd29986cd2ed3368518",
+      "status": "unavailable",
+      "tests_failed": 0,
+      "tests_passed": 0,
+      "tests_skipped": 0
+    },
+    "windows-amd64/3.14": {
+      "artifact_hashes": {},
+      "asyncdb_verified": false,
+      "baseline_only_failures": [],
+      "commands": [],
+      "experimental_native_absent": null,
+      "has_rust_parsers": null,
+      "interpreter": "",
+      "interpreter_version": "",
+      "is_import_only": false,
+      "log_excerpt": "",
+      "platform": "windows-amd64",
+      "python": "3.14",
+      "reason": "no Windows AMD64 runner is available in this environment; requires the FEAT-001 release workflow or an authorized CI runner",
+      "source_fingerprint": "fde1d97b71c03be889390a4bfe69c4cdf0564ce8a84e5cd29986cd2ed3368518",
+      "status": "unavailable",
+      "tests_failed": 0,
+      "tests_passed": 0,
+      "tests_skipped": 0
+    }
+  },
+  "cells_missing_or_unavailable": 9,
+  "cells_with_evidence": 1,
+  "certified": false,
+  "expected_source_fingerprint": "fde1d97b71c03be889390a4bfe69c4cdf0564ce8a84e5cd29986cd2ed3368518",
+  "problems": [
+    "linux-x86_64 / CPython 3.10: FAILED (1 failing tests)",
+    "linux-x86_64 / CPython 3.11: FAILED (1 failing tests)",
+    "linux-x86_64 / CPython 3.12: FAILED (1 failing tests)",
+    "linux-x86_64 / CPython 3.14: FAILED (29 failing tests)",
+    "windows-amd64 / CPython 3.10: unavailable \u2014 no Windows AMD64 runner is available in this environment; requires the FEAT-001 release workflow or an authorized CI runner. This is incomplete certification, not a skip.",
+    "windows-amd64 / CPython 3.11: unavailable \u2014 no Windows AMD64 runner is available in this environment; requires the FEAT-001 release workflow or an authorized CI runner. This is incomplete certification, not a skip.",
+    "windows-amd64 / CPython 3.12: unavailable \u2014 no Windows AMD64 runner is available in this environment; requires the FEAT-001 release workflow or an authorized CI runner. This is incomplete certification, not a skip.",
+    "windows-amd64 / CPython 3.13: unavailable \u2014 no Windows AMD64 runner is available in this environment; requires the FEAT-001 release workflow or an authorized CI runner. This is incomplete certification, not a skip.",
+    "windows-amd64 / CPython 3.14: unavailable \u2014 no Windows AMD64 runner is available in this environment; requires the FEAT-001 release workflow or an authorized CI runner. This is incomplete certification, not a skip."
+  ],
+  "required_cells": 10,
+  "status": "NOT CERTIFIED"
+}
