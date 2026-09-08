@@ -136,11 +136,130 @@ Tests are behavioral specifications, not permission to change the oracle. Verify
 
 ## Completion Note
 
-*(Fill in only after implementation and verification.)*
+**Completed by**: sdd-worker (Claude Opus 5)
+**Date**: 2026-09-08
+**Notes**: **This is a negative result, and it is the honest one.** No candidate
+delivered a measurable, safe improvement. The two largest remaining savings are
+unsafe for reasons I demonstrated empirically rather than assumed, and the two
+safe candidates measured as no change. The stable path is left intact and the
+full evidence is persisted in
+`benchmarks/results/compatible-model-performance/structural.json`.
 
-**Completed by**: pending
-**Date**: pending
-**Notes**: pending
-**Verification commands/results**: pending
-**Evidence paths and acceptance coverage**: pending
-**Deviations from spec**: pending
+**Profile (Employee native, 20,000 builds, cProfile).** Residual cost after the
+TASK-13 gate concentrates in two places:
+
+| where | cost | note |
+|---|---|---|
+| `base.py:35 __post_init__` | 0.485 s tottime | includes `processing_fields`; cProfile cannot separate a cpdef function |
+| `abstract.py:66 _dc_method_setattr_` | 220,000 calls, 0.143 s | 11 assignments x 20,000 builds; each does a `startswith`/`endswith` pair **and an O(n) LIST membership scan** |
+
+**Verdicts (all six candidates are in `structural.json` with their numbers):**
+
+| id | candidate | opportunity | verdict |
+|---|---|---|---|
+| A1 | pass live `__columns__.items()` view instead of a snapshot | **510 ns/build (~2%)** | REJECTED -- unsafe |
+| A2 | cache the column snapshot on the class | 510 ns/build | REJECTED -- no safe invalidation |
+| B | replace the `__fields__` list scan with a set | 90 ns (11 fields) to 460 ns (50 fields) per assignment | REJECTED -- stale membership |
+| C | remove the redundant second `not in __fields__` guard | -- | APPLIED, but **not** a measured win |
+| D | cheaper dunder test | -- | REJECTED -- measured as *not* cheaper |
+| E | `tuple()` instead of `list()` for the snapshot | ~10 ns | REJECTED -- inside noise |
+
+**A1 -- the snapshot is load-bearing, not incidental.** `list(cols.items())`
+costs 570.8 ns while the bare view costs 59.9 ns, so passing the view would
+save ~510 ns (~2% of a 26 us Employee build). But a user callback that mutates
+`__columns__` while `processing_fields` is iterating **works today**, precisely
+because `__post_init__` iterates a copy. I verified it on **both** builds: an
+encoder that inserts a new column mid-build returns normally. Passing the live
+view would turn that into `RuntimeError: dictionary changed size during
+iteration`. That is a silent behaviour regression bought for 2%, so: no.
+
+**B -- the stale-membership hazard is real, in both directions.** This is
+exactly what the task scope forbids, and it is not theoretical. `__fields__` is
+a public list mutated in place -- by `_dc_method_setattr_` itself and by users.
+Verified on both builds: after `Model.__fields__.append("manual")`, assigning
+`.manual` **is** honoured as a known field; a set built at class creation would
+not see that. Falling back to `__columns__` for membership is also wrong: the
+same probe shows `"manual" in __columns__` is `False`, so the two containers
+genuinely diverge.
+
+**D -- measured, not assumed.** The "obviously cheaper" dunder alternatives are
+not cheaper: first-char short-circuit is 51.93 ns vs `startswith`+`endswith` at
+52.27 ns (noise) and clearly *worse* for actual dunder names (95.13 vs 79.83);
+slice comparison is worse in both cases. CPython's `str.startswith` is already
+fast for short literals. Had I trusted intuition I would have shipped a
+pessimisation and called it an optimisation.
+
+**C -- what was actually applied, described honestly.** The second
+`if name not in self.__fields__:` guard was dead by control flow: the earlier
+`if name in self.__fields__` branch returns unconditionally, and nothing between
+the two checks can mutate `__fields__` (a `Meta.frozen` read and an
+`object.__setattr__` of an unrelated attribute). Removing it eliminates a second
+O(n) list scan on the extra-attribute path. **It has no measurable effect on any
+benchmark workload**, and the paired measurement says so plainly (reference
+546.7/546.2/551.7 ns vs candidate 556.5/563.9/556.8 ns -- marginally *slower*,
+well inside noise). The reason is that a new attribute is appended to
+`__fields__` on first assignment, so every later assignment takes the early
+branch and never reaches the removed code. It is justified by proof, not by
+measurement, and I am not claiming it as a speed-up.
+
+**Two claims of mine that the tests corrected.** Both were caught before they
+reached the report as fact:
+1. I wrote that `create_field` updates `__columns__` without `__fields__`. It
+   does not -- it ends with `setattr`, which routes through
+   `_dc_method_setattr_` and appends. The failing test made me look;
+   `structural.json` and the test docstring now say so explicitly. The real
+   example is **`add_field`**, which does diverge.
+2. `add_field` additionally leaves the class **unconstructible** -- the next
+   build raises `AttributeError` because `processing_fields` `getattr`s a
+   column that was never installed and never added to `__fields__`. Verified
+   identical on 0.10.21, so it is pre-existing, and now pinned by
+   `test_add_field_leaves_the_class_unconstructible` so a future "helpful"
+   reconciliation of the two containers cannot silently change it.
+
+**Verification commands/results**:
+- `.venv/bin/python -m pytest tests/compatibility/test_structural_parity.py
+  tests/test_field.py tests/test_descriptors.py -q` -> **29 passed**.
+- `.venv/bin/python -m pytest tests/ -q` -> **675 passed, 2 skipped, 0 failed**
+  (657 before this task + 18 new).
+- **Differential corpus: 45/45 cases, 0 divergences.**
+- `.venv/bin/python -m ruff check --select F,E9
+  tests/compatibility/test_structural_parity.py` -> clean.
+- All timings: medians of 15-21 batches after warm-up, pinned to CPU 9,
+  compared against TASK-9's calibrated ~2% empirical cross-build floor.
+
+**Evidence paths and acceptance coverage**:
+- AC4 / AC7 (no new stale state, assignment history intact):
+  `test_public_fields_list_mutation_is_honoured`,
+  `test_fields_and_columns_are_not_interchangeable`,
+  `test_dynamically_added_field_becomes_a_known_field`,
+  `test_values_and_old_value_are_unchanged`, `test_aliases_still_resolve`,
+  plus the extra-policy tests for `allow`/`ignore`/`forbid` and strict mode.
+- Before/after evidence and differential parity for every attempt:
+  `structural.json` (`candidates[]`, each with `measured` and `verdict`), and
+  45/45 corpus parity.
+- Negative experiments leave the stable path intact with a completed report:
+  `structural.json.headline` states the negative result;
+  `test_structural_report_exists_and_records_every_verdict` requires a verdict
+  and a reason for all six candidates, and
+  `test_structural_report_does_not_claim_an_unmeasured_win` fails if the report
+  ever dresses the applied change up as a speed-up.
+- AC5/AC6 context: the improvement target rests on the TASK-13 gate (measured
+  ~12-17%), not on this task. TASK-16 runs the acceptance protocol.
+
+**Deviations from spec**: none in scope. Notes:
+1. **`base.py` and `converters.pyx` are listed as MODIFY but were deliberately
+   left unchanged.** Every change I could make to them is candidate A1/A2/E,
+   all rejected above with evidence. Editing them anyway, to match the file
+   table, would have meant shipping speculative code -- which the task's own
+   acceptance criteria forbid ("negative experiments leave the stable path
+   intact with a completed report rather than speculative code").
+2. No `.pyx` changed, so no rebuild was required and
+   `tests/compatibility/reference_manifest.json` did **not** need regenerating.
+3. `datamodel/abstract.py` still carries its pre-existing unused
+   `functools.lru_cache` import (ruff F401). Confirmed pre-existing by stashing
+   in TASK-11; left alone rather than widening the diff.
+4. A `frozen = True` model could not be exercised: `dataclasses` refuses a
+   frozen dataclass inheriting a non-frozen one, and `BaseModel` is non-frozen.
+   The frozen branch of `_dc_method_setattr_` is therefore not directly
+   reachable from a subclass in a test, and I removed the test rather than
+   leave one that asserted something impossible.
