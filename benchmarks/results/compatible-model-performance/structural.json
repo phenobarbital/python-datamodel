@@ -1,0 +1,129 @@
+{
+  "candidates": [
+    {
+      "evidence_test": "tests/compatibility/test_structural_parity.py::test_a_callback_may_mutate_columns_during_processing",
+      "id": "A1",
+      "measured": {
+        "cols.items() view ns": 59.9,
+        "list(cols.items()) 11 fields ns": 570.8,
+        "share_of_a_26us_employee_build": "~2.0%",
+        "tuple(cols.items()) ns": 560.4
+      },
+      "measured_opportunity_ns_per_build": 510.9,
+      "name": "Pass the live __columns__.items() view instead of a per-build list snapshot",
+      "reason": "The snapshot is load-bearing, not incidental. A user callback that mutates __columns__ while processing_fields is iterating is TOLERATED today precisely because __post_init__ iterates a copy. Verified on BOTH builds: an encoder that inserts a new column mid-build returns normally (value 1.0). Passing the live view would turn that into RuntimeError: dictionary changed size during iteration -- a silent behaviour regression for ~2%.",
+      "verdict": "REJECTED"
+    },
+    {
+      "id": "A2",
+      "measured_opportunity_ns_per_build": 510.9,
+      "name": "Cache the column snapshot on the class and reuse it",
+      "reason": "Any cheap invalidation key is one the task explicitly forbids or that demonstrably goes stale. Identity+length is named as forbidden in the task scope. __columns__ is a public, directly mutable dict, so no counter maintained by datamodel's own code can see a third-party mutation. Making it self-tracking would mean replacing __columns__ with a dict subclass -- a public-surface change well beyond 'a small measured compatible improvement', and out of scope.",
+      "verdict": "REJECTED"
+    },
+    {
+      "evidence_test": "tests/compatibility/test_structural_parity.py::test_public_fields_list_mutation_is_honoured",
+      "id": "B",
+      "measured": {
+        "list membership worst case, 11 fields ns": 132.6,
+        "list membership worst case, 50 fields ns": 504.5,
+        "opportunity_per_assignment_ns": "~90 (11 fields) to ~460 (50 fields)",
+        "set membership 11 ns": 42.8,
+        "set membership 50 ns": 43.3
+      },
+      "name": "Replace the O(n) `name in self.__fields__` list scan with a set",
+      "reason": "This is exactly the 'membership state that can become stale after public list/dict mutation' the task scope forbids, and the hazard is real rather than theoretical. __fields__ is a public list and is mutated in place -- by _dc_method_setattr_ itself, and by users. Verified on BOTH builds: after `Model.__fields__.append('manual')`, assigning `.manual` is honoured as a known field. A parallel set would not see that append. Using __columns__ as the membership source instead is ALSO unsafe: the same probe shows 'manual' in __columns__ is False, so the two containers genuinely diverge, and base.py's add_field updates __columns__ and __dataclass_fields__ WITHOUT updating __fields__ (create_field is not an example -- it ends with setattr, which appends to __fields__ as a side effect; an earlier draft of this report claimed otherwise and the test caught it). add_field's divergence is pre-existing and observable: the next construction raises AttributeError on BOTH builds.",
+      "verdict": "REJECTED"
+    },
+    {
+      "honest_note": "The benchmark does not exercise the removed code after the first call: a new attribute is appended to __fields__ on first assignment, so every later assignment takes the early known-field branch. The removal is real work eliminated on first assignment of each new name, but it is NOT measurable on any benchmark workload and is not claimed as a speed-up.",
+      "id": "C",
+      "measured": {
+        "paired extra-attribute assignment, 30 extra attrs present": {
+          "candidate_ns": [
+            556.5,
+            563.9,
+            556.8
+          ],
+          "reference_ns": [
+            546.7,
+            546.2,
+            551.7
+          ],
+          "verdict": "no improvement; candidate marginally slower, well inside noise"
+        }
+      },
+      "name": "Remove the redundant second `if name not in self.__fields__` guard",
+      "reason": "Provable from control flow rather than measurement: the earlier `if name in self.__fields__` branch returns unconditionally, and nothing between the two checks can mutate __fields__ (a Meta.frozen read and an object.__setattr__ of an unrelated attribute). The guard was therefore always True and cost a second O(n) list scan on the extra-attribute path.",
+      "verdict": "APPLIED (correct, but not a measured win)"
+    },
+    {
+      "id": "D",
+      "measured": {
+        "dunder name: short circuit ns": 95.13,
+        "dunder name: startswith+endswith ns": 79.83,
+        "first-char short circuit ns": 51.93,
+        "slice compare ns": 86.75,
+        "startswith+endswith ns": 52.27
+      },
+      "name": "Cheaper dunder test in _dc_method_setattr_",
+      "reason": "Measured, not assumed: the 'obviously cheaper' alternatives are not cheaper. The first-char short circuit is within noise for field names (51.93 vs 52.27) and clearly WORSE for dunder names (95.13 vs 79.83); slice comparison is worse in both cases. CPython's str.startswith is already fast for short literals.",
+      "verdict": "REJECTED"
+    },
+    {
+      "id": "E",
+      "measured": {
+        "list ns": 570.8,
+        "tuple ns": 560.4
+      },
+      "name": "tuple() instead of list() for the column snapshot",
+      "reason": "A ~10ns difference is far inside noise, and processing_fields declares its parameter as `list columns`; passing a tuple would require changing a cpdef signature for no measurable gain.",
+      "verdict": "REJECTED"
+    }
+  ],
+  "conclusion": "The residual structural cost after TASK-13 is concentrated in two places -- the per-build column snapshot (~2% of an Employee build) and the per-assignment membership scan (~2-4%) -- and both are protected by behaviour that is observable today and identical on both builds. Buying them would require either accepting a stale-state hazard the spec forbids or changing public container types. The correct outcome is to leave the stable path intact and record why. The AC5 improvement target therefore rests on the TASK-13 gate (measured ~12-17%), not on this task.",
+  "environment": {
+    "candidate": "this worktree / 0.12.0",
+    "cpu_pinned": 9,
+    "note": "All timings are medians of 15-21 batches after warm-up, on a pinned core. TASK-9's calibrated empirical cross-build floor is ~2%: anything smaller is not a result.",
+    "python": "3.13.11",
+    "reference": "d932c720 / 0.10.21"
+  },
+  "feature": "FEAT-2",
+  "generated_at": "2026-09-08T02:44:06+00:00",
+  "headline": "NEGATIVE RESULT. No candidate delivered a measurable, safe improvement. The two largest wins are unsafe for reasons demonstrated empirically below, and the two safe ones measured as no change. One provably-redundant O(n) scan was removed; it is correct but has no measurable effect on any benchmark workload. The stable path is left intact.",
+  "parity": {
+    "differential_corpus_cases": 45,
+    "divergences": 0,
+    "full_suite": "657 passed, 2 skipped, 0 failed"
+  },
+  "profile": {
+    "top_costs": [
+      {
+        "note": "includes processing_fields, which cProfile cannot separate because it is a cpdef Cython function",
+        "tottime_s": 0.485,
+        "where": "base.py:35 __post_init__"
+      },
+      {
+        "calls": 220000,
+        "note": "11 field assignments x 20000 builds; each does a startswith/endswith pair and an O(n) LIST membership scan",
+        "tottime_s": 0.143,
+        "where": "abstract.py:66 _dc_method_setattr_"
+      },
+      {
+        "calls": 220000,
+        "tottime_s": 0.027,
+        "where": "dict.setdefault"
+      },
+      {
+        "calls": 220000,
+        "tottime_s": 0.024,
+        "where": "str.startswith"
+      }
+    ],
+    "workload": "Employee(**native_payload), 20000 builds, cProfile"
+  },
+  "purpose": "Profile the residual structural cost remaining after the TASK-13 gate, and record a verdict with evidence for every candidate improvement -- including the ones deliberately NOT taken.",
+  "spec": "sdd/specs/compatible-model-performance.spec.md",
+  "task": "TASK-15"
+}

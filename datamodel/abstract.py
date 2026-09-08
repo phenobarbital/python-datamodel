@@ -98,31 +98,38 @@ def _dc_method_setattr_(self, name: str, value: Any) -> None:
     # (Note: here we “neutralize” any callable value to None if needed.)
     object.__setattr__(self, name, None if callable(value) else value)
 
-    # If the field isn’t known yet:
-    if name not in self.__fields__:
-        # In strict mode, we don’t allow unknown fields.
-        if self.Meta.strict:
-            return False
+    # FEAT-2/TASK-15: an `if name not in self.__fields__:` guard used to wrap
+    # everything below. Reaching this point already implies the name is not a
+    # known field -- the `if name in self.__fields__` branch above returns
+    # unconditionally -- and nothing between the two can mutate `__fields__`
+    # (a `Meta.frozen` read and an `object.__setattr__` of an unrelated
+    # attribute). So the guard was always True and cost a second O(n) scan of
+    # a list on every extra-attribute assignment. Removing it is provable from
+    # control flow, not from a measurement.
+    #
+    # In strict mode, we don’t allow unknown fields.
+    if self.Meta.strict:
+        return False
 
-        # Otherwise, check the "extra" policy.
-        extra_policy = self.Meta.extra
-        if extra_policy == 'forbid':
-            raise TypeError(f"Field {name!r} is not allowed on {self.modelName}")
-        elif extra_policy == 'ignore':
-            return
+    # Otherwise, check the "extra" policy.
+    extra_policy = self.Meta.extra
+    if extra_policy == 'forbid':
+        raise TypeError(f"Field {name!r} is not allowed on {self.modelName}")
+    elif extra_policy == 'ignore':
+        return
 
-        # Dynamically create a new Field for the unknown attribute.
-        try:
-            new_field = Field(required=False, default=value)
-            new_field.name = name
-            new_field.type = type(value)
-            # (Optionally, you might attach a parser here if validation is on.)
-            self.__columns__[name] = new_field
-            self.__fields__.append(name)
-            object.__setattr__(self, name, value)
-        except Exception as err:
-            logging.exception(err, stack_info=True)
-            raise
+    # Dynamically create a new Field for the unknown attribute.
+    try:
+        new_field = Field(required=False, default=value)
+        new_field.name = name
+        new_field.type = type(value)
+        # (Optionally, you might attach a parser here if validation is on.)
+        self.__columns__[name] = new_field
+        self.__fields__.append(name)
+        object.__setattr__(self, name, value)
+    except Exception as err:
+        logging.exception(err, stack_info=True)
+        raise
 
 
 def _validate_field_assignment(self, name: str, value: Any) -> Any:
