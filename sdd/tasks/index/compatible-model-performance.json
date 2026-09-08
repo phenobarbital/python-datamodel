@@ -446,7 +446,7 @@
       "feature_id": "FEAT-2",
       "feature": "compatible-model-performance",
       "spec": "sdd/specs/compatible-model-performance.spec.md",
-      "status": "in-progress",
+      "status": "blocked",
       "priority": "high",
       "effort": "M",
       "estimated_hours": 4,
@@ -460,10 +460,11 @@
       "assigned_to": "unassigned",
       "assigned_at": null,
       "created_at": "2026-09-07T23:19:35+00:00",
-      "updated_at": "2026-09-07T23:19:35+00:00",
+      "updated_at": "2026-09-08T07:55:53+00:00",
       "started_at": "2026-09-07T23:24:10+00:00",
       "completed_at": null,
-      "file": "sdd/tasks/active/TASK-21-platform-consumer-verification.md"
+      "file": "sdd/tasks/active/TASK-21-platform-consumer-verification.md",
+      "blocked_reason": "AC12 certification NOT granted: 1 of 10 required platform/interpreter cells has passing evidence (linux-x86_64/CPython3.13, 772 passed, rs_parsers built, real asyncdb 2.16.0 verified, experimental native module confirmed absent). NO failure is attributable to FEAT-2 - every one reproduces on the 0.10.21 reference - but a cell failing for a pre-existing reason still has no passing evidence. BLOCKER-1 (high): CPython 3.14 does not work at all; dataclasses.Field gained a required doc parameter in 3.14 and fields.pyx does not pass it, so every model definition raises TypeError. Verified pre-existing by building the reference against 3.14. The FEAT-001 matrix claims 3.14 support that is non-functional; needs its own ticket, outside FEAT-2 scope. BLOCKER-2: Windows AMD64 evidence entirely absent (5 cells). BLOCKER-3: asyncdb verified on cp313 only. BLOCKER-4: editable install does not build rs_parsers. Evidence: benchmarks/results/compatible-model-performance/platforms.md and platforms.json."
     },
     {
       "id": "TASK-22",

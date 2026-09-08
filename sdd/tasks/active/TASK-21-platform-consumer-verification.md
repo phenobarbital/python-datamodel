@@ -122,11 +122,117 @@ Tests are behavioral specifications, not permission to change the oracle. Verify
 
 ## Completion Note
 
-*(Fill in only after implementation and verification.)*
+**STATUS: INCOMPLETE — BLOCKED. Certification is NOT granted.**
 
-**Completed by**: pending
-**Date**: pending
-**Notes**: pending
-**Verification commands/results**: pending
-**Evidence paths and acceptance coverage**: pending
-**Deviations from spec**: pending
+The task's own criteria are explicit: *"AC12 release certification remains
+blocked if any required external evidence is unavailable; this task is not
+marked verified until complete."* One of ten required cells has passing
+evidence, so the task stays open.
+
+**Run by**: sdd-worker (Claude Opus 5) | **Date**: 2026-09-08
+**Evidence**: `benchmarks/results/compatible-model-performance/platforms.md`
+and `platforms.json`.
+
+### The matrix
+
+| platform | CPython | status | tests | rs_parsers | asyncdb |
+|---|---|---|---|---|---|
+| linux-x86_64 | 3.10 | fail | 1 collection error | absent | unverified |
+| linux-x86_64 | 3.11 | fail | 1 collection error | absent | unverified |
+| linux-x86_64 | 3.12 | fail | 1 collection error | absent | unverified |
+| linux-x86_64 | **3.13** | **PASS** | **772 passed, 0 failed** | built | **verified** |
+| linux-x86_64 | 3.14 | fail | 29 collection errors | absent | unverified |
+| windows-amd64 | 3.10–3.14 | **unavailable** | — | — | — |
+
+### The qualifier that matters most
+
+**No failure found here is attributable to FEAT-2.** Every one reproduces on the
+0.10.21 reference. But a cell that fails for a pre-existing reason still has no
+passing evidence, so it still blocks AC12. "Not our fault" is not "certified",
+and the aggregator does not let those two be confused.
+
+### BLOCKER-1 (high) — CPython 3.14 does not work at all
+
+`dataclasses.Field.__init__` gained a required `doc` parameter in Python 3.14;
+`datamodel/fields.pyx` does not pass it, so **every model definition** raises
+`TypeError: Field.__init__() missing 1 required positional argument: 'doc'`.
+29 test modules fail at collection.
+
+I verified this is **pre-existing** rather than assuming: the `ff.__init__` call
+site is byte-identical between the reference and the candidate, and I built the
+**0.10.21 reference against CPython 3.14** and reproduced the identical failure.
+
+The consequence is a release-facing one: **the FEAT-001 release matrix claims
+CPython 3.10–3.14 support, and on 3.14 no model can be declared.** Wheels may
+build and import; the library is unusable. This needs its own ticket against
+`fields.pyx` — fixing it is outside FEAT-2's scope and would be exactly the kind
+of unrelated repair the cardinal rules forbid here.
+
+### Other blockers
+
+* **BLOCKER-2 (medium)** — Windows AMD64 evidence entirely absent (5 of 10
+  cells). Needs the FEAT-001 release workflow or an authorized CI runner.
+* **BLOCKER-3 (medium)** — the pinned asyncdb 2.16.0 artifact is the **cp313**
+  wheel, so real consumer compatibility is verified on one interpreter only;
+  AC12 requires it per cell.
+* **BLOCKER-4 (low)** — `uv pip install -e .` does not build `rs_parsers`, so
+  `converters.pyx:199,236` dereference `rc.to_date`/`rc.to_datetime` against
+  `HAS_RUST = False`. This is TASK-7's characterized gap, confirmed shared with
+  the reference, and is why 3.10/3.11/3.12 show a collection error rather than a
+  clean run.
+
+### What the one passing cell actually demonstrates
+
+`linux-x86_64 / CPython 3.13`, source fingerprint `fde1d97b71c0…`:
+**772 passed, 0 failed, 2 skipped** — the full repository suite, not an import
+smoke test; `rs_parsers` present; real **asyncdb 2.16.0** installed with its
+compatibility suite green; and the **experimental native module absent** from a
+normally installed environment, confirming the TASK-17/19 `rs_core` work did not
+leak into the package and that default construction works without it.
+
+### The aggregator cannot be talked into a green tick
+
+This is as much the deliverable as the numbers. It refuses to certify on: a cell
+never run (each of the ten checked individually), an `unavailable` cell
+("incomplete certification, not a skip"), a failed cell, an **import-only smoke
+test** (`tests_passed == 0` is treated as no evidence, per the acceptance
+criteria), a **stale artifact reference** (source-fingerprint mismatch), or a
+cell that did not verify the real asyncdb consumer. An empty report yields
+exactly ten problems — and a fully clean matrix *does* certify, so the positive
+control exists and `certified` is not hard-wired to False.
+
+### Verification commands/results
+
+- `.venv/bin/python -m pytest tests/compatibility/test_matrix_runner.py -q`
+  -> **17 passed**.
+- `.venv/bin/python -m pytest tests/ -q` -> **772 passed, 2 skipped, 0 failed**.
+- Matrix sweep: `run_cell()` for CPython 3.10/3.11/3.12/3.13/3.14 in throwaway
+  virtualenvs built from source; results above.
+- Reference-on-3.14 probe: `uv pip install -e <ref-worktree>` under CPython
+  3.14.2 -> `TypeError: Field.__init__() missing 1 required positional
+  argument: 'doc'`.
+- `.venv/bin/python -m ruff check --select F,E9` on both new files -> clean.
+
+### Evidence and acceptance coverage
+
+- **AC12**: `platforms.json` -> `certified: false`, `problems`,
+  `analysis.release_blockers`;
+  `test_the_platform_report_exists_and_is_honest` fails if the report ever
+  claims certification while listing problems, or denies it without a reason.
+- **AC1** (artifact provenance): every cell records a source fingerprint;
+  mismatches are rejected as stale.
+- **AC2/AC4/AC7**: the passing cell runs the entire suite, including the
+  differential corpus, adversarial parity and asyncdb consumer tests.
+- Experimental native absence without breaking default construction:
+  recorded per cell as `experimental_native_absent`, true in the passing cell.
+- rs_parsers-absent behaviour characterized separately: `baseline_only_failures`
+  on the affected cells, cross-referenced to TASK-7/TASK-8.
+
+### Required next steps
+
+1. Fix CPython 3.14 (`Field.__init__` must pass `doc`) **or** remove 3.14 from
+   the declared support matrix — currently it promises something non-functional.
+2. Run the Windows AMD64 cells on the FEAT-001 release workflow.
+3. Provide asyncdb artifacts per interpreter so consumer compatibility is
+   verified per cell.
+4. Build `rs_parsers` in each test environment so 3.10–3.12 run clean.
