@@ -1,7 +1,8 @@
-from typing import Optional
-from dataclasses import dataclass, fields as dc_fields, asdict, replace, _MISSING_TYPE
+from dataclasses import _MISSING_TYPE, asdict, dataclass, replace
+from dataclasses import fields as dc_fields
+
 import pytest
-from datamodel.fields import Field, Column
+from datamodel.fields import Column, Field
 from datamodel.types import default_dict
 
 
@@ -48,9 +49,9 @@ def test_field_type():
 class Person:
     name: str
     age: int = Column(default=0)
-    email: Optional[str] = Field(default=None)
-    bio: Optional[str] = Field(default='')
-    attributes: Optional[dict] = Column(default_factory=default_dict)
+    email: str | None = Field(default=None)
+    bio: str | None = Field(default='')
+    attributes: dict | None = Column(default_factory=default_dict)
 
 
 def test_person():

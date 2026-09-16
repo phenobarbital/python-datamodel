@@ -18,7 +18,7 @@ def main():
     assert r.HAS_RUST, "Rust extension not available"
     print("HAS_RUST: OK")
 
-    from datamodel import BaseModel, Field, Column
+    from datamodel import BaseModel, Column, Field
 
     f1 = Field()
     assert f1.doc is None, f"Field().doc should be None, got {f1.doc!r}"

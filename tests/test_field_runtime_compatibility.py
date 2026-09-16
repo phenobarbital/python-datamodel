@@ -4,8 +4,9 @@ Validates that Field/Column doc values survive model construction,
 type conversion works via eager annotations, and inherited fields
 retain their doc values across all supported interpreters.
 """
+from datamodel.fields import Column, Field
+
 from datamodel import BaseModel
-from datamodel.fields import Field, Column
 
 
 class TestModelFieldInitialization:
