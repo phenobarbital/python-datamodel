@@ -163,10 +163,8 @@ When you pick up this task:
 
 ## Completion Note
 
-*(Agent fills this in when done)*
+**Completed by**: Claude Opus 4.6 (sdd-start session)
+**Date**: 2026-09-16
+**Notes**: Inserted two-line version guard (`if version_info >= (3, 14): args["doc"] = doc`) between the `args` dict (line 240) and `ff.__init__` (line 241) in `datamodel/fields.pyx`. Rebuilt Cython extension on CPython 3.13 — all 6 existing tests pass, smoke tests for Field(), Field(doc="hello"), and Column(doc="col doc") pass. On 3.13 the guard is inactive (no `doc` kwarg sent to superclass).
 
-**Completed by**: <session or agent ID>
-**Date**: YYYY-MM-DD
-**Notes**: What was implemented, any deviations from scope, issues encountered.
-
-**Deviations from spec**: none | describe if any
+**Deviations from spec**: none

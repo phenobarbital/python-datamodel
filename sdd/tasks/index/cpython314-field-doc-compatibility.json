@@ -16,7 +16,7 @@
       "feature_id": null,
       "feature": "cpython314-field-doc-compatibility",
       "spec": "sdd/specs/cpython314-field-doc-compatibility.spec.md",
-      "status": "in-progress",
+      "status": "done",
       "priority": "high",
       "effort": "S",
       "depends_on": [],
@@ -24,8 +24,9 @@
       "parallelism_notes": "No dependencies; modifies only datamodel/fields.pyx",
       "assigned_to": null,
       "started_at": "2026-09-16T01:11:07+00:00",
-      "completed_at": null,
-      "file": "sdd/tasks/active/HOTFIX-CPY314DOC-1-field-doc-forwarding.md"
+      "completed_at": "2026-09-16T01:13:05+00:00",
+      "file": "sdd/tasks/completed/HOTFIX-CPY314DOC-1-field-doc-forwarding.md",
+      "verification": "verified"
     },
     {
       "id": "HOTFIX-CPY314DOC-2",
