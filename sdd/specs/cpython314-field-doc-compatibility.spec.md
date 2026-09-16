@@ -8,7 +8,7 @@ base_branch: main
 **Identity**: `cpython314-field-doc-compatibility` (standalone hotfix; no Jira key assigned)
 **Date**: 2026-09-08
 **Author**: Codex, based on Jesus Lara's request and FEAT-2 evidence
-**Status**: draft
+**Status**: approved
 **Severity / Priority**: Critical compatibility defect / P0 for a release advertising CPython 3.14
 **Target version**: Next corrective release; exact number to be assigned by the maintainer
 **Related work**: FEAT-001 platform support; FEAT-2 TASK-21 `BLOCKER-1`
@@ -314,13 +314,17 @@ implementation is performed by this specification request.
 - [x] Is a new public doc parameter needed? No: preserve and forward the existing one.
 - [x] Does repairing doc prove all 3.14 models work? No: annotation discovery
   and the remaining platform/consumer evidence need separate resolution.
-- [ ] Assign a Jira key if external tracking is desired. — Owner: maintainer.
-- [ ] Assign the corrective release number before publishing. — Owner: maintainer.
-- [ ] Create/link the companion annotation-discovery issue and require it for
-  full CPython 3.14 certification. — Owner: maintainer / implementation review.
+- [x] Assign a Jira key if external tracking is desired. — No Jira key needed;
+  tracked via SDD artifacts and git history only.
+- [x] Assign the corrective release number before publishing. — Fix ships as
+  part of 0.11.0 (no separate patch release).
+- [x] Create/link the companion annotation-discovery issue and require it for
+  full CPython 3.14 certification. — A separate SDD spec will be created for
+  the annotation-discovery defect on CPython 3.14.
 
 ## Revision History
 
 | Version | Date | Author | Change |
 |---|---|---|---|
 | 0.1 | 2026-09-08 | Codex | Initial bug spec; reproduced reference failure, qualified scope, specified compatibility fix and installed-wheel regression gate |
+| 0.2 | 2026-09-16 | Jesus Lara | Resolved open questions: no Jira key, fix ships in 0.11.0, annotation-discovery tracked via separate SDD spec. Status → approved |
