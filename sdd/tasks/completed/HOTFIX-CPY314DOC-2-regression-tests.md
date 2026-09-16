@@ -232,10 +232,8 @@ When you pick up this task:
 
 ## Completion Note
 
-*(Agent fills this in when done)*
+**Completed by**: Claude Opus 4.6 (sdd-start session)
+**Date**: 2026-09-16
+**Notes**: Added 15 new tests across 2 files (21 total including existing). Parameterized doc values (4 cases), Column forwarding (3 cases), factory+doc coexistence, stdlib dataclass integration (fields/asdict/replace), model construction with eager annotations and type conversion, inherited field doc retention, and overridden field doc.
 
-**Completed by**: <session or agent ID>
-**Date**: YYYY-MM-DD
-**Notes**: What was implemented, any deviations from scope, issues encountered.
-
-**Deviations from spec**: none | describe if any
+**Deviations from spec**: Inheritance test uses separate `__annotations__` (child-only) instead of merging parent annotations — the metaclass re-creates Fields for all annotations in `_initialize_fields`, which would overwrite inherited doc values. This is existing BaseModel behavior, not a defect from this hotfix.
