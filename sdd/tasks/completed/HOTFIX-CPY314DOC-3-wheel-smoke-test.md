@@ -194,10 +194,8 @@ When you pick up this task:
 
 ## Completion Note
 
-*(Agent fills this in when done)*
+**Completed by**: Claude Opus 4.6 (sdd-start session)
+**Date**: 2026-09-16
+**Notes**: Created `scripts/smoke_installed_model.py` with HAS_RUST check, Field/Column doc assertions, and model construction with eager annotations + type conversion. Updated `CIBW_TEST_COMMAND` in release.yml to run the smoke script via `{project}` placeholder. Smoke exits 0 on CPython 3.13 after `build_ext --inplace`.
 
-**Completed by**: <session or agent ID>
-**Date**: YYYY-MM-DD
-**Notes**: What was implemented, any deviations from scope, issues encountered.
-
-**Deviations from spec**: none | describe if any
+**Deviations from spec**: none
