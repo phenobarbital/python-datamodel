@@ -16,14 +16,14 @@
       "feature_id": null,
       "feature": "cpython314-field-doc-compatibility",
       "spec": "sdd/specs/cpython314-field-doc-compatibility.spec.md",
-      "status": "pending",
+      "status": "in-progress",
       "priority": "high",
       "effort": "S",
       "depends_on": [],
       "parallel": true,
       "parallelism_notes": "No dependencies; modifies only datamodel/fields.pyx",
       "assigned_to": null,
-      "started_at": null,
+      "started_at": "2026-09-16T01:11:07+00:00",
       "completed_at": null,
       "file": "sdd/tasks/active/HOTFIX-CPY314DOC-1-field-doc-forwarding.md"
     },
@@ -37,7 +37,9 @@
       "status": "pending",
       "priority": "high",
       "effort": "M",
-      "depends_on": ["HOTFIX-CPY314DOC-1"],
+      "depends_on": [
+        "HOTFIX-CPY314DOC-1"
+      ],
       "parallel": true,
       "parallelism_notes": "Needs the doc forwarding fix from HOTFIX-CPY314DOC-1 (datamodel/fields.pyx) to pass on 3.14; modifies tests/test_field.py and creates tests/test_field_runtime_compatibility.py — no file overlap with HOTFIX-CPY314DOC-3",
       "assigned_to": null,
@@ -55,7 +57,9 @@
       "status": "pending",
       "priority": "high",
       "effort": "M",
-      "depends_on": ["HOTFIX-CPY314DOC-1"],
+      "depends_on": [
+        "HOTFIX-CPY314DOC-1"
+      ],
       "parallel": true,
       "parallelism_notes": "Needs the doc forwarding fix from HOTFIX-CPY314DOC-1 (datamodel/fields.pyx) for smoke to pass; creates scripts/smoke_installed_model.py and modifies .github/workflows/release.yml — no file overlap with HOTFIX-CPY314DOC-2",
       "assigned_to": null,
@@ -73,7 +77,10 @@
       "status": "pending",
       "priority": "medium",
       "effort": "S",
-      "depends_on": ["HOTFIX-CPY314DOC-2", "HOTFIX-CPY314DOC-3"],
+      "depends_on": [
+        "HOTFIX-CPY314DOC-2",
+        "HOTFIX-CPY314DOC-3"
+      ],
       "parallel": true,
       "parallelism_notes": "Needs test and smoke results from HOTFIX-CPY314DOC-2 and HOTFIX-CPY314DOC-3 to document verified correction; modifies only CHANGELOG.md — no file overlap with earlier tasks",
       "assigned_to": null,
