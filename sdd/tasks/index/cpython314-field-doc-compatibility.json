@@ -56,7 +56,7 @@
       "feature_id": null,
       "feature": "cpython314-field-doc-compatibility",
       "spec": "sdd/specs/cpython314-field-doc-compatibility.spec.md",
-      "status": "pending",
+      "status": "in-progress",
       "priority": "high",
       "effort": "M",
       "depends_on": [
@@ -65,7 +65,7 @@
       "parallel": true,
       "parallelism_notes": "Needs the doc forwarding fix from HOTFIX-CPY314DOC-1 (datamodel/fields.pyx) for smoke to pass; creates scripts/smoke_installed_model.py and modifies .github/workflows/release.yml — no file overlap with HOTFIX-CPY314DOC-2",
       "assigned_to": null,
-      "started_at": null,
+      "started_at": "2026-09-16T01:17:17+00:00",
       "completed_at": null,
       "file": "sdd/tasks/active/HOTFIX-CPY314DOC-3-wheel-smoke-test.md"
     },
