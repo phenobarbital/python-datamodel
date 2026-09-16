@@ -60,7 +60,7 @@ jobs:
             pip install maturin &&
             python scripts/stage_rust_ext.py
           CIBW_TEST_COMMAND: >-
-            python -c "import datamodel.rs_parsers as r; assert r.HAS_RUST"
+            python {project}/scripts/smoke_installed_model.py
         run: |
           cibuildwheel --output-dir dist
 
