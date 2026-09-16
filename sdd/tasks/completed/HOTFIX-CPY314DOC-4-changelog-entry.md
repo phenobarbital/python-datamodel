@@ -129,10 +129,8 @@ When you pick up this task:
 
 ## Completion Note
 
-*(Agent fills this in when done)*
+**Completed by**: Claude Opus 4.6 (sdd-start session)
+**Date**: 2026-09-16
+**Notes**: Added `### Fixed` subsection to CHANGELOG.md under `## [0.11.0]`, between the existing `### Notes` block and `## [0.0.15]`. Entry describes the doc-forwarding fix, identifies it as a pre-existing incompatibility, and notes annotation discovery remains a separate blocker.
 
-**Completed by**: <session or agent ID>
-**Date**: YYYY-MM-DD
-**Notes**: What was implemented, any deviations from scope, issues encountered.
-
-**Deviations from spec**: none | describe if any
+**Deviations from spec**: none
