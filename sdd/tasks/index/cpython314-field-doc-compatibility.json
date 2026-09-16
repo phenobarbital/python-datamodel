@@ -1,0 +1,96 @@
+{
+  "feature": "cpython314-field-doc-compatibility",
+  "feature_id": null,
+  "jira_issue_key": null,
+  "spec": "sdd/specs/cpython314-field-doc-compatibility.spec.md",
+  "type": "hotfix",
+  "base_branch": "main",
+  "created_at": "2026-09-16T00:00:00+00:00",
+  "completed_at": "2026-09-16T01:23:27+00:00",
+  "parallel_semantics": "exclusive",
+  "tasks": [
+    {
+      "id": "HOTFIX-CPY314DOC-1",
+      "slug": "field-doc-forwarding",
+      "title": "Fix Field.__init__ doc forwarding for CPython 3.14",
+      "feature_id": null,
+      "feature": "cpython314-field-doc-compatibility",
+      "spec": "sdd/specs/cpython314-field-doc-compatibility.spec.md",
+      "status": "done",
+      "priority": "high",
+      "effort": "S",
+      "depends_on": [],
+      "parallel": true,
+      "parallelism_notes": "No dependencies; modifies only datamodel/fields.pyx",
+      "assigned_to": null,
+      "started_at": "2026-09-16T01:11:07+00:00",
+      "completed_at": "2026-09-16T01:13:05+00:00",
+      "file": "sdd/tasks/completed/HOTFIX-CPY314DOC-1-field-doc-forwarding.md",
+      "verification": "verified"
+    },
+    {
+      "id": "HOTFIX-CPY314DOC-2",
+      "slug": "regression-tests",
+      "title": "Add regression tests for Field/Column doc compatibility",
+      "feature_id": null,
+      "feature": "cpython314-field-doc-compatibility",
+      "spec": "sdd/specs/cpython314-field-doc-compatibility.spec.md",
+      "status": "done",
+      "priority": "high",
+      "effort": "M",
+      "depends_on": [
+        "HOTFIX-CPY314DOC-1"
+      ],
+      "parallel": true,
+      "parallelism_notes": "Needs the doc forwarding fix from HOTFIX-CPY314DOC-1 (datamodel/fields.pyx) to pass on 3.14; modifies tests/test_field.py and creates tests/test_field_runtime_compatibility.py — no file overlap with HOTFIX-CPY314DOC-3",
+      "assigned_to": null,
+      "started_at": "2026-09-16T01:14:53+00:00",
+      "completed_at": "2026-09-16T01:16:26+00:00",
+      "file": "sdd/tasks/completed/HOTFIX-CPY314DOC-2-regression-tests.md",
+      "verification": "verified"
+    },
+    {
+      "id": "HOTFIX-CPY314DOC-3",
+      "slug": "wheel-smoke-test",
+      "title": "Add installed-wheel smoke script and update release workflow",
+      "feature_id": null,
+      "feature": "cpython314-field-doc-compatibility",
+      "spec": "sdd/specs/cpython314-field-doc-compatibility.spec.md",
+      "status": "done",
+      "priority": "high",
+      "effort": "M",
+      "depends_on": [
+        "HOTFIX-CPY314DOC-1"
+      ],
+      "parallel": true,
+      "parallelism_notes": "Needs the doc forwarding fix from HOTFIX-CPY314DOC-1 (datamodel/fields.pyx) for smoke to pass; creates scripts/smoke_installed_model.py and modifies .github/workflows/release.yml — no file overlap with HOTFIX-CPY314DOC-2",
+      "assigned_to": null,
+      "started_at": "2026-09-16T01:17:17+00:00",
+      "completed_at": "2026-09-16T01:18:03+00:00",
+      "file": "sdd/tasks/completed/HOTFIX-CPY314DOC-3-wheel-smoke-test.md",
+      "verification": "verified"
+    },
+    {
+      "id": "HOTFIX-CPY314DOC-4",
+      "slug": "changelog-entry",
+      "title": "Record corrective changelog entry",
+      "feature_id": null,
+      "feature": "cpython314-field-doc-compatibility",
+      "spec": "sdd/specs/cpython314-field-doc-compatibility.spec.md",
+      "status": "done",
+      "priority": "medium",
+      "effort": "S",
+      "depends_on": [
+        "HOTFIX-CPY314DOC-2",
+        "HOTFIX-CPY314DOC-3"
+      ],
+      "parallel": true,
+      "parallelism_notes": "Needs test and smoke results from HOTFIX-CPY314DOC-2 and HOTFIX-CPY314DOC-3 to document verified correction; modifies only CHANGELOG.md — no file overlap with earlier tasks",
+      "assigned_to": null,
+      "started_at": "2026-09-16T01:19:17+00:00",
+      "completed_at": "2026-09-16T01:21:17+00:00",
+      "file": "sdd/tasks/completed/HOTFIX-CPY314DOC-4-changelog-entry.md",
+      "verification": "verified"
+    }
+  ]
+}
