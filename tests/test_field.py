@@ -1,5 +1,5 @@
 from typing import Optional
-from dataclasses import dataclass, _MISSING_TYPE
+from dataclasses import dataclass, fields as dc_fields, asdict, replace, _MISSING_TYPE
 import pytest
 from datamodel.fields import Field, Column
 from datamodel.types import default_dict
@@ -73,3 +73,72 @@ def test_person():
 
     age_field = Column(default=0, factory=int)
     person = Person(name="Bob", age=age_field)
+
+
+@pytest.mark.parametrize("doc_val,expected", [
+    (None, None),
+    ("", ""),
+    ("field documentation", "field documentation"),
+    ("Multi\nline", "Multi\nline"),
+])
+def test_field_doc_values(doc_val, expected):
+    if doc_val is None:
+        f = Field()
+    else:
+        f = Field(doc=doc_val)
+    assert f.doc == expected
+
+
+def test_field_doc_omitted():
+    f = Field()
+    assert f.doc is None
+
+
+@pytest.mark.parametrize("doc_val,expected", [
+    (None, None),
+    ("column doc", "column doc"),
+    ("", ""),
+])
+def test_column_doc_forwarding(doc_val, expected):
+    if doc_val is None:
+        c = Column()
+    else:
+        c = Column(doc=doc_val)
+    assert isinstance(c, Field)
+    assert c.doc == expected
+
+
+def test_doc_with_default_factory():
+    f = Field(factory=list, doc="has factory")
+    assert f.doc == "has factory"
+    assert f.default_factory is list
+    v1 = f.default_factory()
+    v2 = f.default_factory()
+    assert v1 == v2 == []
+    assert v1 is not v2
+
+    with pytest.raises(ValueError, match="Cannot specify both"):
+        Field(factory=list, default_factory=dict)
+
+
+def test_dataclass_field_doc():
+    @dataclass
+    class DocDataclass:
+        name: str = Field(default="anon", doc="The name")
+        count: int = Column(default=0, doc="A counter")
+
+    obj = DocDataclass()
+    assert obj.name == "anon"
+    assert obj.count == 0
+
+    flds = dc_fields(obj)
+    assert len(flds) == 2
+    assert flds[0].name == "name"
+    assert flds[1].name == "count"
+
+    d = asdict(obj)
+    assert d == {"name": "anon", "count": 0}
+
+    obj2 = replace(obj, name="Bob", count=5)
+    assert obj2.name == "Bob"
+    assert obj2.count == 5
