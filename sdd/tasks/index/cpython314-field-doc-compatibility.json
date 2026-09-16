@@ -35,7 +35,7 @@
       "feature_id": null,
       "feature": "cpython314-field-doc-compatibility",
       "spec": "sdd/specs/cpython314-field-doc-compatibility.spec.md",
-      "status": "pending",
+      "status": "in-progress",
       "priority": "high",
       "effort": "M",
       "depends_on": [
@@ -44,7 +44,7 @@
       "parallel": true,
       "parallelism_notes": "Needs the doc forwarding fix from HOTFIX-CPY314DOC-1 (datamodel/fields.pyx) to pass on 3.14; modifies tests/test_field.py and creates tests/test_field_runtime_compatibility.py — no file overlap with HOTFIX-CPY314DOC-3",
       "assigned_to": null,
-      "started_at": null,
+      "started_at": "2026-09-16T01:14:53+00:00",
       "completed_at": null,
       "file": "sdd/tasks/active/HOTFIX-CPY314DOC-2-regression-tests.md"
     },
