@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         include:
           - python-version: "3.10"
@@ -48,6 +48,7 @@ jobs:
         env:
           CIBW_ARCHS_LINUX: x86_64
           CIBW_ARCHS_WINDOWS: AMD64
+          CIBW_ARCHS_MACOS: arm64
           CIBW_BUILD: ${{ matrix.cibw-build }}
           CIBW_SKIP: "*-musllinux_*"
           CIBW_ENVIRONMENT_LINUX: "PATH=/root/.cargo/bin:$PATH"
@@ -56,6 +57,14 @@ jobs:
             export PATH=/root/.cargo/bin:$PATH &&
             pip install maturin &&
             python scripts/stage_rust_ext.py --manylinux off
+          CIBW_BEFORE_BUILD_MACOS: >-
+            curl https://sh.rustup.rs -sSf | sh -s -- -y &&
+            export PATH=$HOME/.cargo/bin:$PATH &&
+            rustup target add aarch64-apple-darwin &&
+            pip install uv &&
+            uv pip install maturin &&
+            python scripts/stage_rust_ext.py --target aarch64-apple-darwin
+          CIBW_ENVIRONMENT_MACOS: "PATH=$HOME/.cargo/bin:$PATH"
           CIBW_BEFORE_BUILD_WINDOWS: >-
             pip install maturin &&
             python scripts/stage_rust_ext.py
@@ -115,10 +124,12 @@ jobs:
           echo "Checking dist/ for the expected wheel inventory..."
           manylinux_count=$(ls dist/*-manylinux*_x86_64.whl 2>/dev/null | wc -l)
           windows_count=$(ls dist/*-win_amd64.whl 2>/dev/null | wc -l)
+          macos_count=$(ls dist/*-macosx*_arm64.whl 2>/dev/null | wc -l)
           sdist_count=$(ls dist/*.tar.gz 2>/dev/null | wc -l)
           total_wheel_count=$(ls dist/*.whl 2>/dev/null | wc -l)
           echo "manylinux x86_64 wheels: $manylinux_count"
           echo "win_amd64 wheels: $windows_count"
+          echo "macos arm64 wheels: $macos_count"
           echo "sdist: $sdist_count"
           echo "total wheels: $total_wheel_count"
           if [ "$manylinux_count" -ne 5 ]; then
@@ -129,14 +140,18 @@ jobs:
             echo "ERROR: expected 5 win_amd64 wheels (cp310-cp314), found $windows_count" >&2
             exit 1
           fi
+          if [ "$macos_count" -ne 5 ]; then
+            echo "ERROR: expected 5 macos arm64 wheels (cp310-cp314), found $macos_count" >&2
+            exit 1
+          fi
           if [ "$sdist_count" -ne 1 ]; then
             echo "ERROR: expected exactly one sdist, found $sdist_count" >&2
             exit 1
           fi
           # Guard against unexpected extra wheels (e.g. musllinux) slipping
           # into dist/ and being uploaded unfiltered by the publish step.
-          if [ "$total_wheel_count" -ne 10 ]; then
-            echo "ERROR: expected exactly 10 wheels total (5 manylinux + 5 win_amd64), found $total_wheel_count" >&2
+          if [ "$total_wheel_count" -ne 15 ]; then
+            echo "ERROR: expected exactly 15 wheels total (5 manylinux + 5 win_amd64 + 5 macos_arm64), found $total_wheel_count" >&2
             exit 1
           fi
 
