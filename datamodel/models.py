@@ -1,6 +1,7 @@
 from __future__ import annotations
 import contextlib
 from typing import Any, Dict, Optional, get_args
+from types import UnionType
 from enum import Enum, EnumMeta
 # Dataclass
 import inspect
@@ -17,7 +18,13 @@ from .functions import is_callable
 
 
 def _get_type_info(_type, name, title):
-    if _type.__module__ == 'typing':
+    if isinstance(_type, UnionType):
+        args = get_args(_type)
+        non_none = [a for a in args if a is not type(None)]
+        if non_none:
+            return _get_type_info(non_none[0], name, title)
+        return 'string'
+    if hasattr(_type, '__module__') and _type.__module__ == 'typing':
         if inspect.isfunction(_type):
             if hasattr(_type, '__supertype__'):
                 return _type.__supertype__
@@ -41,6 +48,12 @@ def _get_type_info(_type, name, title):
 
 
 def _get_ref_info(_type, field):
+    if isinstance(_type, UnionType):
+        args = get_args(_type)
+        non_none = [a for a in args if a is not type(None)]
+        if non_none:
+            return _get_ref_info(non_none[0], field)
+        return None
     if isinstance(_type, EnumMeta):
         return {
             "type": "array",
