@@ -1,4 +1,7 @@
 {
+  "env": {
+    "CLAUDE_CODE_ENABLE_FUNCTION_HOOKS": "1"
+  },
   "permissions": {
     "allow": [
       "Bash(ruff:*)",
@@ -14,6 +17,16 @@
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/dangerous-actions-blocker.sh\"",
             "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Grep|Glob|Read|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/jesuslara/proyectos/python-datamodel/.venv/bin/wikitoolkit claude-hook",
+            "timeout": 10
           }
         ]
       }
@@ -41,5 +54,16 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "fast-jev-compaction@fast-jev-compaction": true
+  },
+  "extraKnownMarketplaces": {
+    "fast-jev-compaction": {
+      "source": {
+        "source": "github",
+        "repo": "tamaratran/fast-jev-compaction"
+      }
+    }
   }
 }

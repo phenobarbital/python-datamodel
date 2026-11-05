@@ -11,7 +11,7 @@ from typing import (
     ClassVar,
     NewType
 )
-from types import GenericAlias
+from types import GenericAlias, UnionType
 from collections import OrderedDict
 from collections.abc import Callable
 import types
@@ -194,6 +194,8 @@ class ModelMeta(type):
                 _type = _type.__supertype__
 
             origin = get_origin(_type)
+            if origin is UnionType:
+                origin = Union
             if origin is ClassVar:
                 continue
 
@@ -236,6 +238,7 @@ class ModelMeta(type):
             _is_prim = is_primitive(_type)
             _is_alias = isinstance(_type, GenericAlias)
             _is_typing = hasattr(_type, '__module__') and _type.__module__ == 'typing'  # noqa
+            _is_union_type = isinstance(_type, UnionType)
 
             # Store the type info in the field object:
             df.is_dc = _is_dc
@@ -268,7 +271,7 @@ class ModelMeta(type):
                 _type_category = 'set'
             elif _is_dc:
                 _type_category = 'dataclass'
-            elif _is_typing or _is_alias:  # noqa
+            elif _is_typing or _is_alias or _is_union_type:  # noqa
                 if df.origin is not None and (df.origin is list and df.args):
                     df._inner_targs = df.args
                     df._inner_type = args[0] if args else Any

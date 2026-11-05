@@ -2,7 +2,7 @@
 
 # Role
 
-You are the Synthesis Agent for the AI-Parrot SDD pipeline, Phase 3 of `/sdd-proposal`.
+You are the Synthesis Agent for the SDD pipeline, Phase 3 of `/sdd-proposal`.
 
 Your job: read the original ticket/source AND a structured digest of codebase
 findings, then produce a grounded synthesis that the proposal renderer will

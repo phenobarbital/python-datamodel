@@ -32,6 +32,7 @@ def build_wheel(
     out_dir: str,
     interpreter: str,
     manylinux: str | None,
+    target: str | None = None,
     maturin_bin: str = "maturin",
 ) -> int:
     """Run `maturin build --release` for `manifest`, writing to `out_dir`.
@@ -54,6 +55,8 @@ def build_wheel(
     ]
     if manylinux is not None:
         command.extend(["--manylinux", manylinux])
+    if target is not None:
+        command.extend(["--target", target])
     completed = subprocess.run(command, check=False)
     return completed.returncode
 
@@ -98,6 +101,7 @@ def main(
     out_dir: str = "rust/target/wheels",
     interpreter: str = "python",
     manylinux: str | None = None,
+    target: str | None = None,
     maturin_bin: str = "maturin",
 ) -> int:
     """Build the Rust extension and stage it into `dest`.
@@ -105,7 +109,7 @@ def main(
     Returns 0 on success. Returns non-zero when Maturin fails, no wheel is
     produced, or no `_rs_parsers*.so`/`.pyd` member is found in the wheel.
     """
-    return_code = build_wheel(manifest, out_dir, interpreter, manylinux, maturin_bin)
+    return_code = build_wheel(manifest, out_dir, interpreter, manylinux, target, maturin_bin)
     if return_code != 0:
         print(f"ERROR: maturin build failed (exit {return_code})", file=sys.stderr)
         return return_code
@@ -154,6 +158,11 @@ def parse_args(argv: list[str] | None = None) -> dict:
         help="Value forwarded to `maturin build --manylinux` (e.g. 'off'); omitted when unset",
     )
     parser.add_argument(
+        "--target",
+        default=None,
+        help="Rust target triple forwarded to `maturin build --target` (e.g. 'aarch64-apple-darwin')",
+    )
+    parser.add_argument(
         "--maturin-bin",
         default="maturin",
         help=(
@@ -169,6 +178,7 @@ def parse_args(argv: list[str] | None = None) -> dict:
         "out_dir": args.out_dir,
         "interpreter": args.interpreter,
         "manylinux": args.manylinux,
+        "target": args.target,
         "maturin_bin": args.maturin_bin,
     }
 

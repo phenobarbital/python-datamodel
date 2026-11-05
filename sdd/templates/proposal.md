@@ -84,7 +84,7 @@ Conventions, contracts, or downstream callers any solution must respect.
   *Implication*: regressions can land silently in `dev`.
   *Evidence*: F006
 
-- **Async-first convention.** AI-Parrot conventions require async public
+- **Async-first convention.** Project conventions require async public
   methods; this module recently migrated.
   *Implication*: rolling back to sync is not an option.
   *Evidence*: F002

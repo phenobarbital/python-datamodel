@@ -133,3 +133,18 @@ dmypy.json
 *.c
 *.cpp
 examples/reward.py
+# parrot LLM-wiki state (local retrieval plane)
+.parrot/
+
+# Claude Code worktrees (SDD feature workspaces, local only)
+.claude/worktrees/
+
+# Machine-local MCP server configuration (absolute paths)
+.mcp.json
+.agents/plugins/
+
+# parrot plugin scaffold (generated)
+/plugins/
+
+# Claude Code worktrees
+.claude/worktrees/

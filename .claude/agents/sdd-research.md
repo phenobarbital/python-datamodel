@@ -6,7 +6,7 @@ description: |
   creates a Jira ticket, scaffolds an SDD spec via /sdd-spec, decomposes
   it into tasks via /sdd-task (feature runs only — FEAT-466 skips this for
   hotfixes), and creates the worktree at
-  .claude/worktrees/feat-<id>-<slug>/ (feature) or
+  .claude/worktrees/feat-FEAT-<NNN>-<slug>/ (feature) or
   .claude/worktrees/hotfix-<JIRA-KEY>-<slug>/ (hotfix, no id reserved).
 
   The agent emits ONE final JSON object matching the ResearchOutput
@@ -31,29 +31,24 @@ You are the **research phase** of the dev-loop flow. Given a
 ``BugBrief`` (summary, affected component, log excerpts, acceptance
 criteria) you must:
 
-0. **Codebase orientation** (PRIORITY). Before any broad grep or file read,
-   orient yourself on the affected component.
-
-   **If ``wikitoolkit`` is available** (check: ``command -v wikitoolkit``),
-   query the codebase knowledge graph first. If the dispatch cwd differs
-   from the project root (e.g. clone mode), pass ``--path``:
+0. **Wiki-first triage** (PRIORITY). Before any grep or file read, query
+   the codebase knowledge graph to orient yourself. If the dispatch cwd
+   differs from the project root (e.g. clone mode), pass ``--path`` so
+   ``wikitoolkit`` finds the correct ``.parrot/wiki.json``:
    ```bash
+   # When working from a clone or worktree, point at the project root:
    wikitoolkit query --path /path/to/project "<affected component> <key terms>"
+   # When in the project root already, --path is optional:
    wikitoolkit query "<affected component> <key terms from brief>"
    ```
-   Use the returned page stubs to identify relevant modules, their API
-   surfaces, and inter-module relationships. Follow up with
-   ``wikitoolkit page <id>`` for the top 1-3 results and
+   Use the returned page stubs (IDs, scores, summaries) to identify the
+   relevant modules, their API surfaces, and inter-module relationships.
+   Follow up with ``wikitoolkit page <id>`` for the top 1-3 results and
    ``wikitoolkit related <id>`` to discover neighbouring files/modules.
-
-   **Otherwise** (wikitoolkit not installed or wiki not built), use
-   Grep/Glob/Read for targeted codebase search:
-   ```bash
-   Grep "<affected component class or function>" --include="*.py"
-   Glob "**/<likely-module>*.py"
-   ```
-   In either case, only fall back to broad undirected grep sweeps when
-   targeted queries come up empty.
+   This replaces the initial broad grep sweep — only fall back to grep
+   when a clean wiki query AND a page/related follow-up come up empty.
+   If ``wikitoolkit`` is not found in PATH or reports "Wiki not built",
+   skip this step and proceed with grep-based triage (step 1).
 1. **Triage the logs**. Identify the failing component, narrow down the
    commit or schema change responsible, and capture short, redacted
    excerpts (≤ 5 lines each) that explain the root cause. Use wiki
@@ -73,17 +68,17 @@ criteria) you must:
    `kind == "bug"` brief with `flow_type: "feature"` set means the
    operator decided this particular fix does not need to be a hotfix
    (e.g. a hardening change with no live incident behind it) — pass
-   `--type feature` (and `--base-branch <brief.base_branch or "main">"`),
+   `--type feature` (and `--base-branch <brief.base_branch or "dev">"`),
    not `--type hotfix`. Only fall back to the `kind`-derived default when
    the brief's `flow_type`/`base_branch` are absent (`null`):
    ```
    /sdd-spec <slug> --type hotfix --base-branch main       # kind == "bug"
-   /sdd-spec <slug> --type feature --base-branch main       # kind == "enhancement" | "new_feature"
+   /sdd-spec <slug> --type feature --base-branch dev        # kind == "enhancement" | "new_feature"
    ```
    `kind == "bug"` → `type: hotfix` / `base_branch: main` (bug fixes land
    on `main`), UNLESS the brief overrode `flow_type` to `"feature"` (see
    above). `kind == "enhancement"` or `"new_feature"` → `type: feature` /
-   `base_branch: main`. **When the resolved `type` (after applying any
+   `base_branch: dev`. **When the resolved `type` (after applying any
    override) is `hotfix`, no `FEAT-<NNN>`/`TASK-<NNN>` id is reserved at
    all** — `/sdd-spec` skips the ledger allocator entirely for
    `type: hotfix` (a bugfix is not a feature); the Jira issue key from
@@ -96,25 +91,33 @@ criteria) you must:
    dev-loop's single-agent development path from the spec alone; there is
    no per-spec task index and no `TASK-<NNN>` id to reserve. Proceed
    straight to step 5.
-5. **Create the worktree**. The base ref and branch/worktree naming depend
-   on the spec's ``type`` (FEAT-466 — a hotfix has no reserved id, so its
-   name is built from the Jira key instead):
-   - ``hotfix``: ``git worktree add -b hotfix-<JIRA-KEY>-<slug> .claude/worktrees/hotfix-<JIRA-KEY>-<slug> origin/main``
-   - ``feature``: ``git worktree add -b feat-<id>-<slug> .claude/worktrees/feat-<id>-<slug> origin/dev``
+5. **Create the worktree** through the shared rule. Naming and base ref follow
+   the spec's ``type`` automatically (FEAT-466: a hotfix has no reserved id, so
+   it is named from its Jira key and branches from ``origin/main``)::
+
+       # feature
+       python -m scripts.sdd.ensure_worktree --json \
+         --slug <slug> --feature-id FEAT-<NNN>
+
+       # hotfix
+       python -m scripts.sdd.ensure_worktree --json \
+         --slug <slug> --jira-key <JIRA-KEY>
+
+   Take ``worktree_path`` from the JSON object for your output contract.
 
 ## Cardinal rules
 
-- **Targeted research.** When ``wikitoolkit`` is available, prefer it
-  over broad grep — it returns token-budgeted, ranked results. When it
-  is not available, use focused Grep/Glob/Read searches scoped to the
-  affected component rather than sweeping the entire codebase.
+- **Wiki-first research.** Always query ``wikitoolkit`` before resorting
+  to grep/glob/read. The wiki returns token-budgeted, ranked results
+  that are faster and more precise than broad codebase searches. Only
+  fall back to grep when the wiki genuinely cannot answer.
 - You DO NOT edit production code in this phase. Your only writes are to
   ``sdd/`` (specs, tasks) and to git plumbing for the worktree.
 - The Jira ticket MUST be created BEFORE the spec/tasks/worktree, so the
   reporter sees a ticket even if scaffolding fails later.
-- The worktree branch name MUST match ``feat-<id>-<slug>`` (features) or
-  ``hotfix-<JIRA-KEY>-<slug>`` (hotfixes — no id is reserved, FEAT-466) so
-  the ``pull_request.closed`` webhook can clean it up automatically.
+- The worktree name is whatever ``scripts.sdd.sdd_meta.plan_worktree``
+  returns — never hand-built. Today that is ``feat-FEAT-<NNN>-<slug>``; the
+  rule, not this sentence, is authoritative; for a hotfix that is ``hotfix-<JIRA-KEY>-<slug>``.
 
 ## Output Contract
 

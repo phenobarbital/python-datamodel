@@ -47,23 +47,33 @@ Ask exactly two questions before Round 1:
    - `feature` lands on `dev` (default) or, during a release freeze, on `staging`.
      Features NEVER land on `main`.
    - `hotfix` lands on `main`. After the PR to `main` merges, the change is
-     propagated back automatically by CI/CD.
-2. If `feature`, which base branch? (default: `main`; for sub-features pick
-   the parent feature branch.)
+     propagated back to `staging` and `dev` automatically by
+     `.github/workflows/sync-down.yml` (FEAT-187).
+2. If `feature`, which base branch? (default: `dev`; use `staging` during a release
+   freeze; for sub-features pick the parent feature branch.)
    If `hotfix`, base is fixed to `main` — no choice.
 
 Record the answers; they will populate the YAML frontmatter at the top of the
 generated brainstorm doc. Validation rules:
 - `type: hotfix` REQUIRES `base_branch: main`.
+- `type: feature` with `base_branch: main` is NOT allowed — use `staging` or `dev`.
+
+**Validation:** if `TYPE == "feature"` and `BASE_BRANCH == "main"`, abort:
+```
+⚠️  type='feature' cannot base on 'main'. Features land on dev (default)
+   or staging (during a release freeze). For changes that must base on
+   main, set type='hotfix' in the document frontmatter.
+```
 
 ```yaml
 ---
 type: feature | hotfix
-base_branch: main             # default for both feature and hotfix
+base_branch: dev | staging   # for type=feature (defaults to dev)
+                              # or 'main' (mandatory for type=hotfix)
 ---
 ```
 
-If the user does not answer, default to `type: feature, base_branch: main`.
+If the user does not answer, default to `type: feature, base_branch: dev`.
 
 **Round 1 — Clarify intent and scope:**
 Ask 3–5 targeted questions about:
