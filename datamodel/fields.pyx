@@ -238,6 +238,8 @@ class Field(ff):
             "metadata": self._meta,
             "kw_only": self.kw_only
         }
+        if version_info >= (3, 14):
+            args["doc"] = doc
         ff.__init__(
             self,
             default=self.default,

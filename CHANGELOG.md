@@ -33,6 +33,14 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * No macOS or ARM/aarch64 wheels are published; the release matrix remains manylinux
   x86_64 + win_amd64.
 
+### Fixed
+* `datamodel.fields.Field.__init__()` now passes the caller's `doc` value to
+  the `dataclasses.Field` superclass on CPython 3.14+, which added `doc` as a
+  required initializer argument. On 3.10–3.13 the superclass call is unchanged.
+  This was a pre-existing incompatibility (present since the `doc` parameter was
+  introduced upstream), not a regression from recent work. Annotation discovery
+  on CPython 3.14 remains a separate tracked compatibility blocker.
+
 ## [0.0.15] - 2022-09-15
 * fixing building wheel for x86_64
 * fixing behaviors over Meta class in Models with missing attributes
