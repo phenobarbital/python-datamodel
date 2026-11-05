@@ -4,6 +4,7 @@
 from typing import get_args, get_origin, Union, Optional, Literal
 from collections.abc import Callable, Awaitable
 import typing
+from types import UnionType
 import asyncio
 import inspect
 from cpython.object cimport PyObject_IsInstance, PyObject_IsSubclass
@@ -24,6 +25,9 @@ from .functions import (
     is_empty
 )
 
+
+cdef bint _is_union(object origin):
+    return origin is Union or origin is UnionType
 
 cdef str valid_int(object field, str name, object value, object _type):
     # Basic check for integer type.
@@ -118,7 +122,7 @@ cdef inline bint is_enum_class(object annotated_type):
         raise RuntimeError("Error in PyObject_IsSubclass")
     return res != 0
 
-cdef bint is_instanceof(object value, type annotated_type):
+cdef bint is_instanceof(object value, object annotated_type):
     """
     Check if value is an instance of annotated_type, handling typing objects properly.
     For generic types (List[int], etc.), just check against the base container type.
@@ -126,8 +130,13 @@ cdef bint is_instanceof(object value, type annotated_type):
     # Get origin type for generics
     origin = get_origin(annotated_type)
 
+    # PEP 604 union types (int | str)
+    if isinstance(annotated_type, UnionType):
+        args = get_args(annotated_type)
+        return any(is_instanceof(value, arg) for arg in args if arg is not type(None)) or value is None and type(None) in args
+
     # If it's a typing module type like List[int], Dict[str, int], etc.
-    if annotated_type.__module__ == 'typing':
+    if hasattr(annotated_type, '__module__') and annotated_type.__module__ == 'typing':
         # For Union, check each option
         if origin is Union:
             args = get_args(annotated_type)
@@ -168,8 +177,8 @@ cpdef bint is_optional_type(object annotated_type):
     """
     origin = get_origin(annotated_type)
 
-    # If it's a Union, check if None is one of the options
-    if origin is Union:
+    # If it's a Union (typing.Union or PEP 604), check if None is one of the options
+    if _is_union(origin):
         args = get_args(annotated_type)
         return type(None) in args
 
@@ -236,7 +245,7 @@ cdef dict _validate_union_field(
                 errors.append(f"Value is not instance of {subtype}")
 
             # 2b) If it's a nested Union, validate recursively
-            elif subtype_origin is Union:
+            elif _is_union(subtype_origin):
                 sub_error = _validate_union_field(F, name, value, subtype)
                 if not sub_error:
                     return {}  # success
@@ -543,7 +552,7 @@ cpdef dict _validation(
         return {}
 
     # Handle Union (including Optional)
-    elif F.origin is Union:
+    elif _is_union(F.origin):
         # If None is allowed and value is None, it's valid
         if type(None) in F.args and value is None:
             return {}
@@ -629,7 +638,7 @@ cpdef dict _validation(
                 )
             return {}
         # Handle Optional Types:
-        elif F.origin is Union and type(None) in F.args:
+        elif _is_union(F.origin) and type(None) in F.args:
             inner_types = [t for t in F.args if t is not type(None)]
             # If value is None then that is valid:
             if value is None:

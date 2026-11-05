@@ -5,6 +5,7 @@ import re
 from typing import get_args, get_origin, Union, Optional, List, NewType, Literal, Any, Set
 from collections.abc import Sequence, Mapping, Callable, Awaitable
 import types
+from types import UnionType
 from dataclasses import _MISSING_TYPE, _FIELDS, fields
 import ciso8601
 import orjson
@@ -47,6 +48,14 @@ cdef bint is_dc(object obj):
 
 cdef bint is_typing(object obj):
     return PyObject_HasAttr(obj, '__module__') and obj.__module__ == 'typing'
+
+cdef bint is_union(object origin):
+    return origin is Union or origin is UnionType
+
+cdef object normalize_origin(object origin):
+    if origin is UnionType:
+        return Union
+    return origin
 
 cdef bint is_empty(object value):
     """
@@ -1135,7 +1144,7 @@ cdef object _parse_list_typing(
                     result.append(processed_sublist)
                 return result
             # Handle List[Optional[T]] or List[Union[...]]
-            elif field._inner_origin is Union:
+            elif is_union(field._inner_origin):
                 for item in data:
                     processed_item = _parse_typing(field, arg_type, item, encoder, False)
                     result.append(processed_item)
@@ -1222,7 +1231,7 @@ cdef object _parse_optional_union(
                 return data
 
     # e.g. Optional[T] is Union[T, NoneType]
-    if origin == Union and type(None) in args:
+    if is_union(origin) and type(None) in args:
         # Pick the non-None type (assumes only two types in the Union)
         non_none_arg = args[0] if args[1] is type(None) else args[1]
         if non_none_arg is None:
@@ -1320,7 +1329,7 @@ cdef object _parse_union_type(
         return None
 
     # If the union includes NoneType, unwrap it and use only the non-None type.
-    if origin == Union and type(None) in targs:
+    if is_union(origin) and type(None) in targs:
         for arg in targs:
             if arg is not type(None):
                 non_none_arg = arg
@@ -1566,6 +1575,8 @@ cdef object _parse_typing(
         origin = get_origin(T)
         targs = get_args(T)
 
+    origin = normalize_origin(origin)
+
     # For generic (typing) fields, reuse cached inner type info if available.
     if origin in (list, set, frozenset) and targs:
         if field._inner_type is not None:
@@ -1586,7 +1597,7 @@ cdef object _parse_typing(
         return _handle_dataclass_type(None, name, data, T, as_objects, None)
 
     # If the field is a Union and data is a list, use _parse_union_type.
-    if origin is Union:
+    if is_union(origin):
         # e.g. Optional[...] or Union[A, B]
         if len(targs) == 2 and type(None) in targs:
             # Handle Optional[...] that is Union[..., None] cases first:
@@ -2178,7 +2189,7 @@ cpdef dict processing_fields(object obj, list columns):
                         errors.update(_build_error(name, f"Error parsing Tuple {name}: ", ex))
                         continue
                 # If the field is a Union and data is a list, use _parse_union_type.
-                elif f.origin is Union:
+                elif is_union(f.origin):
                     try:
                         if len(f.args) == 2 and type(None) in f.args:
                             # e.g. Optional[...] or Union[A, B]
@@ -2193,7 +2204,7 @@ cpdef dict processing_fields(object obj, list columns):
                                     None, name, value, f._inner_type, as_objects, None
                                 )
                             elif f._inner_origin is list:
-                                if f._inner_type.__module__ == 'typing':
+                                if f._inner_type.__module__ == 'typing' or isinstance(f._inner_type, types.GenericAlias):
                                     newval = _parse_list_typing(
                                         f,
                                         f._typing_args,
@@ -2410,7 +2421,7 @@ cdef object _field_checks_(object f, str name, object value, object meta):
 
 
 cpdef parse_type(object field, object T, object data, object encoder = None):
-    cdef object origin = get_origin(T)
+    cdef object origin = normalize_origin(get_origin(T))
     cdef tuple args = None
     cdef str type_name = getattr(T, '_name', None)
     cdef object type_args = getattr(T, '__args__', None)
@@ -2477,7 +2488,7 @@ cpdef parse_type(object field, object T, object data, object encoder = None):
         elif type_name is None or type_name in ('Optional', 'Union'):
             args = get_args(T)
             # Handling Optional types
-            if origin == Union and type(None) in args:
+            if is_union(origin) and type(None) in args:
                 if data is None:
                     return None
                 # Determine the non-None type.
