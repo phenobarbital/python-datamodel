@@ -145,3 +145,6 @@ examples/reward.py
 
 # parrot plugin scaffold (generated)
 /plugins/
+
+# Claude Code worktrees
+.claude/worktrees/
