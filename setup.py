@@ -18,9 +18,12 @@ def _compiler_flags() -> tuple[list[str], list[str]]:
     MSVC (Windows) rejects the GCC-style `-O3` / `-lstdc++` flags used on
     POSIX platforms, so this returns `/O2` with no extra link args on
     `win32`, and the existing `-O3` / `-lstdc++` pair everywhere else.
+    macOS uses libc++ (Apple Clang default), so no explicit `-lstdc++`.
     """
     if sys.platform == "win32":
         return ["/O2"], []
+    if sys.platform == "darwin":
+        return ["-O3"], ["-lc++"]
     return ["-O3"], ["-lstdc++"]
 
 

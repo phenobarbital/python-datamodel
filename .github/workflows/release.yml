@@ -60,7 +60,8 @@ jobs:
           CIBW_BEFORE_BUILD_MACOS: >-
             curl https://sh.rustup.rs -sSf | sh -s -- -y &&
             export PATH=$HOME/.cargo/bin:$PATH &&
-            pip install maturin &&
+            pip install uv &&
+            uv pip install maturin &&
             python scripts/stage_rust_ext.py
           CIBW_ENVIRONMENT_MACOS: "PATH=$HOME/.cargo/bin:$PATH"
           CIBW_BEFORE_BUILD_WINDOWS: >-
