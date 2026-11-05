@@ -60,9 +60,10 @@ jobs:
           CIBW_BEFORE_BUILD_MACOS: >-
             curl https://sh.rustup.rs -sSf | sh -s -- -y &&
             export PATH=$HOME/.cargo/bin:$PATH &&
+            rustup target add aarch64-apple-darwin &&
             pip install uv &&
             uv pip install maturin &&
-            python scripts/stage_rust_ext.py
+            python scripts/stage_rust_ext.py --target aarch64-apple-darwin
           CIBW_ENVIRONMENT_MACOS: "PATH=$HOME/.cargo/bin:$PATH"
           CIBW_BEFORE_BUILD_WINDOWS: >-
             pip install maturin &&
