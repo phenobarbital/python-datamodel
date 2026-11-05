@@ -41,7 +41,7 @@ description: |
 model: sonnet
 color: cyan
 permissionMode: default
-tools: Read, Grep, Glob, Bash, Write, Edit
+tools: Read, Grep, Glob, Bash, Write, Edit, mcp__wikitoolkit__wiki_query, mcp__wikitoolkit__wiki_page, mcp__wikitoolkit__wiki_related
 ---
 
 # SDD Ideation — Natural Language → Committed SDD Document
@@ -67,6 +67,7 @@ The dispatch payload carries:
 | `context` | Optional extra context/links/constraints. May be empty. |
 | `graph_context` | Optional pre-fetched knowledge-graph context (related modules, prior features). Read it before searching the codebase yourself. |
 | `answers` | Prior-round `question -> answer` mapping. Empty on round 1. |
+| `base_branch` | FEAT-555. The branch the document's frontmatter MUST declare (`base_branch: <value>`). Default `dev`; never infer it from the text. |
 | `document_path` | Set on resume rounds: the document you must extend. |
 | `round` | 1-based round counter. |
 | `partner_findings` | FEAT-482, round 1 only. Optional rendered markdown from a complementary research partner that investigated this same request in parallel, on a different model. Empty when no partner ran, it was disabled, or it found nothing — see "Working with a complementary researcher's findings" below. |
@@ -112,17 +113,25 @@ proposed change — that discipline does not apply here).
   that case — never treat absence as a signal, and never mention a
   partner that did not run.
 
-## Code search
+## Graph-backed code search
 
-Use `Grep`, `Glob`, and `Read` for codebase exploration. Query for the
-symbol/module/subsystem name you actually want, not your hypothesis about
-where it lives.
+Alongside `Grep`, you have three read-only tools backed by this repo's
+AST/tree-sitter knowledge-graph plane (FEAT-482):
 
-If a `wikitoolkit` MCP server is available in this project, prefer its
-`wiki_query` / `wiki_page` / `wiki_related` tools over `Grep` for "where
-does X live" / "how do these modules relate" questions — they return ranked
-summaries instead of raw line matches. Otherwise, rely on `Grep` and `Glob`
-for all code search.
+- `mcp__wikitoolkit__wiki_query` — ranked, token-budgeted page stubs for a
+  scoped question. **Prefer this over `Grep`** for "where does X live" /
+  "how do these modules relate" questions: it returns summaries and API
+  outlines instead of raw, unranked line matches.
+- `mcp__wikitoolkit__wiki_page` — read one page in full once `wiki_query`
+  has named it.
+- `mcp__wikitoolkit__wiki_related` — follow typed edges (`contains`,
+  `references`) to neighbouring files/modules from a page id.
+
+`Grep` remains the right tool for exact literals, config values, or
+anything not indexed by the graph. Query for the symbol/module/subsystem
+name you actually want, not your hypothesis about where it lives — the
+ranking is lexical, and extra "theory" words steer it away from the real
+page.
 
 ## Step 1 — Resolve the slug and target path
 
@@ -167,12 +176,15 @@ Every document you write starts with the FEAT-145 frontmatter, verbatim:
 ```
 ---
 # SDD flow type and base branch (FEAT-145).
-# - type: feature  (default)  → base_branch: main
-# - type: hotfix              → base_branch: main
+# - type: feature  (default)  → base_branch: dev (or any non-main branch)
+# - type: hotfix              → base_branch MUST be: main
 type: feature
-base_branch: main
+base_branch: <the payload's `base_branch` value, verbatim — `dev` when it is `dev`>
 ---
 ```
+
+`type` is always `feature`; `base_branch` comes from the payload — do not
+hard-code `dev`.
 
 ### mode = "brainstorm"  (intent: new_feature)
 

@@ -2,17 +2,29 @@
 
 Decompose an approved Feature Specification into atomic, assignable implementation tasks.
 
+
 ## Usage
 ```
 /sdd-task sdd/specs/<feature-name>.spec.md
+/sdd-task sdd/specs/<feature-name>.spec.md --from-issue <issue-id>
 ```
+
+`--from-issue <issue-id>` (FEAT-566, optional): seed one generated task from
+an open ledger issue (`wikitoolkit ledger ready` / `/sdd-next`'s "Ready
+ledger issues" section) instead of writing its Context/Scope from scratch.
+Promotion is always explicit — no ledger issue is ever auto-promoted.
 
 ## Guardrails
 - Only decompose specs with `status: approved`.
 - Each task must be independently implementable and testable.
 - Check `sdd/tasks/index/<feature>.json` for existing tasks to avoid duplication.
-- Do NOT write implementation code — tasks are plans, not code.
-- Mark tasks that can run in parallel worktrees with `parallel: true`.
+- Do NOT write the full implementation — but every task MUST carry an
+  **Implementation Blueprint** (executor-ready per-file code blocks + why +
+  `FILL IN` checklist, see §3). Blueprints stop at the mechanical parts;
+  branches, edge cases and test bodies stay as `FILL IN` stubs.
+- Build the task graph by §3's **Task graph rules** — `depends_on` is the only
+  ordering, `parallel: false` means *exclusive* — and run
+  `scripts/sdd/check_task_graph.py` on the index before committing (§4b).
 - **`TASK-<NNN>` numbers are reserved via `scripts/sdd/reserve_ids.py`
   (FEAT-387), never hand-computed by scanning existing files for the
   highest number in use.** That scan-and-increment approach has no lock
@@ -20,8 +32,10 @@ Decompose an approved Feature Specification into atomic, assignable implementati
   committing, so two `/sdd-task` runs racing each other (e.g. concurrent
   dev-loop planner dispatches) can silently allocate the same number to
   different features. See §4 below.
-- **Must run on the spec's `base_branch`** (read from frontmatter — `main` by default). Not inside a worktree.
-- **Always commit task files and per-spec index to `base_branch`** before creating the worktree.
+- **Must run on the spec's `base_branch`** (read from frontmatter — `dev` for features, `main` for hotfixes). Not inside a worktree.
+- **Always commit task files and per-spec index to `base_branch`** — they are
+  versioned artifacts, and the machine that implements the feature pulls them
+  from there. This command creates no worktree (FEAT-552).
 
 ## Steps
 
@@ -87,11 +101,37 @@ Analyze the spec and identify atomic tasks:
 - Order tasks to respect implementation dependencies.
 - Aim for tasks completable in 1–4 hours each.
 
-**Parallelism analysis:**
-- Identify tasks within the spec that share NO files or imports with other tasks.
-- Mark those tasks as `parallel: true` — they CAN run in separate worktrees.
-- Tasks that import/extend code from a prior task in the same spec are `parallel: false` (default).
-- Document the rationale in the `parallelism_notes` field.
+**Task graph rules (`depends_on`, `parallel`, `parallelism_notes`):**
+
+Every task runs in its own sub-worktree, dispatched by the `sdd-coder` engine as
+soon as its `depends_on` are done; tasks whose dependencies are met run
+**concurrently**. So the graph, not the prose, decides how long a feature takes
+(querysource FEAT-147: 18 tasks chained 1→2→…→18 with one copy-pasted
+rationale ran strictly in series for ~7 h).
+
+- **`depends_on` is the ONLY ordering.** Add `B depends_on A` only with evidence:
+  - B imports, calls, extends or tests a symbol A **creates**; or
+  - B consumes a file/table/config/fixture A creates; or
+  - B and A both **modify the same file** (serialize them: the lower id first).
+
+  Never add an edge because tasks share a module, a spec section or a "phase", or
+  "to be safe". A spec that says tasks run *sequentially* or *per-spec* means ONE
+  feature worktree — it is NOT a dependency chain. Transitive edges may be
+  omitted.
+- **`parallel` defaults to `true`.** Set `parallel: false` (*exclusive* — never
+  dispatched alongside any other task, even with its dependencies met) only when
+  the task mutates shared state **outside its declared files**: rebuilding
+  compiled extensions (Cython `make build-inplace`, maturin), editing dependency
+  manifests or lockfiles (`pyproject.toml`, `uv.lock`), running DDL/migrations
+  against a shared database, regenerating shared generated code, or changing a
+  `conftest.py` other tasks' tests load.
+- **`parallelism_notes` is per task and names its evidence**: for each
+  `depends_on` edge, the dependency id plus the symbol/file it needs
+  (`"imports TenantRegistry from TASK-716 (querysource/tenants.py)"`); for an
+  exclusive task, the shared resource. Identical notes on several tasks is a
+  defect.
+- Write `"parallel_semantics": "exclusive"` in the index header (see schema) —
+  without it the engine ignores every `parallel` flag.
 
 **CRITICAL — Codebase Contract per Task (Anti-Hallucination):**
 For EACH task, you MUST populate its `## Codebase Contract` section:
@@ -110,6 +150,39 @@ For EACH task, you MUST populate its `## Codebase Contract` section:
 **Quality bar**: A task without a populated Codebase Contract section is incomplete.
 The implementing agent (often Sonnet or Haiku) WILL hallucinate if not given
 explicit, verified code anchors.
+
+**CRITICAL — Implementation Blueprint per Task (Executor Readiness, FEAT-545):**
+For EACH task, you MUST populate its `## Implementation Blueprint` section so a
+non-thinking executor (Haiku) can write the declared code to disk and complete
+only the marked gaps:
+
+1. **One block per file** listed in "Files to Create / Modify" — CREATE blocks
+   are whole-file starting points; MODIFY blocks quote the verified anchor line
+   they attach to (`# AFTER — insert below \`<anchor>\` (verified: path:NN)`).
+   **MODIFY blocks MUST state the anchor's occurrence count**
+   (`# occurrences: <N> (verified: grep -c '<anchor>' path)`); if `<N>` is `> 1`,
+   the block is `# FILL IN: disambiguate — quote enough surrounding context (2–3
+   lines) to make the anchor unique` instead of a bare one-line anchor.
+2. **Mechanical code is complete**: imports, class/function signatures,
+   docstrings, `self.logger` calls, registration/wiring, return types.
+3. **Judgement calls are `FILL IN` stubs**: `# FILL IN: <decision> — bounded by
+   <constraint | AC-N>`. Never leave a gap without the constraint that bounds it.
+4. **Every import comes from the task's Verified Imports** — the blueprint may
+   not introduce a symbol the Codebase Contract does not list.
+5. **Derive from the spec's Interface Skeletons** (spec §3) and re-verify the
+   anchors now; signatures fixed by the skeleton are not renegotiable.
+6. **Size cap**: no block over ~80 lines. If a file needs more, split the task.
+7. **Explain-for-executor rule**: every non-trivial decision is written as an
+   imperative instruction *plus its reason* ("do X — because Y"), in the
+   Steps list and in the **Why** paragraph under each block. Do not rely on
+   the executor to infer intent.
+8. **Steps (in order)** and the **FILL IN checklist** are mandatory even when
+   a task has a single file.
+
+**Quality bar**: A task without a populated Implementation Blueprint section is
+incomplete — same bar as the Codebase Contract. If the blueprint would be the
+full implementation, the task is too small; if it needs more than ~80 lines per
+file, the task is too big.
 
 ### 4. Generate Tasks
 1. Ensure `sdd/tasks/active/` directory exists (create if needed).
@@ -158,6 +231,19 @@ explicit, verified code anchors.
    in the per-spec index; never invent, recompute, or reuse a `TASK-<NNN>`
    number outside of what `reserve_ids.py` returned.
 
+   **`--from-issue <issue-id>` (FEAT-566):** the promoted task still gets a
+   normally-reserved `TASK-<NNN>` from `reserve_ids.py` above — a ledger
+   issue id is never used as (or in place of) a task id. Seed the task's
+   Context/Scope from `wikitoolkit ledger context <issue-id>` (title, body,
+   `about` targets), and link back to the source issue by including
+   `discovered_from: <issue-id>` in the generated task's frontmatter/notes
+   so `wikitoolkit ledger close <issue-id> --reason "promoted to TASK-<NNN>"`
+   can be run once the task is filed. Promotion never runs `ledger close`
+   automatically — that stays an explicit, separate step for the human/agent
+   doing the promotion.
+   Fill the template's `## Implementation Blueprint` section for every task
+   per §3's rules; a task without one is incomplete.
+
 **CRITICAL — Task file header must include the Feature ID:**
 The `**Feature**:` line at the top of every task file MUST combine the formal
 Feature ID and the human-readable feature title, separated by an em-dash:
@@ -181,9 +267,10 @@ and ignored by all FEAT-145 commands). Schema:
   "feature_id": "FEAT-<NNN>",
   "spec": "sdd/specs/<feature-slug>.spec.md",
   "type": "feature",
-  "base_branch": "main",
+  "base_branch": "dev",
   "created_at": "<ISO-8601>",
   "completed_at": null,
+  "parallel_semantics": "exclusive",
   "tasks": [
     {
       "id": "TASK-<NNN>",
@@ -196,8 +283,8 @@ and ignored by all FEAT-145 commands). Schema:
       "priority": "<high|medium|low>",
       "effort": "<S|M|L|XL>",
       "depends_on": [],
-      "parallel": false,
-      "parallelism_notes": "<rationale>",
+      "parallel": true,
+      "parallelism_notes": "<per-task evidence: 'needs <symbol> from TASK-<X> (<file>)' | exclusive resource>",
       "assigned_to": null,
       "started_at": null,
       "completed_at": null,
@@ -210,7 +297,9 @@ and ignored by all FEAT-145 commands). Schema:
 **Header fields (`type`, `base_branch`)** are populated from the spec's
 frontmatter (resolved in §1 above). If `sdd/tasks/index/<feature>.json`
 already exists (created by the migration script for older specs), append
-the new tasks to its `tasks[]` array — do NOT overwrite the header.
+the new tasks to its `tasks[]` array — do NOT overwrite the header. Do not add
+`parallel_semantics` to an existing header whose tasks were written before these
+rules: their `parallel: false` meant something else and would serialize them.
 
 **Index location helper:**
 ```bash
@@ -223,6 +312,44 @@ mkdir -p "$(dirname "$INDEX")"
   **`null` for a hotfix** (FEAT-466 — no id reserved); use `jira_issue_key`
   as the identity instead.
 - `feature`: Kebab-case slug (e.g., `"videoreel-visual-changes"`).
+
+#### Delegation Contract (optional, per task)
+
+Emit a `## Delegation Contract` packet ONLY for a task whose design is
+complete. `design_complete: true` is a declaration the task author signs.
+
+- List every target file with its `action` (`create`/`modify`), and give each
+  `modify` target a REAL `expected_sha256` — compute it, never guess:
+  `sha256sum <path>` or
+  `python -c "import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" <path>`.
+- Every `create` target needs a block tagged `path=<target>` holding the new
+  file's full content; every referenced block id must exist in the task file.
+- Never leave placeholders (`...`, `TODO`, `FIXME`, `XXX`, `<angle>`,
+  `raise NotImplementedError`) in an implementation block — the validator
+  rejects them and the packet is not delegated.
+- Hashes are re-validated at execution time, after dependencies land. If they
+  are stale then, the executor refreshes the packet in the task file FIRST and
+  only then re-runs `writer_generate`.
+- Omit the section entirely when the task is not eligible. Most tasks are not,
+  and that is the normal, expected route.
+
+### 4b. Validate the Task Graph
+
+Run the deterministic graph check on the index you just wrote:
+
+```bash
+python -m scripts.sdd.check_task_graph sdd/tasks/index/<feature-slug>.json
+```
+
+- **Errors** (exit 1) block the commit: `file-overlap` (two tasks declare the
+  same file with no dependency path between them — they would run concurrently
+  and conflict), `unknown-dependency`, `cycle`. Fix the graph, re-run.
+- **Every warning is resolved, not ignored**: `unjustified-edge` → remove the
+  edge, or write its evidence in `parallelism_notes` (naming the dependency id);
+  `possible-missing-dependency` → add the edge or confirm the reference is not
+  a use; `duplicate-notes` / `exclusive-without-notes` → write per-task notes.
+- Copy the report's first line (`<N> tasks, <W> waves, max width <M>`) into the
+  §6 output. A width of 1 on a multi-task feature needs a one-line justification.
 
 ### 5. Commit Tasks and Per-Spec Index to `<BASE>`
 
@@ -251,24 +378,16 @@ git diff --cached --name-only
 git commit -m "sdd: add <N> tasks for FEAT-<ID> — <feature-name>"
 ```
 
-### 6. Create the Worktree
+### 6. Output
 
-After committing to `<BASE>`, create the worktree so it inherits the tasks.
-Naming and base ref depend on `TYPE` (FEAT-466 — a hotfix has no reserved
-id, so it is named from its Jira key, and always branches from
-`origin/main`, never `HEAD`):
+Before printing the summary, count the delegation-eligible tasks. This is the
+number the targeted writer will actually receive when the worker runs, so it
+is worth seeing up front:
 
 ```bash
-# type: feature
-git worktree add -b feat-<FEAT-ID>-<slug> \
-  .claude/worktrees/feat-<FEAT-ID>-<slug> HEAD
-
-# type: hotfix (the rare case /sdd-task ran directly against a hotfix spec)
-git worktree add -b hotfix-<JIRA-KEY>-<slug> \
-  .claude/worktrees/hotfix-<JIRA-KEY>-<slug> origin/main
+grep -l '^## Delegation Contract' sdd/tasks/active/TASK-*.md | wc -l
 ```
 
-### 7. Output
 ```
 ✅ Generated and committed <N> tasks for FEAT-<ID> — <feature-name>
    (hotfix: for Jira <KEY> — <feature-name>, no FEAT-<NNN>/TASK-<NNN> reserved)
@@ -277,13 +396,18 @@ Tasks created:
   TASK-<NNN> — <title> [<priority>/<effort>]      # feature
   HOTFIX-<JIRA-KEY>-<N> — <title> [<priority>/<effort>]  # hotfix
 
-Worktree created:
-  .claude/worktrees/feat-<FEAT-ID>-<slug>              # feature
-  .claude/worktrees/hotfix-<JIRA-KEY>-<slug>           # hotfix
+Blueprints: <N>/<N> tasks carry an Implementation Blueprint
+Graph:      <N> tasks, <W> waves, max width <M>; exclusive: <ids or "none">
+Delegated:  <D>/<N> tasks carry a Delegation Contract (targeted writer)
+            TASK-<NNN>, TASK-<NNN>          # list them, or "none"
+
+Worktree: not created. /sdd-task produces versioned artifacts only — the
+          worktree is created by whoever implements, on the machine that
+          implements (FEAT-552).
 
 Next:
-  cd .claude/worktrees/<worktree-name>
-  /sdd-start <task-id>   # begin first task
+  /sdd-start <task-id>        # creates the worktree, then begins the task
+  # or, unattended:  claude --agent sdd-worker --model sonnet --verbose
 ```
 
 ## Reference

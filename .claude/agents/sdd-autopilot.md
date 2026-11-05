@@ -660,13 +660,12 @@ worker never needs to ask:
 
 ## Codebase Contract
 ### Verified Imports
-- `from parrot_tools.toolkit import AbstractToolkit` — packages/ai-parrot-tools/src/parrot_tools/toolkit.py:15
-- `from parrot.tools.manager import ToolManager` — packages/ai-parrot/src/parrot/tools/manager.py:1
+- `from datamodel import BaseModel` — datamodel/models.py
+- `from datamodel.converters import parse_type` — datamodel/converters.pyx
 
 ### Does NOT Exist
-- `parrot.auth.CredentialResolver` — must be created in this task
-- `AbstractToolkit.credentials` — no such attribute
-- `JiraToolkit.refresh_token()` — no such method
+- `datamodel.auth.CredentialResolver` — must be created in this task
+- `BaseModel.credentials` — no such attribute
 
 ## Test Skeleton
 ```python

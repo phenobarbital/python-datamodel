@@ -1,8 +1,8 @@
-# AI-Parrot SDD Workflow
+# SDD Workflow
 
 ## Overview
 
-This document defines the **Spec-Driven Development (SDD)** methodology for AI-Parrot, unified across Claude Code, Codex, and Google Gemini via Antigravity CLI (`agy`) with multi-agent task distribution.
+This document defines the **Spec-Driven Development (SDD)** methodology for this project, unified across Claude Code, Codex, and Google Gemini via Antigravity CLI (`agy`) with multi-agent task distribution.
 
 The key idea: specifications are the Single Source of Truth (SSOT). Agents across all supported platforms consume spec documents and produce **Task Artifacts** — discrete, self-contained files in `sdd/tasks/active/` that can be independently picked up and executed by agents in parallel.
 
